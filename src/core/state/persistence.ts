@@ -3,6 +3,7 @@ import {
   createInitialGameState,
   type DomainId,
   type DomainProgress,
+  type EchoBonuses,
   type GameState,
   type Mortal,
   type MortalTrait,
@@ -27,6 +28,10 @@ function readNumber(value: unknown, fallback: number): number {
 
 function readString(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
+}
+
+function readBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
 }
 
 function readTrait(value: unknown, fallback: MortalTrait): MortalTrait {
@@ -76,8 +81,8 @@ function sanitizeDomains(value: unknown, fallback: DomainProgress[]): DomainProg
     if (!domainId) continue;
     byId.set(domainId, {
       id: domainId,
-      level: Math.max(0, readNumber(entry.level, 0)),
-      xp: Math.max(0, readNumber(entry.xp, 0))
+      level: Math.max(0, Math.floor(readNumber(entry.level, 0))),
+      xp: Math.max(0, Math.floor(readNumber(entry.xp, 0)))
     });
   }
 
@@ -101,18 +106,25 @@ function sanitizeOmenLog(value: unknown, fallback: OmenEntry[]): OmenEntry[] {
   return sanitized.length > 0 ? sanitized.slice(0, 200) : fallback;
 }
 
-function migrateFromSchemaV1(rawState: unknown, nowMs: number): GameState {
+function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses {
+  if (!isRecord(value)) return fallback;
+  return {
+    startInf: readBoolean(value.startInf, fallback.startInf),
+    faithFloor: readBoolean(value.faithFloor, fallback.faithFloor),
+    prophetThreshold: readBoolean(value.prophetThreshold, fallback.prophetThreshold),
+    cultCostBase: readBoolean(value.cultCostBase, fallback.cultCostBase)
+  };
+}
+
+function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const fallback = createInitialGameState(nowMs);
   if (!isRecord(rawState)) return fallback;
 
   const rawMeta = isRecord(rawState.meta) ? rawState.meta : {};
   const rawSimulation = isRecord(rawState.simulation) ? rawState.simulation : {};
   const rawResources = isRecord(rawState.resources) ? rawState.resources : {};
-
-  const prophets = Math.max(0, Math.floor(readNumber(rawState.prophets, fallback.prophets)));
-  const mortals = sanitizeMortals(rawState.mortals, fallback.mortals);
-  const domains = sanitizeDomains(rawState.domains, fallback.domains);
-  const omenLog = sanitizeOmenLog(rawState.omenLog, fallback.omenLog);
+  const rawActivity = isRecord(rawState.activity) ? rawState.activity : {};
+  const rawStats = isRecord(rawState.stats) ? rawState.stats : {};
 
   return {
     meta: {
@@ -123,7 +135,7 @@ function migrateFromSchemaV1(rawState: unknown, nowMs: number): GameState {
     },
     simulation: {
       tickMs: fallback.simulation.tickMs,
-      // Reset to current wall-clock to avoid accidental offline progression before M6.
+      // Keep last tick anchored to now until dedicated offline simulation milestone.
       lastTickAt: nowMs,
       accumulatedMs: Math.max(0, readNumber(rawSimulation.accumulatedMs, 0)),
       totalTicks: Math.max(0, Math.floor(readNumber(rawSimulation.totalTicks, 0))),
@@ -135,18 +147,39 @@ function migrateFromSchemaV1(rawState: unknown, nowMs: number): GameState {
       veil: Math.max(0, readNumber(rawResources.veil, fallback.resources.veil)),
       followers: Math.max(0, Math.floor(readNumber(rawResources.followers, fallback.resources.followers)))
     },
-    mortals,
-    domains,
-    prophets,
-    omenLog,
+    activity: {
+      lastEventAt: Math.max(0, readNumber(rawActivity.lastEventAt, nowMs)),
+      whisperWindowStartedAt: Math.max(0, readNumber(rawActivity.whisperWindowStartedAt, nowMs)),
+      whispersInWindow: Math.max(0, Math.floor(readNumber(rawActivity.whispersInWindow, 0)))
+    },
+    stats: {
+      totalBeliefEarned: Math.max(0, readNumber(rawStats.totalBeliefEarned, fallback.stats.totalBeliefEarned))
+    },
+    echoBonuses: sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses),
+    mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
+    domains: sanitizeDomains(rawState.domains, fallback.domains),
+    prophets: Math.max(0, Math.floor(readNumber(rawState.prophets, fallback.prophets))),
+    cults: Math.max(0, Math.floor(readNumber(rawState.cults, fallback.cults))),
+    matchingDomainPairs: Math.max(0, Math.floor(readNumber(rawState.matchingDomainPairs, fallback.matchingDomainPairs))),
+    rngState: Math.max(1, Math.floor(readNumber(rawState.rngState, fallback.rngState))) >>> 0,
+    omenLog: sanitizeOmenLog(rawState.omenLog, fallback.omenLog),
     nextEventId: Math.max(1, Math.floor(readNumber(rawState.nextEventId, fallback.nextEventId)))
   };
+}
+
+function migrateFromSchemaV1(rawState: unknown, nowMs: number): GameState {
+  return sanitizeState(rawState, nowMs);
+}
+
+function migrateFromSchemaV2(rawState: unknown, nowMs: number): GameState {
+  return sanitizeState(rawState, nowMs);
 }
 
 type Migrator = (rawState: unknown, nowMs: number) => GameState;
 
 const MIGRATORS: Record<number, Migrator> = {
-  1: migrateFromSchemaV1
+  1: migrateFromSchemaV1,
+  2: migrateFromSchemaV2
 };
 
 function toSaveEnvelope(state: GameState): SaveEnvelope {

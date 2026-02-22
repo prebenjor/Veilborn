@@ -1,19 +1,5 @@
-import {
-  BELIEF_PER_PROPHET_PER_SECOND,
-  INFLUENCE_BASE_CAP,
-  INFLUENCE_BASE_REGEN_PER_SECOND,
-  INFLUENCE_CAP_PER_PROPHET,
-  INFLUENCE_REGEN_PER_PROPHET_PER_SECOND,
-  type GameState
-} from "../state/gameState";
-
-export function getInfluenceCap(prophets: number): number {
-  return INFLUENCE_BASE_CAP + prophets * INFLUENCE_CAP_PER_PROPHET;
-}
-
-function getInfluenceRegenPerSecond(prophets: number): number {
-  return INFLUENCE_BASE_REGEN_PER_SECOND + prophets * INFLUENCE_REGEN_PER_PROPHET_PER_SECOND;
-}
+import { getBeliefPerSecond, getInfluenceCap, getInfluenceRegenPerSecond, normalizeWhisperCycle } from "./formulas";
+import type { GameState } from "../state/gameState";
 
 export function advanceWorld(state: GameState, nowMs: number): GameState {
   const elapsedSinceLastTick = nowMs - state.simulation.lastTickAt;
@@ -25,8 +11,14 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   const accumulatedMs = totalMs - ticks * tickMs;
 
   if (ticks <= 0) {
+    const whisperCycle = normalizeWhisperCycle(state.activity, nowMs);
     return {
       ...state,
+      activity: {
+        ...state.activity,
+        whisperWindowStartedAt: whisperCycle.whisperWindowStartedAt,
+        whispersInWindow: whisperCycle.whispersInWindow
+      },
       simulation: {
         ...state.simulation,
         lastTickAt: nowMs,
@@ -41,11 +33,11 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
 
   const simulatedMs = ticks * tickMs;
   const simulatedSeconds = simulatedMs / 1000;
-  const prophets = state.prophets;
-
-  const beliefGain = prophets * BELIEF_PER_PROPHET_PER_SECOND * simulatedSeconds;
-  const influenceCap = getInfluenceCap(prophets);
-  const influenceGain = getInfluenceRegenPerSecond(prophets) * simulatedSeconds;
+  const beliefPerSecond = getBeliefPerSecond(state, nowMs);
+  const beliefGain = beliefPerSecond * simulatedSeconds;
+  const influenceCap = getInfluenceCap(state);
+  const influenceGain = getInfluenceRegenPerSecond(state) * simulatedSeconds;
+  const whisperCycle = normalizeWhisperCycle(state.activity, nowMs);
 
   return {
     ...state,
@@ -53,6 +45,15 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
       ...state.resources,
       belief: state.resources.belief + beliefGain,
       influence: Math.min(influenceCap, state.resources.influence + influenceGain)
+    },
+    activity: {
+      ...state.activity,
+      whisperWindowStartedAt: whisperCycle.whisperWindowStartedAt,
+      whispersInWindow: whisperCycle.whispersInWindow
+    },
+    stats: {
+      ...state.stats,
+      totalBeliefEarned: state.stats.totalBeliefEarned + beliefGain
     },
     simulation: {
       ...state.simulation,

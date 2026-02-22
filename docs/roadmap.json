@@ -48,7 +48,7 @@
     {
       "id": "M2",
       "title": "Resource and Formula Layer",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M1"],
       "deliverables": [
         "Uncapped Belief generation formula stack",
