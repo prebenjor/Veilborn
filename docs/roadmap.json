@@ -1,0 +1,201 @@
+{
+  "project": "Veilborn",
+  "canonical_source": "MANIFESTO.md",
+  "branch": "main",
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "Project Foundation",
+      "status": "pending",
+      "dependencies": [],
+      "deliverables": [
+        "React + TypeScript scaffold",
+        "Tailwind + Framer Motion setup",
+        "Core folder structure",
+        "README with dev instructions",
+        "GitHub Pages workflow"
+      ],
+      "validation": [
+        "npm run dev",
+        "npm run build"
+      ]
+    },
+    {
+      "id": "M1",
+      "title": "Core Simulation Loop (Whispers)",
+      "status": "pending",
+      "dependencies": ["M0"],
+      "deliverables": [
+        "Tick loop and world state",
+        "Influence and belief resources",
+        "First mortal and prophet conversion",
+        "localStorage save/load"
+      ],
+      "validation": [
+        "Can create first prophet",
+        "Belief grows passively",
+        "Reload restores state"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "Domains and Veil Probability",
+      "status": "pending",
+      "dependencies": ["M1"],
+      "deliverables": [
+        "Domain model",
+        "Domain investment UI",
+        "Probability resolver weighted by domains"
+      ],
+      "validation": [
+        "Different domain allocations change outcome distributions"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "Doctrine Systems",
+      "status": "pending",
+      "dependencies": ["M2"],
+      "deliverables": [
+        "Followers and cult formation",
+        "Acts system",
+        "Domain synergy multipliers",
+        "Rival cult generation"
+      ],
+      "validation": [
+        "Player cult can execute acts",
+        "Rival cult appears from simulation"
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "UI as Veil Progression",
+      "status": "pending",
+      "dependencies": ["M2"],
+      "deliverables": [
+        "Veil thickness variable",
+        "Progressive label/tooltip reveals",
+        "In-universe omen event log"
+      ],
+      "validation": [
+        "UI legibility unlocks as progression advances"
+      ]
+    },
+    {
+      "id": "M5",
+      "title": "Miracles and Unraveling",
+      "status": "pending",
+      "dependencies": ["M3", "M4"],
+      "deliverables": [
+        "Miracle events",
+        "World stability system",
+        "Unraveling trigger"
+      ],
+      "validation": [
+        "Miracles produce high-impact outcomes",
+        "Overuse destabilizes world",
+        "Unraveling reachable"
+      ]
+    },
+    {
+      "id": "M6",
+      "title": "Ascension 1 (Echoes)",
+      "status": "pending",
+      "dependencies": ["M5"],
+      "deliverables": [
+        "Ascension reset pipeline",
+        "Echo currency persistence",
+        "New run world variance"
+      ],
+      "validation": [
+        "Second run starts faster with retained progression"
+      ]
+    },
+    {
+      "id": "M7",
+      "title": "Social Memory and Lineages",
+      "status": "pending",
+      "dependencies": ["M6"],
+      "deliverables": [
+        "Trait inheritance",
+        "Social debt markers",
+        "Conversion modifiers from memory"
+      ],
+      "validation": [
+        "Past betrayals affect future populations"
+      ]
+    },
+    {
+      "id": "M8",
+      "title": "Pantheon Layer",
+      "status": "pending",
+      "dependencies": ["M6"],
+      "deliverables": [
+        "Alliance and betrayal systems",
+        "Belief sharing",
+        "Domain poisoning persistence"
+      ],
+      "validation": [
+        "Alliance vs betrayal has clear long-term tradeoffs"
+      ]
+    },
+    {
+      "id": "M9",
+      "title": "Audio as Mechanic",
+      "status": "pending",
+      "dependencies": ["M4", "M5"],
+      "deliverables": [
+        "Tone.js integration",
+        "Domain instrument layers",
+        "Instability detune/dropout behavior"
+      ],
+      "validation": [
+        "Players can hear instability before visual collapse"
+      ]
+    },
+    {
+      "id": "M10",
+      "title": "Ghost Echoes",
+      "status": "pending",
+      "dependencies": ["M8"],
+      "deliverables": [
+        "Run signature import/export",
+        "Anomaly injector",
+        "Offline-safe fallback"
+      ],
+      "validation": [
+        "Imported signatures alter world state predictably"
+      ]
+    },
+    {
+      "id": "M11",
+      "title": "Architecture Layer and Endgame",
+      "status": "pending",
+      "dependencies": ["M8", "M10"],
+      "deliverables": [
+        "Meta-rule editor",
+        "Name-letter milestones",
+        "Secret ending choice flow"
+      ],
+      "validation": [
+        "Remembrance path completable",
+        "Final choice intentionally ambiguous"
+      ]
+    },
+    {
+      "id": "M12",
+      "title": "Balance and Content Expansion",
+      "status": "pending",
+      "dependencies": ["M11"],
+      "deliverables": [
+        "Pacing and economy tuning",
+        "20-40 minute session milestone cadence checks",
+        "Expanded prose/content packs",
+        "Regression tests"
+      ],
+      "validation": [
+        "Playtests align with manifesto target playtimes"
+      ]
+    }
+  ]
+}
