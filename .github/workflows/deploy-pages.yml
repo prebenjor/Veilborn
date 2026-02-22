@@ -22,6 +22,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -34,10 +37,15 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          test -f dist/index.html
+          grep -q "/Veilborn/assets/" dist/index.html
+
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: ./dist
 
   deploy:
     needs: build
@@ -49,4 +57,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

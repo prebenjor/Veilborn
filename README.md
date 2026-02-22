@@ -47,8 +47,17 @@ Project page URL:
   - CI build validation (`CI` workflow).
   - Pages deployment (`Deploy Pages` workflow).
 - Build creates `dist/404.html` automatically for SPA-safe refreshes on Pages.
+- Build also writes `dist/.nojekyll` to prevent Jekyll processing side effects.
 - After each push, test the live page at:
   - `https://prebenjor.github.io/Veilborn/`
+
+### Pages Troubleshooting
+
+If you see a blank page and console errors like `GET /src/main.tsx 404`:
+
+1. Open Actions and confirm latest `Deploy Pages` workflow succeeded.
+2. Hard refresh the site (`Ctrl+Shift+R`).
+3. Re-open `https://prebenjor.github.io/Veilborn/` after deploy completes.
 
 ## M0 Folder Baseline
 
