@@ -1,19 +1,69 @@
-import type { GameState } from "../state/gameState";
+import {
+  BELIEF_PER_PROPHET_PER_SECOND,
+  INFLUENCE_BASE_CAP,
+  INFLUENCE_BASE_REGEN_PER_SECOND,
+  INFLUENCE_CAP_PER_PROPHET,
+  INFLUENCE_REGEN_PER_PROPHET_PER_SECOND,
+  type GameState
+} from "../state/gameState";
 
-const TICK_SECONDS = 1;
+export function getInfluenceCap(prophets: number): number {
+  return INFLUENCE_BASE_CAP + prophets * INFLUENCE_CAP_PER_PROPHET;
+}
 
-export function worldTick(state: GameState): GameState {
-  const prophetOutput = state.prophets * 2;
-  const beliefGain = prophetOutput * TICK_SECONDS;
-  const influenceGain = Math.min(100, state.resources.influence + 1);
+function getInfluenceRegenPerSecond(prophets: number): number {
+  return INFLUENCE_BASE_REGEN_PER_SECOND + prophets * INFLUENCE_REGEN_PER_PROPHET_PER_SECOND;
+}
+
+export function advanceWorld(state: GameState, nowMs: number): GameState {
+  const elapsedSinceLastTick = nowMs - state.simulation.lastTickAt;
+  if (elapsedSinceLastTick <= 0) return state;
+
+  const totalMs = state.simulation.accumulatedMs + elapsedSinceLastTick;
+  const tickMs = state.simulation.tickMs;
+  const ticks = Math.floor(totalMs / tickMs);
+  const accumulatedMs = totalMs - ticks * tickMs;
+
+  if (ticks <= 0) {
+    return {
+      ...state,
+      simulation: {
+        ...state.simulation,
+        lastTickAt: nowMs,
+        accumulatedMs
+      },
+      meta: {
+        ...state.meta,
+        updatedAt: nowMs
+      }
+    };
+  }
+
+  const simulatedMs = ticks * tickMs;
+  const simulatedSeconds = simulatedMs / 1000;
+  const prophets = state.prophets;
+
+  const beliefGain = prophets * BELIEF_PER_PROPHET_PER_SECOND * simulatedSeconds;
+  const influenceCap = getInfluenceCap(prophets);
+  const influenceGain = getInfluenceRegenPerSecond(prophets) * simulatedSeconds;
 
   return {
     ...state,
     resources: {
       ...state.resources,
       belief: state.resources.belief + beliefGain,
-      influence: influenceGain
+      influence: Math.min(influenceCap, state.resources.influence + influenceGain)
+    },
+    simulation: {
+      ...state.simulation,
+      lastTickAt: nowMs,
+      accumulatedMs,
+      totalTicks: state.simulation.totalTicks + ticks,
+      totalElapsedMs: state.simulation.totalElapsedMs + simulatedMs
+    },
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
     }
   };
 }
-

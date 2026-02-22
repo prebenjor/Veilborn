@@ -32,7 +32,7 @@
     {
       "id": "M1",
       "title": "Core Tick Engine and Save Model",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M0"],
       "deliverables": [
         "Deterministic tick loop",

@@ -1,10 +1,11 @@
 interface WhisperPanelProps {
   influence: number;
+  cost: number;
   onWhisper: () => void;
 }
 
-export function WhisperPanel({ influence, onWhisper }: WhisperPanelProps) {
-  const disabled = influence < 10;
+export function WhisperPanel({ influence, cost, onWhisper }: WhisperPanelProps) {
+  const disabled = influence < cost;
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -18,9 +19,8 @@ export function WhisperPanel({ influence, onWhisper }: WhisperPanelProps) {
         onClick={onWhisper}
         className="mt-4 rounded-xl border border-ember/60 px-3 py-2 text-sm text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
       >
-        Whisper (10 Influence)
+        Whisper ({cost} Influence)
       </button>
     </section>
   );
 }
-
