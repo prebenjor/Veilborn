@@ -1,200 +1,250 @@
 {
   "project": "Veilborn",
+  "manifesto_revision": "B",
   "canonical_source": "MANIFESTO.md",
   "branch": "main",
+  "execution_protocol": [
+    "Select earliest incomplete milestone with dependencies complete",
+    "Implement only that milestone scope unless blocked",
+    "Run milestone validation checks",
+    "Commit with M# prefix and push to origin/main",
+    "Update milestone status in this file"
+  ],
   "milestones": [
     {
       "id": "M0",
-      "title": "Project Foundation",
+      "title": "Foundation and Deployment",
       "status": "pending",
       "dependencies": [],
       "deliverables": [
         "React + TypeScript scaffold",
-        "Tailwind + Framer Motion setup",
+        "Tailwind + Framer Motion integration",
         "Core folder structure",
-        "README with dev instructions",
-        "GitHub Pages workflow"
+        "GitHub Pages workflow",
+        "README dev/deploy instructions"
       ],
       "validation": [
         "npm run dev",
-        "npm run build"
+        "npm run build",
+        "Pages deploy succeeds from main"
       ]
     },
     {
       "id": "M1",
-      "title": "Core Simulation Loop (Whispers)",
+      "title": "Core Tick Engine and Save Model",
       "status": "pending",
       "dependencies": ["M0"],
       "deliverables": [
-        "Tick loop and world state",
-        "Influence and belief resources",
-        "First mortal and prophet conversion",
-        "localStorage save/load"
+        "Deterministic tick loop",
+        "State model for core resources/entities",
+        "localStorage persistence",
+        "Versioned save schema"
       ],
       "validation": [
-        "Can create first prophet",
-        "Belief grows passively",
-        "Reload restores state"
+        "Reload restores run state exactly",
+        "30+ minute run stability"
       ]
     },
     {
       "id": "M2",
-      "title": "Domains and Veil Probability",
+      "title": "Resource and Formula Layer",
       "status": "pending",
       "dependencies": ["M1"],
       "deliverables": [
-        "Domain model",
-        "Domain investment UI",
-        "Probability resolver weighted by domains"
+        "Uncapped Belief generation formula stack",
+        "Faith decay and floor behavior",
+        "Influence cap/regen/cost formulas",
+        "Prophet threshold and cult cost scaling",
+        "Domain XP and investment formulas"
       ],
       "validation": [
-        "Different domain allocations change outcome distributions"
+        "Runtime formula outputs match manifesto constants",
+        "No global softcap logic present"
       ]
     },
     {
       "id": "M3",
-      "title": "Doctrine Systems",
+      "title": "Whispers Loop (Era I)",
       "status": "pending",
       "dependencies": ["M2"],
       "deliverables": [
-        "Followers and cult formation",
-        "Acts system",
-        "Domain synergy multipliers",
-        "Rival cult generation"
+        "Whisper and recruit actions",
+        "Prophet conversion",
+        "Active event cadence hooks",
+        "Era I gate checks"
       ],
       "validation": [
-        "Player cult can execute acts",
-        "Rival cult appears from simulation"
+        "Active play reaches Era II gate conditions",
+        "Decision cadence remains 30-60 seconds"
       ]
     },
     {
       "id": "M4",
-      "title": "UI as Veil Progression",
+      "title": "Doctrine Loop (Era II)",
       "status": "pending",
-      "dependencies": ["M2"],
+      "dependencies": ["M3"],
       "deliverables": [
-        "Veil thickness variable",
-        "Progressive label/tooltip reveals",
-        "In-universe omen event log"
+        "Cult formation and growth",
+        "Act system and returns",
+        "Rival systems",
+        "Era II gate checks"
       ],
       "validation": [
-        "UI legibility unlocks as progression advances"
+        "Cults and rivals create strategic tension",
+        "Era II to III gate is multi-system"
       ]
     },
     {
       "id": "M5",
-      "title": "Miracles and Unraveling",
+      "title": "Veil, Miracles, and Civilization Pressure (Era III)",
       "status": "pending",
-      "dependencies": ["M3", "M4"],
+      "dependencies": ["M4"],
       "deliverables": [
-        "Miracle events",
-        "World stability system",
-        "Unraveling trigger"
+        "Veil bonus/regen/erosion/collapse",
+        "Miracle tiers and returns",
+        "Civilization health/collapse/rebuild",
+        "Unraveling gate checks"
       ],
       "validation": [
-        "Miracles produce high-impact outcomes",
-        "Overuse destabilizes world",
-        "Unraveling reachable"
+        "Veil 30-55 yields high-risk/high-reward play",
+        "Miracle spam self-limits via civ stability",
+        "Unraveling reachable through intended path"
       ]
     },
     {
       "id": "M6",
-      "title": "Ascension 1 (Echoes)",
+      "title": "Offline Progression Engine",
       "status": "pending",
       "dependencies": ["M5"],
       "deliverables": [
-        "Ascension reset pipeline",
-        "Echo currency persistence",
-        "New run world variance"
+        "8h capped offline simulation",
+        "85% offline Belief efficiency",
+        "Offline rules for Influence/Veil/Rivals/Faith",
+        "Return summary (lore + deltas)"
       ],
       "validation": [
-        "Second run starts faster with retained progression"
+        "No offline collapse",
+        "Offline Veil floor enforced at 15",
+        "Return state is coherent and playable"
       ]
     },
     {
       "id": "M7",
-      "title": "Social Memory and Lineages",
+      "title": "Ascension and Echo Trees",
       "status": "pending",
       "dependencies": ["M6"],
       "deliverables": [
-        "Trait inheritance",
-        "Social debt markers",
-        "Conversion modifiers from memory"
+        "Ascension reset pipeline",
+        "Echo gain formula (divisor 150000)",
+        "Fibonacci-cost Echo trees",
+        "Early bottleneck-fix upgrades"
       ],
       "validation": [
-        "Past betrayals affect future populations"
+        "Run 2 is structurally distinct",
+        "Echo builds create viable strategic variance"
       ]
     },
     {
       "id": "M8",
-      "title": "Pantheon Layer",
+      "title": "Social Memory and Lineages",
       "status": "pending",
-      "dependencies": ["M6"],
+      "dependencies": ["M7"],
       "deliverables": [
-        "Alliance and betrayal systems",
-        "Belief sharing",
-        "Domain poisoning persistence"
+        "Trait inheritance",
+        "Trust debt and skepticism modifiers",
+        "Historical markers in event outcomes"
       ],
       "validation": [
-        "Alliance vs betrayal has clear long-term tradeoffs"
+        "Prior-run decisions alter future conversion dynamics"
       ]
     },
     {
       "id": "M9",
-      "title": "Audio as Mechanic",
+      "title": "Pantheon Layer (Run 2+)",
       "status": "pending",
-      "dependencies": ["M4", "M5"],
+      "dependencies": ["M7"],
       "deliverables": [
-        "Tone.js integration",
-        "Domain instrument layers",
-        "Instability detune/dropout behavior"
+        "Pantheon entities",
+        "Alliance/betrayal mechanics",
+        "Domain poisoning persistence",
+        "Name letter betrayal hook"
       ],
       "validation": [
-        "Players can hear instability before visual collapse"
+        "Alliance and betrayal are both viable with distinct tradeoffs"
       ]
     },
     {
       "id": "M10",
-      "title": "Ghost Echoes",
+      "title": "UI as Veil and Omen Log",
       "status": "pending",
-      "dependencies": ["M8"],
+      "dependencies": ["M3"],
       "deliverables": [
-        "Run signature import/export",
-        "Anomaly injector",
-        "Offline-safe fallback"
+        "Progressive UI legibility system",
+        "Veil-driven disclosure rules",
+        "In-universe omen log baseline"
       ],
       "validation": [
-        "Imported signatures alter world state predictably"
+        "Readability progression is mechanically visible",
+        "Event feed avoids sterile system text"
       ]
     },
     {
       "id": "M11",
-      "title": "Architecture Layer and Endgame",
+      "title": "Audio as System Feedback",
       "status": "pending",
-      "dependencies": ["M8", "M10"],
+      "dependencies": ["M5"],
       "deliverables": [
-        "Meta-rule editor",
-        "Name-letter milestones",
-        "Secret ending choice flow"
+        "Tone.js domain layers",
+        "Instability detune/dropout",
+        "Mute and fallback controls"
       ],
       "validation": [
-        "Remembrance path completable",
-        "Final choice intentionally ambiguous"
+        "Players hear destabilization before major visual consequences"
       ]
     },
     {
       "id": "M12",
-      "title": "Balance and Content Expansion",
+      "title": "Ghost Echoes and Async Signatures",
       "status": "pending",
-      "dependencies": ["M11"],
+      "dependencies": ["M9"],
       "deliverables": [
-        "Pacing and economy tuning",
-        "20-40 minute session milestone cadence checks",
-        "Expanded prose/content packs",
-        "Regression tests"
+        "Run signature format",
+        "Import/export workflow",
+        "Anomaly injection and fallback behavior"
       ],
       "validation": [
-        "Playtests align with manifesto target playtimes"
+        "Imported signatures produce recognizable world fingerprints",
+        "Core game complete without signature data"
+      ]
+    },
+    {
+      "id": "M13",
+      "title": "Architecture Layer and Remembrance Endgame",
+      "status": "pending",
+      "dependencies": ["M9", "M12"],
+      "deliverables": [
+        "Meta-rule editing layer",
+        "All name letter conditions and tracking",
+        "Secret final choice flow"
+      ],
+      "validation": [
+        "Remembrance path completable",
+        "Final choice remains intentionally ambiguous"
+      ]
+    },
+    {
+      "id": "M14",
+      "title": "Balance and Runtime Targets",
+      "status": "pending",
+      "dependencies": ["M13"],
+      "deliverables": [
+        "Timing and economy tuning for Revision B targets",
+        "Decision and milestone cadence instrumentation",
+        "Regression tests for formulas and offline sim"
+      ],
+      "validation": [
+        "Run timing approximates 6.5h, 4h, 2.5h, 1.2h, 45m floor",
+        "No high-severity simulation regressions"
       ]
     }
   ]

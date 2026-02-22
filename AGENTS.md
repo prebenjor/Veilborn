@@ -1,6 +1,7 @@
 # Veilborn Working Rules
 
 Before planning or implementing any feature, read `MANIFESTO.md`.
+Active manifesto mode is Revision B (uncapped Belief + offline progression).
 
 ## Priority Order
 

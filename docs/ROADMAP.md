@@ -1,216 +1,240 @@
-# Veilborn Roadmap
+# Veilborn Roadmap (Revision B)
 
-Canonical source: `MANIFESTO.md`
+Canonical source: `MANIFESTO.md` (System Manifesto, Revision B).
 
-This roadmap converts the manifesto into implementation milestones with explicit done criteria.
+This roadmap is ordered for autonomous implementation.
+When a milestone is complete, update `docs/roadmap.json`, commit, and push to `origin/main`.
 
-## Execution Protocol (Agent)
+## Execution Protocol
 
-1. Always pick the earliest incomplete milestone whose dependencies are complete.
-2. Implement only tasks in that milestone unless blocked.
-3. Run milestone validation checks.
-4. Commit with `M#:` prefix and push to `origin/main`.
-5. Mark milestone status update in `docs/roadmap.json`.
+1. Select the earliest incomplete milestone whose dependencies are complete.
+2. Build only milestone scope unless blocked by a hard dependency.
+3. Validate against milestone done criteria.
+4. Commit with message prefix `M#:` and push to `origin/main`.
+5. Update milestone status in `docs/roadmap.json`.
 
 ## Milestones
 
-## M0 - Project Foundation
+## M0 - Foundation and Deployment
 
-Objective: Create runnable React baseline and enforce manifesto-first workflow.
+Objective: Initialize production-ready browser project and deployment pipeline.
 
 Deliverables:
-- React + TypeScript app scaffold.
-- Tailwind + Framer Motion wiring.
-- Core folder structure:
+- React + TypeScript scaffold.
+- Tailwind + Framer Motion integration.
+- Core folders:
   - `src/core/engine`
   - `src/core/state`
   - `src/core/content`
   - `src/ui`
-- `README.md` with local dev instructions.
-- GitHub Pages workflow file.
+- GitHub Pages workflow.
+- `README.md` with local and deploy instructions.
 
 Definition of Done:
-- `npm run dev` starts locally.
-- `npm run build` produces `dist`.
-- Pages workflow exists and is valid YAML.
+- `npm run dev` works locally.
+- `npm run build` produces deployable output.
+- Pages deploy from `main` succeeds.
 
-## M1 - Core Simulation Loop (Whispers)
+## M1 - Core Tick Engine and Save Model
 
-Objective: First playable loop with one mortal, influence spend, and belief generation.
+Objective: Establish deterministic simulation loop and persistent run state.
 
 Deliverables:
-- Tick-based world engine (`worldTick`).
-- Core resources: `influence`, `belief`, `time`.
-- First mortal entity with trait seed.
-- Prophet conversion action with probabilistic outcome.
-- Passive belief generation from prophet.
-- Save/load in `localStorage`.
+- Tick loop with deterministic step interval.
+- State model for Belief, Influence, Veil, Followers, Prophets, Domains.
+- Save/load via `localStorage`.
+- Versioned save schema and migration hook.
 
 Definition of Done:
-- Player can start from zero and create first prophet.
-- Belief increases passively after prophet conversion.
-- Save/load reproduces world state after reload.
+- Reload restores run state exactly.
+- Engine runs continuously without memory leak over 30+ minutes.
 
-## M2 - Domains + Veil Probability Layer
+## M2 - Resource and Formula Layer
 
-Objective: Make outcomes shaped by domains rather than direct deterministic commands.
+Objective: Implement active numerical model from manifesto.
 
 Deliverables:
-- Domain model (`Fire`, `Death`, `Harvest`, `Storm`, extensible).
-- Domain investment UI and state.
-- Veil probability resolver where domain weights alter outcome tables.
-- Event schema for nudges and outcomes.
+- Belief generation stack (uncapped).
+- Faith decay with Echo floor behavior.
+- Influence cap/regen and action costs.
+- Prophet threshold scaling and cult cost scaling.
+- Domain XP/level/investment formulas.
 
 Definition of Done:
-- Same nudge produces different distributions with different domain allocations.
-- Outcome preview remains partial (probabilistic, not deterministic).
+- Runtime values match manifesto formulas within floating-point tolerance.
+- No global Belief softcap logic exists in runtime.
 
-## M3 - Doctrine Systems (Followers, Cults, Acts)
+## M3 - Whispers Loop (Era I)
 
-Objective: Expand into mid-game structure and synergies.
+Objective: First fully playable era with active engagement cadence.
 
 Deliverables:
-- Followers generated from prophet activity.
-- Cult formation rules.
-- Act system (`shrine`, `ritual`, `proselytize`).
-- Domain synergy multipliers for act results.
-- Rival cult generator from world pressure.
+- Whisper and recruit actions.
+- Prophet conversion pipeline.
+- Event cadence hooks to prevent passive dead zones.
+- Era I gate checks.
 
 Definition of Done:
-- At least one player cult can form and execute acts.
-- Rival cult can appear without direct player creation.
-- Belief economy changes based on synergy choices.
+- Player can reliably reach 3 prophets and domain level 3 through active play.
+- Decisions occur at least every 30-60 seconds during active session.
 
-## M4 - UI-As-Veil Progression
+## M4 - Doctrine Loop (Era II)
 
-Objective: Interface legibility is a progression mechanic.
+Objective: Cult and act gameplay with domain synergies and rivals.
 
 Deliverables:
-- Veil thickness state variable tied to progression.
-- Progressive reveal rules for labels/tooltips/panels.
-- Early-game cryptic UI mode and mid-game readable mode.
-- Omen-style event log renderer (in-universe prose only).
+- Cult formation and growth.
+- Act execution with return formula and floor logic.
+- Rival spawn/drain/suppress lifecycle.
+- Era II gate checks.
 
 Definition of Done:
-- New run starts partially opaque.
-- UI elements unlock legibility over time.
-- Event log avoids sterile system phrasing.
+- Cults and rivals coexist with measurable strategic tradeoffs.
+- Era II -> III gate requires mixed-system mastery (not single-stat rush).
 
-## M5 - Miracles + Stability + Unraveling
+## M5 - Veil, Miracles, and Civilization Pressure (Era III)
 
-Objective: Late-game power with collapse pressure and ascension trigger.
+Objective: High-risk optimization layer and end-of-run tension.
 
 Deliverables:
-- Miracle system with high-impact world events.
-- World stability meter and collapse effects.
-- Civilization collapse consequences (follower loss/reset pressure).
-- Unraveling trigger and ascension handoff.
+- Veil bonus, regen, erosion, and collapse rules.
+- Miracle tiers with civ damage and civ-stability-adjusted returns.
+- Civilization health, collapse, and rebuild systems.
+- Unraveling gate checks.
 
 Definition of Done:
-- Miracles can swing belief significantly.
-- Overuse creates measurable destabilization.
-- Unraveling can be reached in a full run.
+- Veil 30-55 is demonstrably strong but risky.
+- Miracle spam self-limits via civ stability degradation.
+- Unraveling is reachable but not trivial to rush.
 
-## M6 - Ascension 1 (Echoes)
+## M6 - Offline Progression Engine
 
-Objective: First prestige loop with permanent progression.
+Objective: Simulate bounded offline time without removing active-play advantage.
+
+Deliverables:
+- Offline delta simulation with 8h cap and 85% Belief efficiency.
+- Offline rules:
+  - Influence resets to 50% max.
+  - Faith decay applies.
+  - Rival drain at 50%.
+  - No rival spawns.
+  - No miracle/collapse processing.
+  - Veil floor clamp at 15.
+- Return summary renderer (lore + numeric deltas).
+
+Definition of Done:
+- 8h offline return yields coherent, playable state.
+- No offline collapse can occur.
+- Return summary communicates both narrative and numbers.
+
+## M7 - Ascension and Echo Trees
+
+Objective: Prestige loop with meaningful run-to-run transformation.
 
 Deliverables:
 - Ascension reset pipeline.
-- Echo currency and persistent upgrades.
-- New world seed per run with varied cultures.
-- Ghost-layer memory bonus hook.
+- Echo gain calculation using Revision B divisor (150000).
+- Echo trees and Fibonacci rank costs.
+- Early bottleneck-fix upgrades (start_inf, prophet_threshold, faith_floor, etc.).
 
 Definition of Done:
-- Complete run -> ascend -> new run starts with retained Echo progression.
-- Early game compresses in run 2.
+- Run 2 feels structurally different, not just numerically faster.
+- Echo spending decisions create distinct build paths.
 
-## M7 - Social Memory + Lineages
+## M8 - Social Memory and Lineages
 
-Objective: World remembers prior actions through inherited traits and social debt.
+Objective: Persistent consequence across generations and runs.
 
 Deliverables:
-- Trait inheritance across generations.
-- Social memory markers (betrayal skepticism, trust debt, resilience).
-- Conversion and act modifiers linked to memory markers.
+- Mortal trait inheritance.
+- Betrayal skepticism and trust-debt modifiers.
+- Historical markers surfaced in events and conversion outcomes.
 
 Definition of Done:
-- Descendant populations reflect lineage traits.
-- Prior betrayals measurably alter later conversion dynamics.
+- Prior decisions measurably alter future generation behavior.
+- World state feels historical, not stateless.
 
-## M8 - Pantheon Layer (Ascension 2)
+## M9 - Pantheon Layer (Run 2+)
 
-Objective: Introduce alliance/betrayal among gods with lasting consequences.
+Objective: Alliance and betrayal systems with long-horizon consequences.
 
 Deliverables:
-- Forgotten gods roster generation.
-- Alliance and betrayal actions.
-- Belief sharing model.
-- Domain poisoning model for betrayal aftermath.
+- Pantheon entity generation.
+- Alliance/betrayal mechanics.
+- Domain poisoning and persistence windows.
+- Name letter condition hook for betrayal.
 
 Definition of Done:
-- Alliance and betrayal produce distinct short/long-term tradeoffs.
-- Betrayal legacy persists across runs.
+- Betrayal has clear short-term gain and long-term cost.
+- Alliance path remains competitively viable.
 
-## M9 - Audio System (Belief Frequency)
+## M10 - UI as Veil + Omen Log
 
-Objective: Make sound a predictive gameplay channel.
+Objective: Make readability and revelation part of progression.
 
 Deliverables:
-- Tone.js integration layer.
-- Domain-to-instrument mapping.
-- Instability-driven detune/dropout behavior.
-- Mute and performance-safe fallback.
+- Veil-driven progressive disclosure of labels/tooltips.
+- Early opacity and mid-game legibility transitions.
+- In-universe prose event log baseline.
 
 Definition of Done:
-- Domain choices audibly alter layered score.
-- Destabilization is audible before obvious visual collapse.
+- New players can infer systems before full UI clarity unlocks.
+- Log entries are lore-forward, not spreadsheet text.
 
-## M10 - Ghost Echoes (Other Players, Async)
+## M11 - Audio as System Feedback
 
-Objective: Opt-in anomalous influence from other players' run signatures.
+Objective: Convert domain and stability state into audible signal.
 
 Deliverables:
-- Run signature export/import format.
-- Local ghost cache and deterministic application rules.
-- World anomaly injector based on imported signatures.
-- Offline-safe behavior when no signatures exist.
+- Tone.js layer mapping domains to instruments.
+- Instability detune/dropout behavior.
+- Performance-safe fallbacks and mute controls.
 
 Definition of Done:
-- Imported signatures alter world behavior in identifiable ways.
-- Core game remains fully playable without ghost data.
+- Players can hear destabilization before major visual consequences.
 
-## M11 - Architecture Layer (Ascension 3) + Endgame
+## M12 - Ghost Echoes and Async Signatures
 
-Objective: Meta-rule editing and final remembrance arc.
+Objective: Import optional other-player fingerprints without hard multiplayer.
 
 Deliverables:
-- Rule-mutation layer (belief formation, civ growth, domain semantics).
-- Name-letter milestone system.
-- Secret final choice implementation without explicit confirmation UI.
-- Ending branches:
-  - remember and break seal
-  - forget again and preserve seal
+- Signature export/import format.
+- Anomaly injection rules.
+- Offline-safe fallback when signatures are absent.
 
 Definition of Done:
-- Player can finish remembrance path.
-- Final decision is mechanically real and intentionally ambiguous in presentation.
+- Imported signatures produce recognizable world variation.
+- Core loop remains complete without ghost data.
 
-## M12 - Balance, Tuning, and Content Expansion
+## M13 - Architecture Layer, Remembrance, and Final Choice
 
-Objective: Hit pacing targets and session cadence.
+Objective: Endgame meta-rules and ambiguous terminal resolution.
 
 Deliverables:
-- Economy tuning passes to target:
-  - Run 1: 6-10h
-  - Runs 2-3: 3-5h
-  - Runs 4+: 1-3h
-  - Emotional core around 25h
-- 20-40 minute milestone cadence instrumentation.
-- Expanded omen prose packs and name generation dictionaries.
-- Regression test suite for simulation determinism boundaries.
+- Rule-editing layer for belief formation/civ growth/domain semantics.
+- All Name Letter conditions and tracking.
+- Secret final choice presentation (no explicit confirmation UX).
 
 Definition of Done:
-- Playtest data supports target durations.
-- Most sessions produce at least one meaningful milestone in <= 40 minutes.
-- No critical simulation regressions in test suite.
+- Remembrance path completable.
+- Final choice is mechanically real and intentionally ambiguous.
+
+## M14 - Balance and Runtime Targets
+
+Objective: Hit cadence and compression targets from Revision B.
+
+Deliverables:
+- Economy tuning against run targets:
+  - Run 1: ~6.5h
+  - Run 2: ~4.0h
+  - Run 3: ~2.5h
+  - Run 5: ~1.2h
+  - Run 8+: ~45m floor
+- 30-60 second active decision cadence checks.
+- 20-40 minute milestone cadence checks.
+- Regression tests for core formulas and offline simulation.
+
+Definition of Done:
+- Playtest data aligns with timing targets.
+- Compression floor (~45m) is preserved.
+- No high-severity simulation regressions.
