@@ -34,10 +34,21 @@ This repo deploys with GitHub Actions.
 3. Push to `main`.
 
 Workflow file: `.github/workflows/deploy-pages.yml`
+CI safety workflow: `.github/workflows/ci.yml`
 
 Project page URL:
 
 - `https://prebenjor.github.io/Veilborn/`
+
+### Continuous Testing Flow
+
+- All milestone commits are pushed to `main`.
+- Every push to `main` triggers:
+  - CI build validation (`CI` workflow).
+  - Pages deployment (`Deploy Pages` workflow).
+- Build creates `dist/404.html` automatically for SPA-safe refreshes on Pages.
+- After each push, test the live page at:
+  - `https://prebenjor.github.io/Veilborn/`
 
 ## M0 Folder Baseline
 
@@ -45,4 +56,3 @@ Project page URL:
 - `src/core/state`
 - `src/core/content`
 - `src/ui`
-
