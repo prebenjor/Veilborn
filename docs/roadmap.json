@@ -14,7 +14,7 @@
     {
       "id": "M0",
       "title": "Foundation and Deployment",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [],
       "deliverables": [
         "React + TypeScript scaffold",
