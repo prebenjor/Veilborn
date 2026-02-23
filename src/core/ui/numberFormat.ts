@@ -27,16 +27,11 @@ export function formatSignedResource(value: number, maximumFractionDigits = 1): 
 export function formatRate(value: number): string {
   if (!Number.isFinite(value)) return "0";
   const absolute = Math.abs(value);
-  if (absolute >= 1) {
-    return Intl.NumberFormat("en-US", {
-      notation: absolute >= 10000 ? "compact" : "standard",
-      compactDisplay: "short",
-      maximumSignificantDigits: 3,
-      minimumSignificantDigits: 2
-    }).format(value);
-  }
-
+  if (absolute === 0) return "0";
   return Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 3
+    notation: absolute >= 10000 ? "compact" : "standard",
+    compactDisplay: "short",
+    maximumSignificantDigits: 3,
+    minimumSignificantDigits: 2
   }).format(value);
 }
