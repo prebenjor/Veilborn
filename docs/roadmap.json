@@ -33,7 +33,9 @@
       "id": "M1",
       "title": "Core Tick Engine and Save Model",
       "status": "completed",
-      "dependencies": ["M0"],
+      "dependencies": [
+        "M0"
+      ],
       "deliverables": [
         "Deterministic tick loop",
         "State model for core resources/entities",
@@ -49,7 +51,9 @@
       "id": "M2",
       "title": "Resource and Formula Layer",
       "status": "completed",
-      "dependencies": ["M1"],
+      "dependencies": [
+        "M1"
+      ],
       "deliverables": [
         "Uncapped Belief generation formula stack",
         "Faith decay and floor behavior",
@@ -66,7 +70,9 @@
       "id": "M3",
       "title": "Whispers Loop (Era I)",
       "status": "completed",
-      "dependencies": ["M2"],
+      "dependencies": [
+        "M2"
+      ],
       "deliverables": [
         "Whisper and recruit actions",
         "Prophet conversion",
@@ -82,7 +88,9 @@
       "id": "M4",
       "title": "Doctrine Loop (Era II)",
       "status": "completed",
-      "dependencies": ["M3"],
+      "dependencies": [
+        "M3"
+      ],
       "deliverables": [
         "Cult formation and growth",
         "Act system and returns",
@@ -98,7 +106,9 @@
       "id": "M5",
       "title": "Veil, Miracles, and Civilization Pressure (Era III)",
       "status": "completed",
-      "dependencies": ["M4"],
+      "dependencies": [
+        "M4"
+      ],
       "deliverables": [
         "Veil bonus/regen/erosion/collapse",
         "Miracle tiers and returns",
@@ -115,7 +125,9 @@
       "id": "M6",
       "title": "Offline Progression Engine",
       "status": "completed",
-      "dependencies": ["M5"],
+      "dependencies": [
+        "M5"
+      ],
       "deliverables": [
         "8h capped offline simulation",
         "85% offline Belief efficiency",
@@ -132,7 +144,9 @@
       "id": "M7",
       "title": "Ascension and Echo Trees",
       "status": "completed",
-      "dependencies": ["M6"],
+      "dependencies": [
+        "M6"
+      ],
       "deliverables": [
         "Ascension reset pipeline",
         "Echo gain formula (divisor 150000)",
@@ -148,7 +162,9 @@
       "id": "M8",
       "title": "Social Memory and Lineages",
       "status": "completed",
-      "dependencies": ["M7"],
+      "dependencies": [
+        "M7"
+      ],
       "deliverables": [
         "Trait inheritance",
         "Trust debt and skepticism modifiers",
@@ -162,7 +178,9 @@
       "id": "M9",
       "title": "Pantheon Layer (Run 2+)",
       "status": "completed",
-      "dependencies": ["M7"],
+      "dependencies": [
+        "M7"
+      ],
       "deliverables": [
         "Pantheon entities",
         "Alliance/betrayal mechanics",
@@ -177,7 +195,9 @@
       "id": "M10",
       "title": "UI as Veil and Omen Log",
       "status": "completed",
-      "dependencies": ["M3"],
+      "dependencies": [
+        "M3"
+      ],
       "deliverables": [
         "Progressive UI legibility system",
         "Veil-driven disclosure rules",
@@ -192,7 +212,9 @@
       "id": "M11",
       "title": "Audio as System Feedback",
       "status": "pending",
-      "dependencies": ["M5"],
+      "dependencies": [
+        "M5"
+      ],
       "deliverables": [
         "Tone.js domain layers",
         "Instability detune/dropout",
@@ -206,7 +228,9 @@
       "id": "M12",
       "title": "Ghost Echoes and Async Signatures",
       "status": "pending",
-      "dependencies": ["M9"],
+      "dependencies": [
+        "M9"
+      ],
       "deliverables": [
         "Run signature format",
         "Import/export workflow",
@@ -221,7 +245,10 @@
       "id": "M13",
       "title": "Architecture Layer and Remembrance Endgame",
       "status": "pending",
-      "dependencies": ["M9", "M12"],
+      "dependencies": [
+        "M9",
+        "M12"
+      ],
       "deliverables": [
         "Meta-rule editing layer",
         "All name letter conditions and tracking",
@@ -236,7 +263,9 @@
       "id": "M14",
       "title": "Balance and Runtime Targets",
       "status": "pending",
-      "dependencies": ["M13"],
+      "dependencies": [
+        "M13"
+      ],
       "deliverables": [
         "Timing and economy tuning for Revision B targets",
         "Decision and milestone cadence instrumentation",
@@ -245,6 +274,98 @@
       "validation": [
         "Run timing approximates 6.5h, 4h, 2.5h, 1.2h, 45m floor",
         "No high-severity simulation regressions"
+      ]
+    },
+    {
+      "id": "M15",
+      "title": "Save Integrity and Recovery",
+      "status": "pending",
+      "dependencies": [
+        "M7"
+      ],
+      "notes": "Must precede M14 balance tuning. Players must not lose runs during stress testing or normal play due to save corruption.",
+      "deliverables": [
+        "Versioned save migration pipeline for schema changes",
+        "Secondary snapshot slot: auto-saved 'last good state' before each ascension and each era transition",
+        "Manual save export to JSON file (download)",
+        "Save import with version validation and conflict warnings",
+        "Graceful corruption recovery: detect bad state, offer rollback or fresh run with explanation"
+      ],
+      "validation": [
+        "Corrupted localStorage does not crash the game",
+        "Exported save can be re-imported and continues correctly",
+        "Schema migration from prior version produces valid state",
+        "Ascension snapshot correctly reflects pre-reset state"
+      ]
+    },
+    {
+      "id": "M16",
+      "title": "Instrumentation and Playtesting Telemetry",
+      "status": "pending",
+      "dependencies": [
+        "M5"
+      ],
+      "notes": "Must precede or run parallel with M14. Balance tuning should be evidence-based. All telemetry is local-only unless opt-in is explicitly added later.",
+      "deliverables": [
+        "Structured local event log: era transitions, collapses, ascensions, rival suppression, miracle use — each with timestamp and key state snapshot",
+        "Per-run summary object written to localStorage on ascension: total time, belief earned, echo gained, peak B/s, collapse count, miracle count by tier",
+        "In-game Stats page reading and displaying run history summaries",
+        "Optional console/JSON export for manual analysis during playtesting",
+        "Hooks for M14 regression tests to read instrumentation output"
+      ],
+      "validation": [
+        "Era transition events are logged with correct timestamps",
+        "Per-run summary is written correctly on ascension",
+        "Stats page renders run history without performance impact",
+        "Log does not grow unbounded: cap at last 20 runs"
+      ]
+    },
+    {
+      "id": "M17",
+      "title": "Accessibility and Mobile Resilience",
+      "status": "pending",
+      "dependencies": [
+        "M10"
+      ],
+      "notes": "The 45-minute floor run and offline check-in model implies intermittent mobile use. This milestone ensures the game is completable on mobile without layout breakage or battery abuse.",
+      "deliverables": [
+        "Responsive layout audit: all panels usable at 375px width without horizontal scroll",
+        "Touch target sizing: all interactive elements meet 44x44px minimum",
+        "Tick rate throttling when tab is backgrounded or device signals low power",
+        "Reduced-motion support: disable Framer Motion animations when prefers-reduced-motion is set",
+        "Keyboard navigation for all primary actions (Whisper, Recruit, Invest, Act, Miracle)",
+        "Focus management when new panels unlock progressively"
+      ],
+      "validation": [
+        "Full Era I loop completable on 375px mobile viewport",
+        "No layout overflow or hidden buttons at small sizes",
+        "Background tab does not spin CPU at full tick rate",
+        "All primary actions reachable via keyboard alone",
+        "Reduced-motion mode produces no animation jank"
+      ]
+    },
+    {
+      "id": "M18",
+      "title": "New Game+ Convergence Mode",
+      "status": "pending",
+      "dependencies": [
+        "M13"
+      ],
+      "notes": "Run 8+ needs structural novelty beyond compression speed. Convergence is not a difficulty mode — it is a layered game state where prior-run echoes interact in ways that alter the run's shape. Design must not break the 45-minute floor or the ambiguous final choice.",
+      "deliverables": [
+        "Convergence flag unlocked after completing Remembrance path once",
+        "Ghost interference layer: imported or locally-generated prior-run signatures passively alter domain synergy, faith decay timing, and rival spawn patterns in the active run",
+        "Accumulated betrayal/alliance history produces Pantheon disposition modifiers that compound across Convergence runs",
+        "Convergence-only omen log entries that reference prior-run events by name",
+        "Convergence does not alter core formulas or gate conditions — pressure is narrative and systemic, not numerical inflation",
+        "Optional: Convergence run summary screen showing which ghost echoes were active and their observed effects"
+      ],
+      "validation": [
+        "Convergence run is structurally distinct from standard run 8+",
+        "Ghost interference is perceptible but does not guarantee win or loss",
+        "Final choice presentation remains ambiguous and unresolved",
+        "45-minute floor is preserved under Convergence conditions",
+        "Convergence does not require M12 Ghost Echoes import to function (falls back to local prior-run signatures)"
       ]
     }
   ],
@@ -324,6 +445,175 @@
         "Hide Veil/Domain aggregate metrics until relevant unlocks",
         "Introduce each metric with brief in-world explanation",
         "Keep early UI near-minimal per manifesto progression intent"
+      ]
+    },
+    {
+      "id": "PF-08",
+      "title": "Run 1 Onboarding and Tutorial Veil",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Design the first 20 minutes of run 1 as a deliberate pacing artifact, not an afterthought",
+        "Introduce Belief, Influence, and Whispers sequentially with contextual in-world cues rather than tutorial popups",
+        "First prophet conversion moment should be marked as a narrative beat, not a silent threshold",
+        "Suppress non-relevant UI panels for the first 5 minutes to reduce initial cognitive load",
+        "Ensure Era I gate is reachable without external documentation or prior knowledge"
+      ]
+    },
+    {
+      "id": "PF-09",
+      "title": "Number Legibility and Large Value Formatting",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Implement consistent suffix notation: K, M, B, T for displayed values throughout all panels",
+        "Belief/s display should show at least 2 significant figures at all scales",
+        "Avoid raw integers above 9999 anywhere in primary HUD",
+        "Echo costs and totals use same suffix system for consistency",
+        "Milestone: no player should need mental arithmetic to understand their current resource state"
+      ]
+    },
+    {
+      "id": "PF-10",
+      "title": "Faith Decay Visual Indicator",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Add a per-prophet or global decay indicator that shows the current faith_decay multiplier",
+        "Visual should pulse or shift color as decay approaches penalty threshold, not just display a raw number",
+        "Indicator must appear only after faith decay has been mechanically explained to the player (Era I, first decay event)",
+        "Tooltip on hover: show time since last event and current multiplier value",
+        "Keep indicator compact; it must not dominate the HUD"
+      ]
+    },
+    {
+      "id": "PF-11",
+      "title": "Influence Spend Nudge System",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "When Influence is within 10% of cap and no action has been taken in 45+ seconds, show a subtle ambient signal (not a notification) that spend is being lost",
+        "Signal must be in-universe: e.g., an omen log line, a visual shimmer on the Influence meter — not a UI toast or alert",
+        "Nudge is suppressed if player has no affordable actions available",
+        "Nudge frequency is capped: at most once per 90 seconds",
+        "Aligns with manifesto spend-before-cap behavior design intent"
+      ]
+    },
+    {
+      "id": "PF-12",
+      "title": "Rival Threat Legibility",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Show active rival strength as a relative threat level, not a raw number, until Era II is established",
+        "Display estimated follower drain rate alongside rival entry in the event log",
+        "Add a brief in-world description of each rival's character on first appearance (one line, not a dossier)",
+        "Suppression cost UI should show whether player can currently afford suppress vs. convert",
+        "Rival panel visibility follows era-locked disclosure rules"
+      ]
+    },
+    {
+      "id": "PF-13",
+      "title": "Collapse Recovery UX",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "When Veil collapse or civ collapse occurs, present a brief narrative moment before resuming the tick — a 2-3 second pause with an in-world omen line describing what broke",
+        "Post-collapse state should clearly show what was lost (follower count before/after, prophets lost) in the omen log",
+        "Immunity timer (if Echo upgrade owned) should be visually apparent, not hidden in stats",
+        "Recovery path (what the player should do next) should be inferrable from visible UI state without documentation",
+        "Collapse must feel consequential without feeling arbitrary or unreadable"
+      ]
+    },
+    {
+      "id": "PF-14",
+      "title": "Echo Tree Visual Clarity",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Echo tree nodes should show current rank, max rank, and cost-to-next in a single compact view",
+        "Purchased nodes visually distinct from affordable/locked/unavailable states",
+        "Fibonacci cost progression should be readable at a glance — show next 2 costs, not just next 1",
+        "Group Echo upgrades by mechanical theme (faith, prophet, veil, era gates, etc.) with unlabeled visual separation",
+        "Tree must not require scrolling to see all currently relevant options"
+      ]
+    },
+    {
+      "id": "PF-15",
+      "title": "Act System Result Clarity",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Show projected belief_gained before committing to an act, using current B/s and act_duration",
+        "Post-act result displayed in omen log with narrative framing, not raw formula output",
+        "Domain match bonus should be visibly reflected in the projection (e.g., 'resonant domain' indicator)",
+        "act_floor echo upgrade effect should be visible when active",
+        "Acts with low projected return should not be hidden, but de-emphasized in ordering"
+      ]
+    },
+    {
+      "id": "PF-16",
+      "title": "Offline Return Narrative Polish",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Offline return summary should lead with a single evocative in-world sentence before showing deltas",
+        "Deltas presented in order of narrative weight: followers, prophets, veil change, belief gained",
+        "Avoid showing raw seconds elapsed; use human-readable duration (e.g., '3 hours, 14 minutes')",
+        "If faith decay dropped significantly offline, surface that prominently as a priority action for return",
+        "Summary screen should be dismissible with one tap/click and not reappear until next offline session"
+      ]
+    },
+    {
+      "id": "PF-17",
+      "title": "Domain Synergy Feedback",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Show active domain_synergy bonus visibly when cult output is being calculated",
+        "Matching domain pairs highlighted in domain panel (subtle, not noisy)",
+        "Tooltip or expandable section showing which pairs are matched and their synergy contribution",
+        "When a new cult is formed or a domain is invested in, briefly surface whether synergy changed",
+        "Keeps domain investment decisions feeling meaningful rather than opaque"
+      ]
+    },
+    {
+      "id": "PF-18",
+      "title": "Veil Mastery Zone Indicator",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Veil meter should visually communicate the three zones: safe (above 55), optimal (30-55), danger (below 30)",
+        "Zone coloring or texture changes, not just a number — the player should feel the zone, not calculate it",
+        "Current veil_bonus multiplier displayed as a live value next to or within the meter",
+        "Collapse threshold marked on the meter with a subtle indicator (becomes visible after first collapse or Era III unlock)",
+        "Zone indicators follow progressive reveal: safe/optimal distinction unlocks in Era II, danger zone in Era III"
+      ]
+    },
+    {
+      "id": "PF-19",
+      "title": "Pantheon Relationship State Legibility",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Each Pantheon entity shows current disposition (ally / neutral / hostile) with one-line contextual flavor",
+        "Betrayal history flagged permanently on the entity entry — in-universe language, not 'BETRAYED' label",
+        "Domain poisoning effect visible on affected domains with source attribution",
+        "Alliance benefits summarized in one line per entity, not buried in stat deltas",
+        "Pantheon panel hidden until run 2 per era-locked disclosure rules"
+      ]
+    },
+    {
+      "id": "PF-20",
+      "title": "Remembrance Conditions Tracker",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "All 8 Name Letter conditions tracked in a persistent, cross-run panel",
+        "Conditions shown as in-world fragments, not mechanical labels — e.g., 'A domain remembered beyond forgetting' not 'Domain level 10'",
+        "Completed conditions visually distinct; uncompleted ones show progress where quantifiable (e.g., 3/5 civ rebuilds)",
+        "Panel hidden until at least one condition has been completed or the player has completed run 1",
+        "Conditions that require specific runs or Pantheon actions flagged as requiring preparation, without spoiling exact mechanic"
       ]
     }
   ]

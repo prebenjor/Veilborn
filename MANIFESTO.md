@@ -366,6 +366,26 @@ Hard rule:
 - Compression should not push mastered runs below ~45 minutes.
 - If upgrades exceed this compression, apply floor-preserving constraints.
 
+## Delivery Roadmap and PF Queue
+
+Implementation governance is now formally bound to `docs/roadmap.json`.
+That file is the machine-readable execution ledger and includes:
+
+- Milestones `M0` through `M18`.
+- Post-final improvements `PF-01` through `PF-20`.
+
+Expanded roadmap commitments:
+- `M15` Save Integrity and Recovery must be completed before `M14` balance stress tuning.
+- `M16` Instrumentation and Playtesting Telemetry must be completed before or in parallel with `M14`.
+- `M17` Accessibility and Mobile Resilience is required for 375px-playable completion and low-power resilience.
+- `M18` New Game+ Convergence Mode adds run 8+ structural novelty without breaking the 45-minute floor or final-choice ambiguity.
+
+Expanded PF commitments (additions beyond `PF-01` to `PF-07`):
+- `PF-08` through `PF-20` are adopted, including onboarding veil pacing, number legibility, faith-decay indicator, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, and remembrance condition tracking.
+
+Sync rule:
+- Any change to milestone or PF definitions must update both `docs/roadmap.json` and this manifesto section in the same change.
+
 ## UI Disclosure and Legibility Progression
 
 The UI is the Veil. Information is progression and must be revealed intentionally.
