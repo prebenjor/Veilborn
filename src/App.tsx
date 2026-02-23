@@ -111,9 +111,15 @@ import {
   type MiracleTier
 } from "./core/state/gameState";
 import {
+  createSaveExportPayload,
+  getRecoverySnapshotMeta,
+  importSavePayload,
   loadGameStateWithOffline,
+  restoreRecoverySnapshot,
   saveGameState,
-  type OfflineProgressSummary
+  saveRecoverySnapshot,
+  type OfflineProgressSummary,
+  type SnapshotMeta
 } from "./core/state/persistence";
 import { CataclysmPanel } from "./ui/panels/CataclysmPanel";
 import { AscensionPanel } from "./ui/panels/AscensionPanel";
@@ -212,6 +218,14 @@ function getVeilZone(veil: number): "stable" | "optimal" | "danger" {
   return "stable";
 }
 
+function formatSnapshotLabel(snapshotMeta: SnapshotMeta | null): string | null {
+  if (!snapshotMeta) return null;
+  const reasonLabel =
+    snapshotMeta.reason === "ascension" ? "Pre-ascension snapshot" : "Pre-era transition snapshot";
+  if (snapshotMeta.savedAt <= 0) return reasonLabel;
+  return `${reasonLabel} at ${new Date(snapshotMeta.savedAt).toLocaleString()}`;
+}
+
 function renderGateChip(label: string, ready: boolean): JSX.Element {
   return (
     <span
@@ -233,6 +247,11 @@ export default function App() {
     initialLoad.offlineSummary
   );
   const [ghostImportStatus, setGhostImportStatus] = useState<string | null>(null);
+  const [saveImportStatus, setSaveImportStatus] = useState<string | null>(initialLoad.recoveryNotice);
+  const [saveImportWarnings, setSaveImportWarnings] = useState<string[]>([]);
+  const [snapshotMeta, setSnapshotMeta] = useState<SnapshotMeta | null>(() =>
+    getRecoverySnapshotMeta()
+  );
   const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
   const [transitionKind, setTransitionKind] = useState<TransitionKind | null>(null);
   const [transitionHint, setTransitionHint] = useState<string | null>(null);
@@ -622,8 +641,61 @@ export default function App() {
     setGhostImportStatus(`Imported ${formatResource(importedCount)} signatures from ${file.name}.`);
   };
 
+  const onExportSave = () => {
+    const payload = createSaveExportPayload(gameStateRef.current);
+    const stamp = new Date().toISOString().replace(/[:]/g, "-");
+    const fileName = `veilborn-save-${stamp}.json`;
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setSaveImportWarnings([]);
+    setSaveImportStatus(`Exported save to ${fileName}.`);
+  };
+
+  const onImportSave = async (file: File) => {
+    const rawText = await file.text();
+    const result = importSavePayload(rawText, gameStateRef.current, Date.now());
+
+    if (result.error || !result.state) {
+      setSaveImportWarnings(result.warnings);
+      setSaveImportStatus(result.error ?? "Save import failed.");
+      return;
+    }
+
+    setGameState(result.state);
+    saveGameState(result.state);
+    setOfflineSummary(null);
+    setSaveImportWarnings(result.warnings);
+    setSaveImportStatus(`Imported save from ${file.name}.`);
+  };
+
+  const onRestoreSnapshot = () => {
+    const result = restoreRecoverySnapshot(Date.now());
+    if (result.error || !result.state) {
+      setSaveImportWarnings(result.warnings);
+      setSaveImportStatus(result.error ?? "Snapshot restore failed.");
+      return;
+    }
+
+    setGameState(result.state);
+    saveGameState(result.state);
+    setOfflineSummary(null);
+    setSaveImportWarnings(result.warnings);
+    setSaveImportStatus("Restored from the last good snapshot.");
+    setSnapshotMeta(getRecoverySnapshotMeta());
+  };
+
   const onAscend = () => {
-    setGameState((prev) => performAscension(prev, Date.now()));
+    setGameState((prev) => {
+      if (!canAscend(prev)) return prev;
+      saveRecoverySnapshot(prev, "ascension");
+      return performAscension(prev, Date.now());
+    });
+    setSnapshotMeta(getRecoverySnapshotMeta());
   };
 
   const onFormPantheonAlliance = (allyId: string) => {
@@ -635,11 +707,21 @@ export default function App() {
   };
 
   const onAdvanceEraOne = () => {
-    setGameState((prev) => performAdvanceEraOneToTwo(prev, Date.now()));
+    setGameState((prev) => {
+      if (!canAdvanceEraOneToTwo(prev)) return prev;
+      saveRecoverySnapshot(prev, "era_transition");
+      return performAdvanceEraOneToTwo(prev, Date.now());
+    });
+    setSnapshotMeta(getRecoverySnapshotMeta());
   };
 
   const onAdvanceEraTwo = () => {
-    setGameState((prev) => performAdvanceEraTwoToThree(prev, Date.now()));
+    setGameState((prev) => {
+      if (!canAdvanceEraTwoToThree(prev)) return prev;
+      saveRecoverySnapshot(prev, "era_transition");
+      return performAdvanceEraTwoToThree(prev, Date.now());
+    });
+    setSnapshotMeta(getRecoverySnapshotMeta());
   };
 
   const doctrinePanel = era >= 2 ? (
@@ -817,12 +899,18 @@ export default function App() {
           ghostLocalCount={gameState.ghost.localSignatures.length}
           ghostImportedCount={gameState.ghost.importedSignatures.length}
           ghostImportStatus={ghostImportStatus}
+          saveImportStatus={saveImportStatus}
+          saveImportWarnings={saveImportWarnings}
+          snapshotLabel={formatSnapshotLabel(snapshotMeta)}
           ghostInfluenceTotals={ghostInfluenceTotals}
           ghostInfluences={gameState.ghost.activeInfluences}
           onPurchaseTree={onPurchaseEchoTreeRank}
           onAscend={onAscend}
           onExportGhostSignatures={onExportGhostSignatures}
           onImportGhostSignatures={onImportGhostSignatures}
+          onExportSave={onExportSave}
+          onImportSave={onImportSave}
+          onRestoreSnapshot={onRestoreSnapshot}
         />
       ) : (
         <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">

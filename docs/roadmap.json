@@ -279,7 +279,7 @@
     {
       "id": "M15",
       "title": "Save Integrity and Recovery",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [
         "M7"
       ],

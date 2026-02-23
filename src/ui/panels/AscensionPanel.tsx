@@ -27,6 +27,9 @@ interface AscensionPanelProps {
   ghostLocalCount: number;
   ghostImportedCount: number;
   ghostImportStatus: string | null;
+  saveImportStatus: string | null;
+  saveImportWarnings: string[];
+  snapshotLabel: string | null;
   ghostInfluenceTotals: {
     domainSynergyDelta: number;
     rivalSpawnDelta: number;
@@ -43,6 +46,9 @@ interface AscensionPanelProps {
   onAscend: () => void;
   onExportGhostSignatures: () => void;
   onImportGhostSignatures: (file: File) => void;
+  onExportSave: () => void;
+  onImportSave: (file: File) => void;
+  onRestoreSnapshot: () => void;
 }
 
 export function AscensionPanel({
@@ -56,14 +62,21 @@ export function AscensionPanel({
   ghostLocalCount,
   ghostImportedCount,
   ghostImportStatus,
+  saveImportStatus,
+  saveImportWarnings,
+  snapshotLabel,
   ghostInfluenceTotals,
   ghostInfluences,
   onPurchaseTree,
   onAscend,
   onExportGhostSignatures,
-  onImportGhostSignatures
+  onImportGhostSignatures,
+  onExportSave,
+  onImportSave,
+  onRestoreSnapshot
 }: AscensionPanelProps) {
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const saveImportInputRef = useRef<HTMLInputElement | null>(null);
 
   const ghostSynergyPercent = Math.round(ghostInfluenceTotals.domainSynergyDelta * 100);
   const ghostRivalPercent = Math.round(Math.abs(ghostInfluenceTotals.rivalSpawnDelta) * 100);
@@ -216,6 +229,56 @@ export function AscensionPanel({
             No ghost anomalies are active. This run is untouched by outside signatures.
           </p>
         )}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Save Archive</p>
+        <p className="mt-1 text-xs text-veil/65">
+          Export or import full run saves. Snapshot fallback stores the last pre-transition state.
+        </p>
+        {snapshotLabel ? <p className="mt-1 text-[11px] text-veil/60">Snapshot: {snapshotLabel}</p> : null}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onExportSave}
+            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
+          >
+            Export Save
+          </button>
+          <button
+            type="button"
+            onClick={() => saveImportInputRef.current?.click()}
+            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
+          >
+            Import Save
+          </button>
+          <button
+            type="button"
+            onClick={onRestoreSnapshot}
+            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
+          >
+            Restore Snapshot
+          </button>
+          <input
+            ref={saveImportInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onImportSave(file);
+              event.currentTarget.value = "";
+            }}
+          />
+        </div>
+        {saveImportStatus ? <p className="mt-2 text-xs text-veil/75">{saveImportStatus}</p> : null}
+        {saveImportWarnings.length > 0 ? (
+          <ul className="mt-2 space-y-1 text-[11px] text-ember/80">
+            {saveImportWarnings.map((warning, index) => (
+              <li key={`save-warning-${index}`}>{warning}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </section>
   );

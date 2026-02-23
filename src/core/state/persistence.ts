@@ -58,11 +58,16 @@ import {
 } from "../engine/formulas";
 
 const SAVE_KEY = "veilborn.save";
+const SNAPSHOT_KEY = "veilborn.save.snapshot";
 
 interface SaveEnvelope {
   schemaVersion: number;
   savedAt: number;
   state: unknown;
+}
+
+interface SnapshotEnvelope extends SaveEnvelope {
+  reason: "ascension" | "era_transition";
 }
 
 export interface OfflineProgressSummary {
@@ -79,6 +84,19 @@ export interface OfflineProgressSummary {
 export interface LoadGameStateResult {
   state: GameState;
   offlineSummary: OfflineProgressSummary | null;
+  recoveryNotice: string | null;
+  recoveredFromSnapshot: boolean;
+}
+
+export interface SaveImportResult {
+  state: GameState | null;
+  warnings: string[];
+  error: string | null;
+}
+
+export interface SnapshotMeta {
+  savedAt: number;
+  reason: "ascension" | "era_transition";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -819,7 +837,9 @@ function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameState
   if (rawElapsedSeconds < 1) {
     return {
       state: applyReturnAnchor(state, nowMs),
-      offlineSummary: null
+      offlineSummary: null,
+      recoveryNotice: null,
+      recoveredFromSnapshot: false
     };
   }
 
@@ -935,7 +955,9 @@ function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameState
       influenceAfter,
       faithDecayMultiplier,
       veilFloorHit
-    }
+    },
+    recoveryNotice: null,
+    recoveredFromSnapshot: false
   };
 }
 
@@ -944,6 +966,79 @@ function toSaveEnvelope(state: GameState): SaveEnvelope {
     schemaVersion: GAME_STATE_SCHEMA_VERSION,
     savedAt: Date.now(),
     state
+  };
+}
+
+function toSnapshotEnvelope(
+  state: GameState,
+  reason: "ascension" | "era_transition"
+): SnapshotEnvelope {
+  return {
+    ...toSaveEnvelope(state),
+    reason
+  };
+}
+
+function parseEnvelope(raw: string): SaveEnvelope | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) return null;
+    const schemaVersion = Math.floor(readNumber(parsed.schemaVersion, 0));
+    if (!Number.isFinite(schemaVersion) || schemaVersion <= 0) return null;
+    if (!("state" in parsed)) return null;
+    return {
+      schemaVersion,
+      savedAt: Math.max(0, readNumber(parsed.savedAt, Date.now())),
+      state: parsed.state
+    };
+  } catch {
+    return null;
+  }
+}
+
+function migrateEnvelopeState(
+  envelope: SaveEnvelope,
+  nowMs: number
+): { state: GameState | null; warning: string | null } {
+  if (envelope.schemaVersion > GAME_STATE_SCHEMA_VERSION) {
+    return {
+      state: null,
+      warning: `Save schema v${envelope.schemaVersion} is newer than supported v${GAME_STATE_SCHEMA_VERSION}.`
+    };
+  }
+
+  const migrator = MIGRATORS[envelope.schemaVersion];
+  if (!migrator) {
+    return {
+      state: null,
+      warning: `No migration path found for schema v${envelope.schemaVersion}.`
+    };
+  }
+
+  const migrated = migrator(envelope.state, nowMs);
+  const normalized: GameState = {
+    ...migrated,
+    simulation: {
+      ...migrated.simulation,
+      lastTickAt: nowMs,
+      accumulatedMs: 0
+    },
+    meta: {
+      ...migrated.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  if (envelope.schemaVersion < GAME_STATE_SCHEMA_VERSION) {
+    return {
+      state: normalized,
+      warning: `Imported schema v${envelope.schemaVersion} was migrated to v${GAME_STATE_SCHEMA_VERSION}.`
+    };
+  }
+
+  return {
+    state: normalized,
+    warning: null
   };
 }
 
@@ -957,11 +1052,154 @@ export function saveGameState(state: GameState): void {
   }
 }
 
+export function saveRecoverySnapshot(
+  state: GameState,
+  reason: "ascension" | "era_transition"
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(toSnapshotEnvelope(state, reason)));
+  } catch {
+    // Ignore snapshot write failures and keep session running.
+  }
+}
+
+export function getRecoverySnapshotMeta(): SnapshotMeta | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) return null;
+    const reason = parsed.reason === "ascension" || parsed.reason === "era_transition" ? parsed.reason : null;
+    if (!reason) return null;
+    return {
+      savedAt: Math.max(0, readNumber(parsed.savedAt, 0)),
+      reason
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function restoreRecoverySnapshot(nowMs = Date.now()): SaveImportResult {
+  if (typeof window === "undefined") {
+    return { state: createInitialGameState(nowMs), warnings: [], error: null };
+  }
+
+  try {
+    const raw = window.localStorage.getItem(SNAPSHOT_KEY);
+    if (!raw) {
+      return {
+        state: null,
+        warnings: [],
+        error: "No recovery snapshot is available."
+      };
+    }
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) {
+      return {
+        state: null,
+        warnings: [],
+        error: "Recovery snapshot is corrupted."
+      };
+    }
+
+    const reason = parsed.reason === "ascension" || parsed.reason === "era_transition" ? parsed.reason : null;
+    if (!reason) {
+      return {
+        state: null,
+        warnings: [],
+        error: "Recovery snapshot metadata is invalid."
+      };
+    }
+
+    const envelope: SaveEnvelope = {
+      schemaVersion: Math.floor(readNumber(parsed.schemaVersion, 0)),
+      savedAt: Math.max(0, readNumber(parsed.savedAt, nowMs)),
+      state: parsed.state
+    };
+
+    const migrated = migrateEnvelopeState(envelope, nowMs);
+    if (!migrated.state) {
+      return {
+        state: null,
+        warnings: migrated.warning ? [migrated.warning] : [],
+        error: "Recovery snapshot could not be migrated."
+      };
+    }
+
+    saveGameState(migrated.state);
+    return {
+      state: migrated.state,
+      warnings: migrated.warning ? [migrated.warning] : [],
+      error: null
+    };
+  } catch {
+    return {
+      state: null,
+      warnings: [],
+      error: "Recovery snapshot could not be restored."
+    };
+  }
+}
+
+export function createSaveExportPayload(state: GameState): string {
+  return JSON.stringify(toSaveEnvelope(state), null, 2);
+}
+
+export function importSavePayload(
+  rawText: string,
+  currentState: GameState,
+  nowMs = Date.now()
+): SaveImportResult {
+  const warnings: string[] = [];
+  const envelope = parseEnvelope(rawText);
+
+  if (!envelope) {
+    return {
+      state: null,
+      warnings,
+      error: "Save file is not a valid Veilborn save envelope."
+    };
+  }
+
+  const migrated = migrateEnvelopeState(envelope, nowMs);
+  if (!migrated.state) {
+    return {
+      state: null,
+      warnings: migrated.warning ? [migrated.warning] : warnings,
+      error: "Save could not be imported with this build."
+    };
+  }
+
+  const imported = migrated.state;
+  if (migrated.warning) warnings.push(migrated.warning);
+  if (imported.meta.runId === currentState.meta.runId) {
+    warnings.push("Imported save has the same run id as the current session.");
+  }
+  if (imported.meta.updatedAt < currentState.meta.updatedAt) {
+    warnings.push("Imported save appears older than your current session.");
+  }
+  if (imported.prestige.completedRuns < currentState.prestige.completedRuns) {
+    warnings.push("Imported save has fewer completed runs than your current session.");
+  }
+
+  return {
+    state: imported,
+    warnings,
+    error: null
+  };
+}
+
 export function loadGameStateWithOffline(nowMs = Date.now()): LoadGameStateResult {
   if (typeof window === "undefined") {
     return {
       state: createInitialGameState(nowMs),
-      offlineSummary: null
+      offlineSummary: null,
+      recoveryNotice: null,
+      recoveredFromSnapshot: false
     };
   }
 
@@ -971,43 +1209,51 @@ export function loadGameStateWithOffline(nowMs = Date.now()): LoadGameStateResul
   } catch {
     return {
       state: createInitialGameState(nowMs),
-      offlineSummary: null
+      offlineSummary: null,
+      recoveryNotice: "Primary save could not be read. Started a fresh cycle.",
+      recoveredFromSnapshot: false
     };
   }
 
   if (!raw) {
     return {
       state: createInitialGameState(nowMs),
-      offlineSummary: null
+      offlineSummary: null,
+      recoveryNotice: null,
+      recoveredFromSnapshot: false
     };
   }
-
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed)) {
+  const primaryEnvelope = parseEnvelope(raw);
+  if (primaryEnvelope) {
+    const migrated = migrateEnvelopeState(primaryEnvelope, nowMs);
+    if (migrated.state) {
+      const simulated = simulateOfflineProgress(migrated.state, nowMs);
       return {
-        state: createInitialGameState(nowMs),
-        offlineSummary: null
+        ...simulated,
+        recoveryNotice: migrated.warning,
+        recoveredFromSnapshot: false
       };
     }
+  }
 
-    const schemaVersion = Math.floor(readNumber(parsed.schemaVersion, 0));
-    const migrator = MIGRATORS[schemaVersion];
-    if (!migrator) {
-      return {
-        state: createInitialGameState(nowMs),
-        offlineSummary: null
-      };
-    }
-
-    const sanitized = migrator(parsed.state, nowMs);
-    return simulateOfflineProgress(sanitized, nowMs);
-  } catch {
+  const snapshotResult = restoreRecoverySnapshot(nowMs);
+  if (snapshotResult.state) {
+    const simulated = simulateOfflineProgress(snapshotResult.state, nowMs);
     return {
-      state: createInitialGameState(nowMs),
-      offlineSummary: null
+      ...simulated,
+      recoveryNotice:
+        "Primary save looked corrupted. Restored from the last good snapshot before transition.",
+      recoveredFromSnapshot: true
     };
   }
+
+  return {
+    state: createInitialGameState(nowMs),
+    offlineSummary: null,
+    recoveryNotice:
+      "Primary save and snapshot could not be recovered. A fresh cycle was started to keep playability.",
+    recoveredFromSnapshot: false
+  };
 }
 
 export function loadGameState(nowMs = Date.now()): GameState {
