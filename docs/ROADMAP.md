@@ -327,3 +327,26 @@ Definition of Done:
 - Final choice presentation remains ambiguous and unresolved.
 - 45-minute floor is preserved under Convergence conditions.
 - Convergence does not require M12 Ghost Echoes import to function; it falls back to local prior-run signatures.
+
+## M19 - Documentation and Wiki Foundation
+
+Objective: Produce and maintain a canonical implementation reference, then promote it into a public wiki structure.
+
+Notes:
+- Initial internal reference exists as `docs/GAME_REFERENCE.md`.
+- This milestone converts that baseline into stable wiki-facing documentation.
+
+Deliverables:
+- Keep `docs/GAME_REFERENCE.md` synchronized with implemented formulas and feature behavior.
+- Add a wiki page map and ownership model for ongoing updates.
+- Create first-pass wiki pages for:
+  - Core loop by era
+  - Formula compendium
+  - Prestige, pantheon, and remembrance systems
+  - Save/offline/telemetry troubleshooting
+- Add documentation validation checklist to development workflow (`AGENTS.md` + PR checklist if introduced).
+
+Definition of Done:
+- Documentation covers all currently implemented mechanics with formula-level clarity.
+- Internal reference and wiki pages are consistent and cross-linked.
+- Roadmap/manifesto/doc updates are performed together when mechanics change.

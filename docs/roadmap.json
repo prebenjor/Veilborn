@@ -367,6 +367,26 @@
         "45-minute floor is preserved under Convergence conditions",
         "Convergence does not require M12 Ghost Echoes import to function (falls back to local prior-run signatures)"
       ]
+    },
+    {
+      "id": "M19",
+      "title": "Documentation and Wiki Foundation",
+      "status": "pending",
+      "dependencies": [
+        "M14"
+      ],
+      "notes": "Convert internal implementation documentation into a stable wiki-ready knowledge base and keep it synchronized with mechanics.",
+      "deliverables": [
+        "Maintain docs/GAME_REFERENCE.md as formula-level implementation reference",
+        "Define wiki page map and ownership for ongoing updates",
+        "Publish first-pass wiki pages for era loop, formulas, prestige/pantheon/remembrance, and save/offline/telemetry troubleshooting",
+        "Add documentation sync validation to workflow guidance"
+      ],
+      "validation": [
+        "All implemented systems are documented with current formulas/constants",
+        "Internal reference and wiki pages are cross-linked and consistent",
+        "Mechanic changes are accompanied by MANIFESTO/roadmap/reference updates"
+      ]
     }
   ],
   "post_final_improvements": [

@@ -96,6 +96,15 @@ Loss events must feel consequential.
 
 `influence_regen_per_second = 1 + (0.5 * prophet_count)`
 
+Implementation-expanded regen stack:
+
+`total_influence_regen_per_second = base + shrine + cult + resonant_word`
+
+- `base = 1 + (0.5 * prophet_count)`
+- `shrine = 0.2 * shrine_count`
+- `cult = min(avg_followers_per_cult * 0.001, 2.0) * cult_count`
+- `resonant_word = +2.0` flat if Echo upgrade is owned
+
 Costs:
 - Whisper: `10 * 1.4^(whispers_today)` (resets every 4 real minutes).
 - Recruit: `25` flat.
@@ -122,7 +131,7 @@ Domain level effects:
 - `+0.25` cult synergy per matching pair.
 
 Meta-progression anchor:
-- Echo `domain_carry`: retain 20% of peak domain level into new runs.
+- Echo `domain_carry`: retained as a planned meta-progression upgrade (not yet active in current runtime).
 
 ## Cult and Act System
 
@@ -147,9 +156,25 @@ Act return:
 `act_floor = 1.0`, or `1.5` with Echo `act_floor`.
 
 Base multipliers by act type:
-- `2.5 / 4.0 / 7.0 / 1.5`
+- `2.5 / 4.0 / 7.0`
 
 Acts must reward engagement without invalidating passive systems.
+
+## Era III Follower Flow Additions (Implemented)
+
+Passive follower arrival (Era III only):
+
+`passiveFollowerRate = (0.35*cults + 0.25*shrines + 0.05*prophets) * faithDecay * (civHealth/100) * veilZoneMult`
+
+`veilZoneMult`:
+- Veil `>55`: `0.8`
+- Veil `30-55`: `1.1`
+- Veil `<30`: `1.25`
+
+Doctrine follower rites (Era III only):
+- Added high-cost rites for active follower bursts in Doctrine panel.
+- Costs scale per-rite by usage count and do not reset on short timers.
+- Rites consume both Belief and Influence and scale from cult/shrine/prophet/domain/faith/veil/civ state.
 
 ## Rival System
 
@@ -250,7 +275,7 @@ Optional multiplier:
 `final_echoes = floor(base_echoes * (1 + 0.08 * completed_runs))` if `echo_multiplier` is purchased.
 
 Echo costs (Fibonacci ranks):
-- `1, 2, 3, 5, 8, 13, 21`
+- `1, 2, 3, 5, 8` (current 5-rank tree implementation)
 
 ## Era Gates
 
@@ -353,6 +378,10 @@ Reference:
   - At 10M: -0.007/s
   - At 100M: -0.008/s
 
+Implementation note:
+- Natural Veil erosion is active.
+- Domain Hunger and Cult Fragmentation are currently tracked as balance targets for `M14` and must be resolved during that pass (implement or revise manifesto explicitly).
+
 ## Run Compression Targets
 
 Targeted median run totals:
@@ -371,7 +400,7 @@ Hard rule:
 Implementation governance is now formally bound to `docs/roadmap.json`.
 That file is the machine-readable execution ledger and includes:
 
-- Milestones `M0` through `M18`.
+- Milestones `M0` through `M19`.
 - Post-final improvements `PF-01` through `PF-20`.
 
 Expanded roadmap commitments:
@@ -379,12 +408,14 @@ Expanded roadmap commitments:
 - `M16` Instrumentation and Playtesting Telemetry must be completed before or in parallel with `M14`.
 - `M17` Accessibility and Mobile Resilience is required for 375px-playable completion and low-power resilience.
 - `M18` New Game+ Convergence Mode adds run 8+ structural novelty without breaking the 45-minute floor or final-choice ambiguity.
+- `M19` Documentation and Wiki Foundation formalizes `docs/GAME_REFERENCE.md` and future wiki publication workflow.
 
 Expanded PF commitments (additions beyond `PF-01` to `PF-07`):
 - `PF-08` through `PF-20` are adopted, including onboarding veil pacing, number legibility, faith-decay indicator, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, and remembrance condition tracking.
 
 Sync rule:
 - Any change to milestone or PF definitions must update both `docs/roadmap.json` and this manifesto section in the same change.
+- Mechanics/formula changes must update `docs/GAME_REFERENCE.md` in the same change set.
 
 ## UI Disclosure and Legibility Progression
 
