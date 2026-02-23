@@ -176,7 +176,7 @@
     {
       "id": "M10",
       "title": "UI as Veil and Omen Log",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M3"],
       "deliverables": [
         "Progressive UI legibility system",

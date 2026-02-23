@@ -53,16 +53,7 @@ export function DoctrinePanel({
   suppressCost,
   onSuppressRival
 }: DoctrinePanelProps) {
-  if (era < 2) {
-    return (
-      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Doctrine</h2>
-        <p className="mt-2 text-sm text-veil/70">
-          Era II unlocks acts, rival pressure, and doctrine-level decisions.
-        </p>
-      </section>
-    );
-  }
+  if (era < 2) return null;
 
   const slotsUsed = activeActs.length;
 

@@ -46,16 +46,7 @@ export function CataclysmPanel({
   miracleOptions,
   onCastMiracle
 }: CataclysmPanelProps) {
-  if (era < 3) {
-    return (
-      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Cataclysm</h2>
-        <p className="mt-2 text-sm text-veil/70">
-          Era III unlocks miracles, Veil collapse pressure, and civilization consequences.
-        </p>
-      </section>
-    );
-  }
+  if (era < 3) return null;
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">

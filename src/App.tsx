@@ -69,6 +69,10 @@ import {
 } from "./core/engine/formulas";
 import { advanceWorld } from "./core/engine/worldTick";
 import {
+  getUiRevealState,
+  veilMaskText
+} from "./core/engine/uiReveal";
+import {
   DOMAIN_LABELS,
   MIRACLE_TIERS,
   RIVAL_DRAIN_RATE,
@@ -202,6 +206,9 @@ export default function App() {
   const lineageConversionFactors = getLineageConversionFactors(gameState);
   const lineageTraits = getLineageTraitDistribution(gameState);
   const lineageRecentMarker = gameState.lineage.history[0]?.text ?? null;
+  const uiReveal = getUiRevealState(gameState);
+  const veilBlurPx = Math.max(0, (0.35 - uiReveal.legibility) * 3.5);
+  const secondaryOpacity = 0.55 + uiReveal.legibility * 0.45;
   const pantheonUnlocked = isPantheonUnlocked(gameState);
   const pantheonAllianceFactors = getPantheonAllianceFactors(gameState);
   const betrayedHookUnlocked = hasPantheonBetrayalHook(gameState);
@@ -224,18 +231,24 @@ export default function App() {
   const canUseAscend = canAscend(gameState);
   const eraLabel = gameState.era === 1 ? "I" : gameState.era === 2 ? "II" : "III";
 
-  const echoTreeViews = ECHO_TREE_META.map((tree) => {
-    const rank = gameState.prestige.treeRanks[tree.id];
-    const nextCost = getEchoTreeNextCost(gameState, tree.id);
-    return {
-      id: tree.id,
-      label: tree.label,
-      rank,
-      nextCost,
-      canPurchase: canPurchaseEchoTreeRank(gameState, tree.id),
-      unlockedBonuses: tree.unlocks.slice(0, rank)
-    };
-  });
+  const echoTreeViews = ECHO_TREE_META
+    .filter((tree) => {
+      if (tree.id === "whispers") return true;
+      if (tree.id === "doctrine") return gameState.era >= 2;
+      return gameState.era >= 3;
+    })
+    .map((tree) => {
+      const rank = gameState.prestige.treeRanks[tree.id];
+      const nextCost = getEchoTreeNextCost(gameState, tree.id);
+      return {
+        id: tree.id,
+        label: tree.label,
+        rank,
+        nextCost,
+        canPurchase: canPurchaseEchoTreeRank(gameState, tree.id),
+        unlockedBonuses: tree.unlocks.slice(0, rank)
+      };
+    });
 
   const actSlotCap = getActSlotCap(gameState);
   const actCosts: Record<ActType, number> = {
@@ -292,6 +305,7 @@ export default function App() {
     0,
     Math.ceil((WHISPER_WINDOW_MS - (whisperCycleElapsed % WHISPER_WINDOW_MS)) / 1000)
   );
+  const visibleOmens = gameState.omenLog.slice(0, uiReveal.omenVisibleCount);
 
   const onWhisper = () => {
     setGameState((prev) => performWhisper(prev, Date.now()));
@@ -363,57 +377,83 @@ export default function App() {
       >
         <header className="space-y-3">
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
-          <h1 className="text-2xl font-semibold text-veil md:text-4xl">Someone is listening.</h1>
-          <p className="max-w-3xl text-sm text-veil/70">
-            M8 loop active: lineages now remember what you broke and what you restored.
-          </p>
+          <h1 className="text-2xl font-semibold text-veil md:text-4xl">
+            {veilMaskText("Someone is listening.", uiReveal.legibility)}
+          </h1>
+          {uiReveal.showHeaderSubtext ? (
+            <p className="max-w-3xl text-sm text-veil/70">
+              M10 veil UI active: clarity now unfolds with power and risk.
+            </p>
+          ) : null}
         </header>
 
         {offlineSummary ? (
           <OfflineSummaryPanel summary={offlineSummary} onDismiss={() => setOfflineSummary(null)} />
         ) : null}
 
-        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4">
+        <section
+          className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4"
+          style={{ opacity: secondaryOpacity }}
+        >
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Era</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
+              {veilMaskText("Era", uiReveal.legibility)}
+            </p>
             <p className="mt-2 text-xl text-white">{eraLabel}</p>
           </article>
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Belief</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
+              {veilMaskText("Belief", uiReveal.legibility)}
+            </p>
             <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.belief)}</p>
             <p className="mt-1 text-xs text-veil/65">{formatNumber(beliefPerSecond)} / sec</p>
           </article>
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Influence</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
+              {veilMaskText("Influence", uiReveal.legibility)}
+            </p>
             <p className="mt-2 text-xl text-white">
               {formatNumber(gameState.resources.influence)} / {formatNumber(influenceCap)}
             </p>
             <p className="mt-1 text-xs text-veil/65">Whisper: {formatNumber(whisperCost)}</p>
           </article>
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Thickness</p>
-            <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.veil)}</p>
-          </article>
+          {uiReveal.showVeilHud ? (
+            <article className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Thickness</p>
+              <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.veil)}</p>
+            </article>
+          ) : null}
         </section>
 
-        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4">
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
-            <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.followers)}</p>
-          </article>
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
-            <p className="mt-2 text-xl text-white">{formatNumber(gameState.prophets)}</p>
-          </article>
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
-            <p className="mt-2 text-xl text-white">{formatNumber(gameState.cults)}</p>
-          </article>
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Domain Level Sum</p>
-            <p className="mt-2 text-xl text-white">{formatNumber(getTotalDomainLevel(gameState))}</p>
-          </article>
-        </section>
+        {uiReveal.showFollowersHud ? (
+          <section
+            className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4"
+            style={{ opacity: secondaryOpacity, filter: `blur(${veilBlurPx}px)` }}
+          >
+            <article className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
+              <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.followers)}</p>
+            </article>
+            {uiReveal.showProphetsHud ? (
+              <article className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
+                <p className="mt-2 text-xl text-white">{formatNumber(gameState.prophets)}</p>
+              </article>
+            ) : null}
+            {uiReveal.showCultsHud ? (
+              <article className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
+                <p className="mt-2 text-xl text-white">{formatNumber(gameState.cults)}</p>
+              </article>
+            ) : null}
+            {uiReveal.showDomainSumHud ? (
+              <article className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Domain Level Sum</p>
+                <p className="mt-2 text-xl text-white">{formatNumber(getTotalDomainLevel(gameState))}</p>
+              </article>
+            ) : null}
+          </section>
+        ) : null}
 
         <div className="grid gap-4 md:grid-cols-[320px_1fr]">
           <WhisperPanel
@@ -427,131 +467,147 @@ export default function App() {
             onRecruit={onRecruit}
           />
           <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-            <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Omens</h2>
+            <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">
+              {veilMaskText(uiReveal.omenTitle, uiReveal.legibility)}
+            </h2>
             <ul className="mt-3 space-y-2 text-sm text-veil/75">
-              {gameState.omenLog.slice(0, 8).map((entry) => (
+              {visibleOmens.map((entry) => (
                 <li key={entry.id}>{entry.text}</li>
               ))}
             </ul>
           </section>
         </div>
 
-        <EraGatePanel
-          era={gameState.era}
-          eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
-          eraOneBeliefTarget={eraOneGate.beliefTarget}
-          prophetsProgress={gameState.prophets}
-          prophetsTarget={eraOneGate.prophetsTarget}
-          domainProgress={getHighestDomainLevel(gameState)}
-          domainTarget={eraOneGate.domainTarget}
-          eraOneReady={canAdvanceEraOne}
-          eraTwoBeliefProgress={gameState.stats.totalBeliefEarned}
-          eraTwoBeliefTarget={eraTwoGate.beliefTarget}
-          cultsProgress={gameState.cults}
-          cultsTarget={eraTwoGate.cultsTarget}
-          rivalEventReady={eraTwoGate.rivalEventReady}
-          eraTwoReady={canAdvanceEraTwo}
-          unravelingBeliefProgress={gameState.stats.totalBeliefEarned}
-          unravelingBeliefTarget={unravelingGate.beliefTarget}
-          unravelingVeilProgress={gameState.resources.veil}
-          unravelingVeilTarget={unravelingGate.veilTarget}
-          unravelingMiraclesProgress={gameState.cataclysm.miraclesThisRun}
-          unravelingMiraclesTarget={unravelingGate.miraclesTarget}
-          unravelingRunTimeProgressSeconds={gameState.simulation.totalElapsedMs / 1000}
-          unravelingRunTimeTargetSeconds={unravelingGate.runTimeTargetSeconds}
-          unravelingReady={unravelingGate.ready}
-          onAdvanceEraOne={onAdvanceEraOne}
-          onAdvanceEraTwo={onAdvanceEraTwo}
-        />
+        {uiReveal.showEraGatePanel ? (
+          <EraGatePanel
+            era={gameState.era}
+            eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
+            eraOneBeliefTarget={eraOneGate.beliefTarget}
+            prophetsProgress={gameState.prophets}
+            prophetsTarget={eraOneGate.prophetsTarget}
+            domainProgress={getHighestDomainLevel(gameState)}
+            domainTarget={eraOneGate.domainTarget}
+            eraOneReady={canAdvanceEraOne}
+            eraTwoBeliefProgress={gameState.stats.totalBeliefEarned}
+            eraTwoBeliefTarget={eraTwoGate.beliefTarget}
+            cultsProgress={gameState.cults}
+            cultsTarget={eraTwoGate.cultsTarget}
+            rivalEventReady={eraTwoGate.rivalEventReady}
+            eraTwoReady={canAdvanceEraTwo}
+            unravelingBeliefProgress={gameState.stats.totalBeliefEarned}
+            unravelingBeliefTarget={unravelingGate.beliefTarget}
+            unravelingVeilProgress={gameState.resources.veil}
+            unravelingVeilTarget={unravelingGate.veilTarget}
+            unravelingMiraclesProgress={gameState.cataclysm.miraclesThisRun}
+            unravelingMiraclesTarget={unravelingGate.miraclesTarget}
+            unravelingRunTimeProgressSeconds={gameState.simulation.totalElapsedMs / 1000}
+            unravelingRunTimeTargetSeconds={unravelingGate.runTimeTargetSeconds}
+            unravelingReady={unravelingGate.ready}
+            onAdvanceEraOne={onAdvanceEraOne}
+            onAdvanceEraTwo={onAdvanceEraTwo}
+          />
+        ) : null}
 
-        <AscensionPanel
-          era={gameState.era}
-          echoes={gameState.prestige.echoes}
-          lifetimeEchoes={gameState.prestige.lifetimeEchoes}
-          completedRuns={gameState.prestige.completedRuns}
-          ascensionEchoGain={ascensionEchoGain}
-          canAscend={canUseAscend}
-          treeViews={echoTreeViews}
-          onPurchaseTree={onPurchaseEchoTreeRank}
-          onAscend={onAscend}
-        />
+        {uiReveal.showAscensionPanel ? (
+          <AscensionPanel
+            era={gameState.era}
+            echoes={gameState.prestige.echoes}
+            lifetimeEchoes={gameState.prestige.lifetimeEchoes}
+            completedRuns={gameState.prestige.completedRuns}
+            ascensionEchoGain={ascensionEchoGain}
+            canAscend={canUseAscend}
+            treeViews={echoTreeViews}
+            onPurchaseTree={onPurchaseEchoTreeRank}
+            onAscend={onAscend}
+          />
+        ) : null}
 
-        <PantheonPanel
-          unlocked={pantheonUnlocked}
-          allies={pantheonAllies}
-          allianceTotalModifier={pantheonAllianceFactors.totalModifier}
-          allianceSharePenalty={pantheonAllianceFactors.sharePenalty}
-          allianceDomainBonus={pantheonAllianceFactors.domainBonus}
-          betrayalsLifetime={gameState.prestige.pantheon.betrayalsLifetime}
-          betrayedHookUnlocked={betrayedHookUnlocked}
-          onFormAlliance={onFormPantheonAlliance}
-          onBetray={onBetrayPantheonAlly}
-        />
+        {uiReveal.showPantheonPanel ? (
+          <PantheonPanel
+            unlocked={pantheonUnlocked}
+            allies={pantheonAllies}
+            allianceTotalModifier={pantheonAllianceFactors.totalModifier}
+            allianceSharePenalty={pantheonAllianceFactors.sharePenalty}
+            allianceDomainBonus={pantheonAllianceFactors.domainBonus}
+            betrayalsLifetime={gameState.prestige.pantheon.betrayalsLifetime}
+            betrayedHookUnlocked={betrayedHookUnlocked}
+            onFormAlliance={onFormPantheonAlliance}
+            onBetray={onBetrayPantheonAlly}
+          />
+        ) : null}
 
-        <ProgressPanel
-          belief={gameState.resources.belief}
-          era={gameState.era}
-          followers={gameState.resources.followers}
-          prophets={gameState.prophets}
-          cults={gameState.cults}
-          nextProphetFollowers={nextProphetFollowers}
-          nextCultBeliefCost={nextCultBeliefCost}
-          lineageGeneration={gameState.lineage.generation}
-          lineageTrustDebt={gameState.lineage.trustDebt}
-          lineageSkepticism={gameState.lineage.skepticism}
-          lineageBetrayalScars={gameState.lineage.betrayalScars}
-          lineageConversionModifier={lineageConversionFactors.totalModifier}
-          lineageRecentMarker={lineageRecentMarker}
-          lineageTraits={lineageTraits}
-          canAnointProphet={canCreateProphet}
-          canFormCult={canCreateCult}
-          onAnointProphet={onAnointProphet}
-          onFormCult={onFormCult}
-        />
+        {uiReveal.showProgressPanel ? (
+          <ProgressPanel
+            belief={gameState.resources.belief}
+            era={gameState.era}
+            followers={gameState.resources.followers}
+            prophets={gameState.prophets}
+            cults={gameState.cults}
+            nextProphetFollowers={nextProphetFollowers}
+            nextCultBeliefCost={nextCultBeliefCost}
+            lineageGeneration={gameState.lineage.generation}
+            lineageTrustDebt={gameState.lineage.trustDebt}
+            lineageSkepticism={gameState.lineage.skepticism}
+            lineageBetrayalScars={gameState.lineage.betrayalScars}
+            lineageConversionModifier={lineageConversionFactors.totalModifier}
+            lineageRecentMarker={lineageRecentMarker}
+            lineageTraits={lineageTraits}
+            canAnointProphet={canCreateProphet}
+            canFormCult={canCreateCult}
+            onAnointProphet={onAnointProphet}
+            onFormCult={onFormCult}
+          />
+        ) : null}
 
-        <DoctrinePanel
-          era={gameState.era}
-          cults={gameState.cults}
-          influence={gameState.resources.influence}
-          actSlotCap={actSlotCap}
-          activeActs={activeActs}
-          actCosts={actCosts}
-          actDurations={actDurations}
-          canStartAct={canStartActs}
-          onStartAct={onStartAct}
-          rivalsCount={gameState.doctrine.rivals.length}
-          rivalStrength={rivalStrength}
-          rivalDrainPerSecond={rivalDrainPerSecond}
-          nextRivalInSeconds={nextRivalInSeconds}
-          canSuppressRival={canUseSuppressRival}
-          suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
-          onSuppressRival={onSuppressRival}
-        />
+        {uiReveal.showDoctrinePanel ? (
+          <DoctrinePanel
+            era={gameState.era}
+            cults={gameState.cults}
+            influence={gameState.resources.influence}
+            actSlotCap={actSlotCap}
+            activeActs={activeActs}
+            actCosts={actCosts}
+            actDurations={actDurations}
+            canStartAct={canStartActs}
+            onStartAct={onStartAct}
+            rivalsCount={gameState.doctrine.rivals.length}
+            rivalStrength={rivalStrength}
+            rivalDrainPerSecond={rivalDrainPerSecond}
+            nextRivalInSeconds={nextRivalInSeconds}
+            canSuppressRival={canUseSuppressRival}
+            suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
+            onSuppressRival={onSuppressRival}
+          />
+        ) : null}
 
-        <CataclysmPanel
-          era={gameState.era}
-          influence={gameState.resources.influence}
-          veil={gameState.resources.veil}
-          veilBonus={veilBonus}
-          veilRegenPerSecond={veilRegenPerSecond}
-          veilErosionPerSecond={veilErosionPerSecond}
-          veilCollapseThreshold={veilCollapseThreshold}
-          shrinesBuilt={gameState.doctrine.shrinesBuilt}
-          civilizationHealth={gameState.cataclysm.civilizationHealth}
-          civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
-          civilizationRebuildInSeconds={civilizationRebuildSeconds}
-          miraclesThisRun={gameState.cataclysm.miraclesThisRun}
-          miracleOptions={miracleOptions}
-          onCastMiracle={onCastMiracle}
-        />
+        {uiReveal.showCataclysmPanel ? (
+          <CataclysmPanel
+            era={gameState.era}
+            influence={gameState.resources.influence}
+            veil={gameState.resources.veil}
+            veilBonus={veilBonus}
+            veilRegenPerSecond={veilRegenPerSecond}
+            veilErosionPerSecond={veilErosionPerSecond}
+            veilCollapseThreshold={veilCollapseThreshold}
+            shrinesBuilt={gameState.doctrine.shrinesBuilt}
+            civilizationHealth={gameState.cataclysm.civilizationHealth}
+            civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
+            civilizationRebuildInSeconds={civilizationRebuildSeconds}
+            miraclesThisRun={gameState.cataclysm.miraclesThisRun}
+            miracleOptions={miracleOptions}
+            onCastMiracle={onCastMiracle}
+          />
+        ) : null}
 
-        <DomainPanel
-          belief={gameState.resources.belief}
-          domains={gameState.domains}
-          getInvestCost={getDomainInvestCost}
-          getXpNeeded={getDomainXpNeeded}
-          onInvest={onInvestDomain}
-        />
+        {uiReveal.showDomainPanel ? (
+          <DomainPanel
+            belief={gameState.resources.belief}
+            domains={gameState.domains}
+            getInvestCost={getDomainInvestCost}
+            getXpNeeded={getDomainXpNeeded}
+            onInvest={onInvestDomain}
+          />
+        ) : null}
 
         <p className="text-xs text-veil/60">
           {gameState.activity.cadencePromptActive
@@ -562,14 +618,16 @@ export default function App() {
             : " Whisper and recruit both satisfy cadence pressure."}
         </p>
 
-        <StatsDrawer
-          runSeconds={elapsedSeconds}
-          totalTicks={gameState.simulation.totalTicks}
-          totalBeliefEarned={gameState.stats.totalBeliefEarned}
-          secondsSinceLastEvent={secondsSinceLastEvent}
-          whispersInWindow={gameState.activity.whispersInWindow}
-          whisperResetInSeconds={whisperResetInSeconds}
-        />
+        {uiReveal.showStatsDrawer ? (
+          <StatsDrawer
+            runSeconds={elapsedSeconds}
+            totalTicks={gameState.simulation.totalTicks}
+            totalBeliefEarned={gameState.stats.totalBeliefEarned}
+            secondsSinceLastEvent={secondsSinceLastEvent}
+            whispersInWindow={gameState.activity.whispersInWindow}
+            whisperResetInSeconds={whisperResetInSeconds}
+          />
+        ) : null}
       </motion.div>
     </main>
   );

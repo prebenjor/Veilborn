@@ -60,36 +60,42 @@ export function AscensionPanel({
         </article>
       </div>
 
-      <div className="mt-3 grid gap-2 md:grid-cols-3">
-        {treeViews.map((tree) => (
-          <article key={tree.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">{tree.label}</p>
-            <p className="mt-1 text-sm text-white">
-              Rank {tree.rank}/{ECHO_TREE_MAX_RANK}
-            </p>
-            <p className="mt-1 text-xs text-veil/65">
-              {tree.nextCost === null
-                ? "Maxed"
-                : `Next rank costs ${formatNumber(tree.nextCost)} echoes`}
-            </p>
-            {tree.unlockedBonuses.length > 0 ? (
-              <p className="mt-1 text-xs text-veil/60">
-                Unlocked: {tree.unlockedBonuses.join(", ")}
+      {treeViews.length > 0 ? (
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          {treeViews.map((tree) => (
+            <article key={tree.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">{tree.label}</p>
+              <p className="mt-1 text-sm text-white">
+                Rank {tree.rank}/{ECHO_TREE_MAX_RANK}
               </p>
-            ) : (
-              <p className="mt-1 text-xs text-veil/60">No bonuses unlocked yet.</p>
-            )}
-            <button
-              type="button"
-              disabled={!tree.canPurchase}
-              onClick={() => onPurchaseTree(tree.id)}
-              className="mt-2 rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-            >
-              Buy Rank
-            </button>
-          </article>
-        ))}
-      </div>
+              <p className="mt-1 text-xs text-veil/65">
+                {tree.nextCost === null
+                  ? "Maxed"
+                  : `Next rank costs ${formatNumber(tree.nextCost)} echoes`}
+              </p>
+              {tree.unlockedBonuses.length > 0 ? (
+                <p className="mt-1 text-xs text-veil/60">
+                  Unlocked: {tree.unlockedBonuses.join(", ")}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-veil/60">No bonuses unlocked yet.</p>
+              )}
+              <button
+                type="button"
+                disabled={!tree.canPurchase}
+                onClick={() => onPurchaseTree(tree.id)}
+                className="mt-2 rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+              >
+                Buy Rank
+              </button>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-veil/65">
+          The deeper branches remain veiled in this age.
+        </p>
+      )}
 
       <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
         <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Ascension</p>
@@ -98,7 +104,7 @@ export function AscensionPanel({
         </p>
         <p className="mt-1 text-xs text-veil/65">
           {era < 3
-            ? "Reach Era III and satisfy the Unraveling Gate to ascend."
+            ? "The final fracture remains sealed for now."
             : "Ascension resets the world state but preserves echoes and tree ranks."}
         </p>
         <button

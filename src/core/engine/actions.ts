@@ -1255,7 +1255,13 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
       )
     : withMiracle;
 
-  const miracleDetail = `Tier ${tier} miracle returned ${Math.floor(beliefGain)} belief.`;
+  const miracleDetailByTier: Record<MiracleTier, string> = {
+    1: "A small district changed its prayers before dawn.",
+    2: "Merchants and magistrates rewrote tomorrow's plans around the sign.",
+    3: "Whole provinces bent their calendars to your intervention.",
+    4: "An age-defining wound opened in history and would not close."
+  };
+  const miracleDetail = miracleDetailByTier[tier];
   const withMiracleOmen = appendOmen(withLineageImpact, nowMs, "miracle", miracleDetail);
   if (!civilizationCollapsed) return withMiracleOmen;
   return appendOmen(withMiracleOmen, nowMs, "civCollapse");
@@ -1394,9 +1400,7 @@ export function performBetrayPantheonAlly(state: GameState, allyId: string, nowM
     withLineageMarker,
     nowMs,
     "pantheonBetrayal",
-    `${ally.name} was cast down. You seized ${Math.floor(
-      betrayalBeliefGain
-    )} belief and poisoned ${DOMAIN_LABELS[ally.domain]} for future cycles.`
+    `${ally.name} was cast down, and ${DOMAIN_LABELS[ally.domain]} turned bitter across future cycles.`
   );
 }
 
@@ -1441,7 +1445,7 @@ export function performPurchaseEchoTreeRank(
     withUpgrade,
     nowMs,
     "echoTree",
-    `${treeId} tree reached rank ${nextRank}.`
+    `The ${treeId} branch rooted deeper into this cycle.`
   );
 }
 
@@ -1518,7 +1522,7 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     withAscensionMemory,
     nowMs,
     "ascension",
-    `You carried ${gainedEchoes} echoes into the next cycle.`
+    "You carried remembrance through the fracture into a younger world."
   );
 
   return ensurePantheonInitialized(withAscensionOmen, nowMs);

@@ -324,7 +324,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     nextState = appendSystemOmen(
       nextState,
       nowMs,
-      "A rival doctrine surfaced in the margins and began draining the faithful."
+      "At the edge of the city, another altar lit itself and your faithful began to waver."
     );
   }
 
@@ -341,7 +341,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     nextState = appendSystemOmen(
       nextState,
       nowMs,
-      "The Veil tore under pressure. Followers scattered and prophets were lost."
+      "The Veil screamed open. Crowds scattered, and two prophetic voices went dark."
     );
   }
 
@@ -358,7 +358,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     nextState = appendSystemOmen(
       nextState,
       nowMs,
-      "After years of ruin, a new civilization rose from the ash."
+      "From ash and hunger, a new city raised its first bell and dared to remember."
     );
   }
 
