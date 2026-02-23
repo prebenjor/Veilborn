@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 3;
+export const GAME_STATE_SCHEMA_VERSION = 4;
 export const WORLD_TICK_MS = 250;
 
 export const PROPHET_OUTPUT_BASE = 2;
@@ -43,6 +43,37 @@ export const CULT_COST_BASE = 500;
 export const CULT_COST_ECHO_BASE = 350;
 export const CULT_COST_SCALAR = 2;
 
+export type ActType = "shrine" | "ritual" | "proclaim";
+export const ACT_TYPES: ActType[] = ["shrine", "ritual", "proclaim"];
+export const ACT_BASE_COST: Record<ActType, number> = {
+  shrine: 20,
+  ritual: 80,
+  proclaim: 150
+};
+export const ACT_DURATION_SECONDS: Record<ActType, number> = {
+  shrine: 30,
+  ritual: 45,
+  proclaim: 60
+};
+export const ACT_BASE_MULTIPLIER: Record<ActType, number> = {
+  shrine: 2.5,
+  ritual: 4.0,
+  proclaim: 7.0
+};
+export const ACT_RETURN_FACTOR = 0.3;
+export const ACT_FLOOR_BASE = 1.0;
+export const ACT_FLOOR_ECHO = 1.5;
+export const ACT_COST_DISCOUNT = 0.85;
+
+export const RIVAL_SPAWN_BASE_MS = 300 * 1000;
+export const RIVAL_SPAWN_ECHO_DELAY_MS = 60 * 1000;
+export const RIVAL_EVENT_DURATION_MS = 90 * 1000;
+export const RIVAL_MAX_ACTIVE = 2;
+export const RIVAL_STRENGTH_SCALE = 0.08;
+export const RIVAL_DRAIN_RATE = 0.015;
+export const RIVAL_WEAKENED_MULTIPLIER = 0.8;
+export const RIVAL_SUPPRESS_INFLUENCE_COST = 200;
+
 export const DOMAIN_INVEST_BASE_COST = 50;
 export const DOMAIN_INVEST_COST_SCALAR = 1.8;
 export const DOMAIN_XP_BASE = 3;
@@ -52,6 +83,9 @@ export const ERA_ONE_BELIEF_GATE_BASE = 10000;
 export const ERA_ONE_GATE_ECHO_MULTIPLIER = 0.7;
 export const ERA_ONE_PROPHET_GATE = 3;
 export const ERA_ONE_DOMAIN_LEVEL_GATE = 3;
+export const ERA_TWO_BELIEF_GATE_BASE = 250000;
+export const ERA_TWO_GATE_ECHO_MULTIPLIER = 0.75;
+export const ERA_TWO_CULT_GATE = 3;
 
 export type MortalTrait = "skeptical" | "zealous" | "cautious";
 export type DomainId = "fire" | "death" | "harvest" | "storm" | "memory" | "void";
@@ -96,6 +130,11 @@ export interface EchoBonuses {
   prophetThreshold: boolean;
   cultCostBase: boolean;
   era1Gate: boolean;
+  era2Gate: boolean;
+  actFloor: boolean;
+  actDiscount: boolean;
+  rivalDelay: boolean;
+  rivalWeaken: boolean;
 }
 
 export interface ActivityState {
@@ -108,6 +147,32 @@ export interface ActivityState {
 
 export interface RunStats {
   totalBeliefEarned: number;
+}
+
+export interface ActiveAct {
+  id: string;
+  type: ActType;
+  startedAt: number;
+  endsAt: number;
+  durationSeconds: number;
+  baseMultiplier: number;
+  cost: number;
+}
+
+export interface RivalState {
+  id: string;
+  strength: number;
+  spawnedAt: number;
+}
+
+export interface DoctrineState {
+  activeActs: ActiveAct[];
+  actsCompleted: number;
+  rivals: RivalState[];
+  lastRivalSpawnAt: number;
+  survivedRivalEvent: boolean;
+  nextActId: number;
+  nextRivalId: number;
 }
 
 export interface RunMeta {
@@ -131,6 +196,7 @@ export interface GameState {
   resources: RunResources;
   activity: ActivityState;
   stats: RunStats;
+  doctrine: DoctrineState;
   echoBonuses: EchoBonuses;
   era: 1 | 2 | 3;
   mortals: Mortal[];
@@ -194,12 +260,26 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     stats: {
       totalBeliefEarned: 0
     },
+    doctrine: {
+      activeActs: [],
+      actsCompleted: 0,
+      rivals: [],
+      lastRivalSpawnAt: nowMs,
+      survivedRivalEvent: false,
+      nextActId: 1,
+      nextRivalId: 1
+    },
     echoBonuses: {
       startInf: false,
       faithFloor: false,
       prophetThreshold: false,
       cultCostBase: false,
-      era1Gate: false
+      era1Gate: false,
+      era2Gate: false,
+      actFloor: false,
+      actDiscount: false,
+      rivalDelay: false,
+      rivalWeaken: false
     },
     era: 1,
     mortals: [

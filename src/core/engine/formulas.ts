@@ -1,8 +1,11 @@
 import {
-  ERA_ONE_BELIEF_GATE_BASE,
-  ERA_ONE_DOMAIN_LEVEL_GATE,
-  ERA_ONE_GATE_ECHO_MULTIPLIER,
-  ERA_ONE_PROPHET_GATE,
+  ACT_BASE_COST,
+  ACT_BASE_MULTIPLIER,
+  ACT_COST_DISCOUNT,
+  ACT_DURATION_SECONDS,
+  ACT_FLOOR_BASE,
+  ACT_FLOOR_ECHO,
+  ACT_RETURN_FACTOR,
   CULT_COST_BASE,
   CULT_COST_ECHO_BASE,
   CULT_COST_SCALAR,
@@ -13,6 +16,13 @@ import {
   DOMAIN_SYNERGY_SCALE,
   DOMAIN_XP_BASE,
   DOMAIN_XP_SCALAR,
+  ERA_ONE_BELIEF_GATE_BASE,
+  ERA_ONE_DOMAIN_LEVEL_GATE,
+  ERA_ONE_GATE_ECHO_MULTIPLIER,
+  ERA_ONE_PROPHET_GATE,
+  ERA_TWO_BELIEF_GATE_BASE,
+  ERA_TWO_CULT_GATE,
+  ERA_TWO_GATE_ECHO_MULTIPLIER,
   FAITH_DECAY_BASE,
   FAITH_DECAY_ECHO_FLOOR,
   FAITH_DECAY_FLOOR,
@@ -30,10 +40,15 @@ import {
   RECRUIT_BASE_FOLLOWERS,
   RECRUIT_DOMAIN_FOLLOWER_DIVISOR,
   RECRUIT_PROPHET_FOLLOWER_BONUS,
+  RIVAL_SPAWN_BASE_MS,
+  RIVAL_SPAWN_ECHO_DELAY_MS,
+  RIVAL_STRENGTH_SCALE,
+  RIVAL_WEAKENED_MULTIPLIER,
   VEIL_BONUS_SCALE,
   WHISPER_BASE_COST,
   WHISPER_COST_SCALAR,
   WHISPER_WINDOW_MS,
+  type ActType,
   type ActivityState,
   type DomainProgress,
   type GameState
@@ -54,12 +69,26 @@ export interface EraOneGateStatus {
   ready: boolean;
 }
 
+export interface EraTwoGateStatus {
+  beliefTarget: number;
+  beliefReady: boolean;
+  cultsTarget: number;
+  cultsReady: boolean;
+  rivalEventReady: boolean;
+  ready: boolean;
+}
+
 export function getTotalDomainLevel(state: GameState): number {
   return state.domains.reduce((sum, domain) => sum + domain.level, 0);
 }
 
 export function getHighestDomainLevel(state: GameState): number {
   return state.domains.reduce((max, domain) => Math.max(max, domain.level), 0);
+}
+
+export function getMatchingDomainPairs(state: GameState): number {
+  const activeDomains = state.domains.filter((domain) => domain.level > 0).length;
+  return Math.floor(activeDomains / 2);
 }
 
 export function getProphetOutput(totalDomainLevel: number): number {
@@ -100,7 +129,10 @@ export function getBeliefPerSecond(state: GameState, nowMs: number): number {
   const prophetStack = state.prophets * prophetOutput * domainMultiplier * faithDecay;
   const cultStack = getCultOutput(state) * domainSynergy;
 
-  return Math.max(0, (prophetStack + cultStack) * getVeilBonus(state.resources.veil) * GHOST_BONUS_BASE);
+  return Math.max(
+    0,
+    (prophetStack + cultStack) * getVeilBonus(state.resources.veil) * GHOST_BONUS_BASE
+  );
 }
 
 export function getInfluenceCap(state: GameState): number {
@@ -163,6 +195,47 @@ export function getDomainXpNeeded(domain: DomainProgress): number {
   return Math.ceil(DOMAIN_XP_BASE * Math.pow(DOMAIN_XP_SCALAR, domain.level));
 }
 
+export function getActCost(state: GameState, type: ActType): number {
+  const discount = state.echoBonuses.actDiscount ? ACT_COST_DISCOUNT : 1;
+  return Math.ceil(ACT_BASE_COST[type] * discount);
+}
+
+export function getActDurationSeconds(type: ActType): number {
+  return ACT_DURATION_SECONDS[type];
+}
+
+export function getActBaseMultiplier(type: ActType): number {
+  return ACT_BASE_MULTIPLIER[type];
+}
+
+export function getActBeliefMultiplier(state: GameState, baseMultiplier: number): number {
+  const floor = state.echoBonuses.actFloor ? ACT_FLOOR_ECHO : ACT_FLOOR_BASE;
+  return Math.max(floor, baseMultiplier + state.matchingDomainPairs * 0.2);
+}
+
+export function getActRewardBelief(
+  state: GameState,
+  beliefPerSecond: number,
+  durationSeconds: number,
+  baseMultiplier: number
+): number {
+  const beliefMultiplier = getActBeliefMultiplier(state, baseMultiplier);
+  return beliefPerSecond * durationSeconds * beliefMultiplier * ACT_RETURN_FACTOR;
+}
+
+export function getRivalSpawnIntervalMs(state: GameState): number {
+  return RIVAL_SPAWN_BASE_MS + (state.echoBonuses.rivalDelay ? RIVAL_SPAWN_ECHO_DELAY_MS : 0);
+}
+
+export function getRivalStrength(state: GameState, beliefPerSecond: number): number {
+  const weakened = state.echoBonuses.rivalWeaken ? RIVAL_WEAKENED_MULTIPLIER : 1;
+  return Math.max(1, beliefPerSecond * RIVAL_STRENGTH_SCALE) * weakened;
+}
+
+export function getTotalRivalStrength(state: GameState): number {
+  return state.doctrine.rivals.reduce((sum, rival) => sum + rival.strength, 0);
+}
+
 export function getEraOneBeliefGateTarget(state: GameState): number {
   const multiplier = state.echoBonuses.era1Gate ? ERA_ONE_GATE_ECHO_MULTIPLIER : 1;
   return Math.ceil(ERA_ONE_BELIEF_GATE_BASE * multiplier);
@@ -186,3 +259,26 @@ export function getEraOneGateStatus(state: GameState): EraOneGateStatus {
     ready: beliefReady && prophetsReady && domainReady
   };
 }
+
+export function getEraTwoBeliefGateTarget(state: GameState): number {
+  const multiplier = state.echoBonuses.era2Gate ? ERA_TWO_GATE_ECHO_MULTIPLIER : 1;
+  return Math.ceil(ERA_TWO_BELIEF_GATE_BASE * multiplier);
+}
+
+export function getEraTwoGateStatus(state: GameState): EraTwoGateStatus {
+  const beliefTarget = getEraTwoBeliefGateTarget(state);
+  const cultsTarget = ERA_TWO_CULT_GATE;
+  const beliefReady = state.stats.totalBeliefEarned >= beliefTarget;
+  const cultsReady = state.cults >= cultsTarget;
+  const rivalEventReady = state.doctrine.survivedRivalEvent;
+
+  return {
+    beliefTarget,
+    beliefReady,
+    cultsTarget,
+    cultsReady,
+    rivalEventReady,
+    ready: beliefReady && cultsReady && rivalEventReady
+  };
+}
+

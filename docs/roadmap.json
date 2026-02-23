@@ -81,7 +81,7 @@
     {
       "id": "M4",
       "title": "Doctrine Loop (Era II)",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M3"],
       "deliverables": [
         "Cult formation and growth",

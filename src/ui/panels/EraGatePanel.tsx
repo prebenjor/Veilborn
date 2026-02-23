@@ -6,14 +6,21 @@ interface GateLineProps {
 
 interface EraGatePanelProps {
   era: number;
-  beliefProgress: number;
-  beliefTarget: number;
+  eraOneBeliefProgress: number;
+  eraOneBeliefTarget: number;
   prophetsProgress: number;
   prophetsTarget: number;
   domainProgress: number;
   domainTarget: number;
-  ready: boolean;
-  onAdvance: () => void;
+  eraOneReady: boolean;
+  eraTwoBeliefProgress: number;
+  eraTwoBeliefTarget: number;
+  cultsProgress: number;
+  cultsTarget: number;
+  rivalEventReady: boolean;
+  eraTwoReady: boolean;
+  onAdvanceEraOne: () => void;
+  onAdvanceEraTwo: () => void;
 }
 
 function formatNumber(value: number): string {
@@ -33,22 +40,63 @@ function GateLine({ label, value, ready }: GateLineProps) {
 
 export function EraGatePanel({
   era,
-  beliefProgress,
-  beliefTarget,
+  eraOneBeliefProgress,
+  eraOneBeliefTarget,
   prophetsProgress,
   prophetsTarget,
   domainProgress,
   domainTarget,
-  ready,
-  onAdvance
+  eraOneReady,
+  eraTwoBeliefProgress,
+  eraTwoBeliefTarget,
+  cultsProgress,
+  cultsTarget,
+  rivalEventReady,
+  eraTwoReady,
+  onAdvanceEraOne,
+  onAdvanceEraTwo
 }: EraGatePanelProps) {
-  if (era >= 2) {
+  if (era === 3) {
     return (
       <section className="rounded-2xl border border-omen/40 bg-omen/10 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-sm uppercase tracking-[0.25em] text-omen">Era II</h2>
+        <h2 className="text-sm uppercase tracking-[0.25em] text-omen">Era III</h2>
         <p className="mt-2 text-sm text-veil/80">
-          The whisper age has ended. Doctrine has begun.
+          Doctrine now bends reality itself. Miracles and Veil pressure come next.
         </p>
+      </section>
+    );
+  }
+
+  if (era === 2) {
+    return (
+      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
+        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Era II Gate</h2>
+        <p className="mt-2 text-sm text-veil/70">Meet all conditions to open Era III.</p>
+        <div className="mt-3 grid gap-2">
+          <GateLine
+            label="Total Belief Earned"
+            value={`${formatNumber(eraTwoBeliefProgress)} / ${formatNumber(eraTwoBeliefTarget)}`}
+            ready={eraTwoBeliefProgress >= eraTwoBeliefTarget}
+          />
+          <GateLine
+            label="Cults Formed"
+            value={`${formatNumber(cultsProgress)} / ${formatNumber(cultsTarget)}`}
+            ready={cultsProgress >= cultsTarget}
+          />
+          <GateLine
+            label="Rival Event Survived"
+            value="Awaiting first rival"
+            ready={rivalEventReady}
+          />
+        </div>
+        <button
+          type="button"
+          disabled={!eraTwoReady}
+          onClick={onAdvanceEraTwo}
+          className="mt-3 rounded-xl border border-veil/60 px-3 py-2 text-sm text-veil transition hover:bg-veil/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+        >
+          Enter Era III
+        </button>
       </section>
     );
   }
@@ -60,8 +108,8 @@ export function EraGatePanel({
       <div className="mt-3 grid gap-2">
         <GateLine
           label="Total Belief Earned"
-          value={`${formatNumber(beliefProgress)} / ${formatNumber(beliefTarget)}`}
-          ready={beliefProgress >= beliefTarget}
+          value={`${formatNumber(eraOneBeliefProgress)} / ${formatNumber(eraOneBeliefTarget)}`}
+          ready={eraOneBeliefProgress >= eraOneBeliefTarget}
         />
         <GateLine
           label="Prophets"
@@ -76,8 +124,8 @@ export function EraGatePanel({
       </div>
       <button
         type="button"
-        disabled={!ready}
-        onClick={onAdvance}
+        disabled={!eraOneReady}
+        onClick={onAdvanceEraOne}
         className="mt-3 rounded-xl border border-veil/60 px-3 py-2 text-sm text-veil transition hover:bg-veil/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
       >
         Enter Era II
@@ -85,4 +133,3 @@ export function EraGatePanel({
     </section>
   );
 }
-

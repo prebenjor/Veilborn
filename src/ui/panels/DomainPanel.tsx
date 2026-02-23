@@ -31,7 +31,7 @@ export function DomainPanel({ belief, domains, getInvestCost, getXpNeeded, onInv
                 {DOMAIN_LABELS[domain.id]}
               </p>
               <p className="mt-1 text-sm text-white">
-                Level {domain.level} • XP {domain.xp}/{xpNeeded}
+                Level {domain.level} - XP {domain.xp}/{xpNeeded}
               </p>
               <button
                 type="button"
@@ -48,4 +48,5 @@ export function DomainPanel({ belief, domains, getInvestCost, getXpNeeded, onInv
     </section>
   );
 }
+
 

@@ -2,39 +2,56 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   canAdvanceEraOneToTwo,
+  canAdvanceEraTwoToThree,
   canAnointProphet,
   canFormCult,
+  canStartAct,
+  canSuppressRival,
+  getActSlotCap,
   canWhisper,
   canRecruit,
   getRecruitPreview,
   performAdvanceEraOneToTwo,
+  performAdvanceEraTwoToThree,
   performCultFormation,
   performDomainInvestment,
   performProphetAnoint,
   performRecruit,
+  performStartAct,
+  performSuppressRival,
   performWhisper
 } from "./core/engine/actions";
 import {
+  getActCost,
+  getActDurationSeconds,
   getBeliefPerSecond,
   getCultFormationCost,
+  getCultOutput,
   getDomainInvestCost,
   getDomainXpNeeded,
   getEraOneGateStatus,
+  getEraTwoGateStatus,
   getFollowersForNextProphet,
   getHighestDomainLevel,
   getInfluenceCap,
+  getRivalSpawnIntervalMs,
+  getTotalRivalStrength,
   getTotalDomainLevel,
   getWhisperCost
 } from "./core/engine/formulas";
 import { advanceWorld } from "./core/engine/worldTick";
 import {
+  RIVAL_DRAIN_RATE,
+  RIVAL_SUPPRESS_INFLUENCE_COST,
   RECRUIT_INFLUENCE_COST,
   WHISPER_WINDOW_MS,
   WORLD_TICK_MS,
+  type ActType,
   type DomainId,
   type GameState
 } from "./core/state/gameState";
 import { loadGameState, saveGameState } from "./core/state/persistence";
+import { DoctrinePanel } from "./ui/panels/DoctrinePanel";
 import { DomainPanel } from "./ui/panels/DomainPanel";
 import { EraGatePanel } from "./ui/panels/EraGatePanel";
 import { ProgressPanel } from "./ui/panels/ProgressPanel";
@@ -91,13 +108,47 @@ export default function App() {
   const nextProphetFollowers = getFollowersForNextProphet(gameState);
   const nextCultBeliefCost = getCultFormationCost(gameState);
   const eraOneGate = getEraOneGateStatus(gameState);
+  const eraTwoGate = getEraTwoGateStatus(gameState);
 
   const canUseWhisper = canWhisper(gameState, nowMs);
   const canUseRecruit = canRecruit(gameState);
   const canCreateProphet = canAnointProphet(gameState);
-  const canCreateCult = gameState.era >= 2 && canFormCult(gameState);
-  const canAdvanceEra = canAdvanceEraOneToTwo(gameState);
+  const canCreateCult = canFormCult(gameState);
+  const canAdvanceEraOne = canAdvanceEraOneToTwo(gameState);
+  const canAdvanceEraTwo = canAdvanceEraTwoToThree(gameState);
   const eraLabel = gameState.era === 1 ? "I" : gameState.era === 2 ? "II" : "III";
+
+  const actSlotCap = getActSlotCap(gameState);
+  const actCosts: Record<ActType, number> = {
+    shrine: getActCost(gameState, "shrine"),
+    ritual: getActCost(gameState, "ritual"),
+    proclaim: getActCost(gameState, "proclaim")
+  };
+  const actDurations: Record<ActType, number> = {
+    shrine: getActDurationSeconds("shrine"),
+    ritual: getActDurationSeconds("ritual"),
+    proclaim: getActDurationSeconds("proclaim")
+  };
+  const canStartActs: Record<ActType, boolean> = {
+    shrine: canStartAct(gameState, "shrine"),
+    ritual: canStartAct(gameState, "ritual"),
+    proclaim: canStartAct(gameState, "proclaim")
+  };
+  const activeActs = gameState.doctrine.activeActs.map((act) => ({
+    id: act.id,
+    type: act.type,
+    remainingSeconds: Math.max(0, (act.endsAt - nowMs) / 1000)
+  }));
+
+  const rivalStrength = getTotalRivalStrength(gameState);
+  const cultOutput = getCultOutput(gameState);
+  const rivalDrainPerSecond = rivalStrength > cultOutput * 0.5 ? rivalStrength * RIVAL_DRAIN_RATE : 0;
+  const rivalSpawnIntervalMs = getRivalSpawnIntervalMs(gameState);
+  const nextRivalInSeconds =
+    gameState.era >= 2 && gameState.cults > 0
+      ? Math.max(0, Math.ceil((gameState.doctrine.lastRivalSpawnAt + rivalSpawnIntervalMs - nowMs) / 1000))
+      : 0;
+  const canUseSuppressRival = canSuppressRival(gameState);
 
   const elapsedSeconds = Math.floor(gameState.simulation.totalElapsedMs / 1000);
   const secondsSinceLastEvent = Math.max(0, (nowMs - gameState.activity.lastEventAt) / 1000);
@@ -127,8 +178,20 @@ export default function App() {
     setGameState((prev) => performCultFormation(prev, Date.now()));
   };
 
-  const onAdvanceEra = () => {
+  const onStartAct = (type: ActType) => {
+    setGameState((prev) => performStartAct(prev, type, Date.now()));
+  };
+
+  const onSuppressRival = () => {
+    setGameState((prev) => performSuppressRival(prev, Date.now()));
+  };
+
+  const onAdvanceEraOne = () => {
     setGameState((prev) => performAdvanceEraOneToTwo(prev, Date.now()));
+  };
+
+  const onAdvanceEraTwo = () => {
+    setGameState((prev) => performAdvanceEraTwoToThree(prev, Date.now()));
   };
 
   return (
@@ -147,8 +210,8 @@ export default function App() {
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
           <h1 className="text-2xl font-semibold text-veil md:text-4xl">Someone is listening.</h1>
           <p className="max-w-3xl text-sm text-veil/70">
-            M3 loop active: whisper and recruit pressure, cadence hooks, prophet growth,
-            and Era I gate tracking into Doctrine.
+            M4 loop active: cult doctrine, timed acts, rival pressure, and Era II progression into
+            miracle-tier play.
           </p>
         </header>
 
@@ -216,14 +279,21 @@ export default function App() {
 
         <EraGatePanel
           era={gameState.era}
-          beliefProgress={gameState.stats.totalBeliefEarned}
-          beliefTarget={eraOneGate.beliefTarget}
+          eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
+          eraOneBeliefTarget={eraOneGate.beliefTarget}
           prophetsProgress={gameState.prophets}
           prophetsTarget={eraOneGate.prophetsTarget}
           domainProgress={getHighestDomainLevel(gameState)}
           domainTarget={eraOneGate.domainTarget}
-          ready={canAdvanceEra}
-          onAdvance={onAdvanceEra}
+          eraOneReady={canAdvanceEraOne}
+          eraTwoBeliefProgress={gameState.stats.totalBeliefEarned}
+          eraTwoBeliefTarget={eraTwoGate.beliefTarget}
+          cultsProgress={gameState.cults}
+          cultsTarget={eraTwoGate.cultsTarget}
+          rivalEventReady={eraTwoGate.rivalEventReady}
+          eraTwoReady={canAdvanceEraTwo}
+          onAdvanceEraOne={onAdvanceEraOne}
+          onAdvanceEraTwo={onAdvanceEraTwo}
         />
 
         <ProgressPanel
@@ -238,6 +308,25 @@ export default function App() {
           canFormCult={canCreateCult}
           onAnointProphet={onAnointProphet}
           onFormCult={onFormCult}
+        />
+
+        <DoctrinePanel
+          era={gameState.era}
+          cults={gameState.cults}
+          influence={gameState.resources.influence}
+          actSlotCap={actSlotCap}
+          activeActs={activeActs}
+          actCosts={actCosts}
+          actDurations={actDurations}
+          canStartAct={canStartActs}
+          onStartAct={onStartAct}
+          rivalsCount={gameState.doctrine.rivals.length}
+          rivalStrength={rivalStrength}
+          rivalDrainPerSecond={rivalDrainPerSecond}
+          nextRivalInSeconds={nextRivalInSeconds}
+          canSuppressRival={canUseSuppressRival}
+          suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
+          onSuppressRival={onSuppressRival}
         />
 
         <DomainPanel

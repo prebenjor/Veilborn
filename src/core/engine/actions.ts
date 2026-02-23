@@ -1,4 +1,5 @@
 import {
+  RIVAL_SUPPRESS_INFLUENCE_COST,
   CADENCE_ACTION_BELIEF_BONUS,
   CADENCE_ACTION_FOLLOWER_BONUS,
   DOMAIN_LABELS,
@@ -9,15 +10,20 @@ import {
   RECRUIT_RANDOM_FOLLOWER_MAX,
   WHISPER_BELIEF_GAIN,
   WHISPER_FOLLOWER_GAIN,
+  type ActType,
   type ActivityState,
   type DomainId,
   type GameState
 } from "../state/gameState";
 import {
+  getActBaseMultiplier,
+  getActCost,
+  getActDurationSeconds,
   getCultFormationCost,
   getDomainInvestCost,
   getDomainXpNeeded,
   getEraOneGateStatus,
+  getEraTwoGateStatus,
   getFollowersForNextProphet,
   getRecruitFollowerGainBase,
   getTotalDomainLevel,
@@ -25,7 +31,17 @@ import {
   normalizeWhisperCycle
 } from "./formulas";
 
-type OmenKind = "whisper" | "recruit" | "domain" | "domainLevel" | "prophet" | "cult" | "era";
+type OmenKind =
+  | "whisper"
+  | "recruit"
+  | "domain"
+  | "domainLevel"
+  | "prophet"
+  | "cult"
+  | "act"
+  | "suppress"
+  | "eraOneToTwo"
+  | "eraTwoToThree";
 
 interface RandomPick<T> {
   rngState: number;
@@ -36,6 +52,12 @@ interface CadenceBonus {
   beliefBonus: number;
   followerBonus: number;
 }
+
+const ACT_LABELS: Record<ActType, string> = {
+  shrine: "Shrine",
+  ritual: "Ritual",
+  proclaim: "Proclamation"
+};
 
 function nextRandom(rngState: number): RandomPick<number> {
   let x = rngState >>> 0;
@@ -198,10 +220,32 @@ function createOmen(
     "At riverbend, initiates traced your sign into wet clay."
   ] as const;
 
-  const eraStarts = [
+  const actStarts = [
+    `A ${detail?.toLowerCase() ?? "rite"} began in secret chambers below the city.`,
+    `Under shuttered roofs, the faithful prepared a ${detail?.toLowerCase() ?? "rite"} by candlelight.`,
+    `Before dawn, wardens opened the stones for a ${detail?.toLowerCase() ?? "rite"}.`,
+    `At the edge of the market, priests marked circles for a ${detail?.toLowerCase() ?? "rite"}.`,
+    `In the salt quarter, a ${detail?.toLowerCase() ?? "rite"} started without proclamation.`
+  ] as const;
+
+  const suppressStarts = [
+    "You bent rival doctrine until it cracked.",
+    "A splinter faith was silenced before it found a second voice.",
+    "Their emissaries vanished from the square before midnight.",
+    "The rival sign dimmed and the crowd turned away.",
+    "Their shrine smoke thinned, then failed."
+  ] as const;
+
+  const eraOneToTwoStarts = [
     "The first veil gave way, and mortals named your silence a doctrine.",
     "A line was crossed in the minds of the faithful; whispers became law.",
     "Your shadow lengthened over the settlements and no one called it rumor anymore."
+  ] as const;
+
+  const eraTwoToThreeStarts = [
+    "Doctrine hardened into force, and the world began to answer with consequence.",
+    "The second veil split; prayer became intervention.",
+    "Rites became miracles in waiting, and even kings spoke softly at dusk."
   ] as const;
 
   if (kind === "whisper") {
@@ -248,8 +292,32 @@ function createOmen(
     };
   }
 
-  if (kind === "era") {
-    const a = pickOne(rngSeed, eraStarts);
+  if (kind === "act") {
+    const a = pickOne(rngSeed, actStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} The doctrine tightened around a single intention.`
+    };
+  }
+
+  if (kind === "suppress") {
+    const a = pickOne(rngSeed, suppressStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} Followers kept their places and did not scatter.`
+    };
+  }
+
+  if (kind === "eraOneToTwo") {
+    const a = pickOne(rngSeed, eraOneToTwoStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value}`
+    };
+  }
+
+  if (kind === "eraTwoToThree") {
+    const a = pickOne(rngSeed, eraTwoToThreeStarts);
     return {
       rngState: a.rngState,
       text: `${a.value}`
@@ -453,10 +521,12 @@ export function performProphetAnoint(state: GameState, nowMs: number): GameState
 }
 
 export function canFormCult(state: GameState): boolean {
+  if (state.era < 2) return false;
   return state.resources.belief >= getCultFormationCost(state);
 }
 
 export function performCultFormation(state: GameState, nowMs: number): GameState {
+  if (state.era < 2) return state;
   const cost = getCultFormationCost(state);
   if (state.resources.belief < cost) return state;
 
@@ -477,6 +547,95 @@ export function performCultFormation(state: GameState, nowMs: number): GameState
   return appendOmen(withCult, nowMs, "cult");
 }
 
+export function getActSlotCap(state: GameState): number {
+  return Math.max(1, state.cults);
+}
+
+export function canStartAct(state: GameState, type: ActType): boolean {
+  if (state.era < 2) return false;
+  if (state.cults <= 0) return false;
+  if (state.doctrine.activeActs.length >= getActSlotCap(state)) return false;
+  return state.resources.influence >= getActCost(state, type);
+}
+
+export function performStartAct(state: GameState, type: ActType, nowMs: number): GameState {
+  if (!canStartAct(state, type)) return state;
+
+  const cost = getActCost(state, type);
+  const durationSeconds = getActDurationSeconds(type);
+  const baseMultiplier = getActBaseMultiplier(type);
+
+  const withAct = {
+    ...state,
+    resources: {
+      ...state.resources,
+      influence: state.resources.influence - cost
+    },
+    doctrine: {
+      ...state.doctrine,
+      activeActs: [
+        ...state.doctrine.activeActs,
+        {
+          id: `act-${state.doctrine.nextActId}`,
+          type,
+          startedAt: nowMs,
+          endsAt: nowMs + durationSeconds * 1000,
+          durationSeconds,
+          baseMultiplier,
+          cost
+        }
+      ],
+      nextActId: state.doctrine.nextActId + 1
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(withAct, nowMs, "act", ACT_LABELS[type]);
+}
+
+export function canSuppressRival(state: GameState): boolean {
+  if (state.era < 2) return false;
+  if (state.doctrine.rivals.length <= 0) return false;
+  return state.resources.influence >= RIVAL_SUPPRESS_INFLUENCE_COST;
+}
+
+export function performSuppressRival(state: GameState, nowMs: number): GameState {
+  if (!canSuppressRival(state)) return state;
+
+  let strongestIndex = 0;
+  for (let i = 1; i < state.doctrine.rivals.length; i += 1) {
+    if (state.doctrine.rivals[i].strength > state.doctrine.rivals[strongestIndex].strength) {
+      strongestIndex = i;
+    }
+  }
+
+  const nextRivals = state.doctrine.rivals.filter((_, index) => index !== strongestIndex);
+
+  const withSuppressedRival = {
+    ...state,
+    resources: {
+      ...state.resources,
+      influence: state.resources.influence - RIVAL_SUPPRESS_INFLUENCE_COST
+    },
+    doctrine: {
+      ...state.doctrine,
+      rivals: nextRivals,
+      survivedRivalEvent: true
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(withSuppressedRival, nowMs, "suppress");
+}
+
 export function canAdvanceEraOneToTwo(state: GameState): boolean {
   if (state.era !== 1) return false;
   return getEraOneGateStatus(state).ready;
@@ -495,7 +654,28 @@ export function performAdvanceEraOneToTwo(state: GameState, nowMs: number): Game
     }
   };
 
-  return appendOmen(withEraShift, nowMs, "era");
+  return appendOmen(withEraShift, nowMs, "eraOneToTwo");
+}
+
+export function canAdvanceEraTwoToThree(state: GameState): boolean {
+  if (state.era !== 2) return false;
+  return getEraTwoGateStatus(state).ready;
+}
+
+export function performAdvanceEraTwoToThree(state: GameState, nowMs: number): GameState {
+  if (!canAdvanceEraTwoToThree(state)) return state;
+
+  const withEraShift = {
+    ...state,
+    era: 3 as const,
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(withEraShift, nowMs, "eraTwoToThree");
 }
 
 export function getRecruitPreview(state: GameState): string {
@@ -505,4 +685,3 @@ export function getRecruitPreview(state: GameState): string {
   const high = low + RECRUIT_RANDOM_FOLLOWER_MAX;
   return `${low}-${high} followers`;
 }
-

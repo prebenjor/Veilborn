@@ -1,13 +1,16 @@
 import {
   GAME_STATE_SCHEMA_VERSION,
   createInitialGameState,
+  type ActiveAct,
+  type DoctrineState,
   type DomainId,
   type DomainProgress,
   type EchoBonuses,
   type GameState,
   type Mortal,
   type MortalTrait,
-  type OmenEntry
+  type OmenEntry,
+  type RivalState
 } from "./gameState";
 
 const SAVE_KEY = "veilborn.save";
@@ -50,6 +53,11 @@ function readDomainId(value: unknown): DomainId | null {
   ) {
     return value;
   }
+  return null;
+}
+
+function readActType(value: unknown): ActiveAct["type"] | null {
+  if (value === "shrine" || value === "ritual" || value === "proclaim") return value;
   return null;
 }
 
@@ -106,6 +114,61 @@ function sanitizeOmenLog(value: unknown, fallback: OmenEntry[]): OmenEntry[] {
   return sanitized.length > 0 ? sanitized.slice(0, 200) : fallback;
 }
 
+function sanitizeActiveActs(value: unknown, fallback: ActiveAct[]): ActiveAct[] {
+  if (!Array.isArray(value)) return fallback;
+
+  const sanitized = value
+    .map((entry, index) => {
+      if (!isRecord(entry)) return null;
+      const type = readActType(entry.type);
+      if (!type) return null;
+      const startedAt = Math.max(0, readNumber(entry.startedAt, 0));
+      const endsAt = Math.max(startedAt, readNumber(entry.endsAt, startedAt));
+      return {
+        id: readString(entry.id, `act-${index + 1}`),
+        type,
+        startedAt,
+        endsAt,
+        durationSeconds: Math.max(1, Math.floor(readNumber(entry.durationSeconds, 30))),
+        baseMultiplier: Math.max(0, readNumber(entry.baseMultiplier, 1)),
+        cost: Math.max(0, readNumber(entry.cost, 0))
+      } satisfies ActiveAct;
+    })
+    .filter((entry): entry is ActiveAct => Boolean(entry));
+
+  return sanitized.slice(0, 64);
+}
+
+function sanitizeRivals(value: unknown, fallback: RivalState[]): RivalState[] {
+  if (!Array.isArray(value)) return fallback;
+
+  const sanitized = value
+    .map((entry, index) => {
+      if (!isRecord(entry)) return null;
+      return {
+        id: readString(entry.id, `rival-${index + 1}`),
+        strength: Math.max(1, readNumber(entry.strength, 1)),
+        spawnedAt: Math.max(0, readNumber(entry.spawnedAt, 0))
+      } satisfies RivalState;
+    })
+    .filter((entry): entry is RivalState => Boolean(entry));
+
+  return sanitized.slice(0, 8);
+}
+
+function sanitizeDoctrine(value: unknown, fallback: DoctrineState): DoctrineState {
+  if (!isRecord(value)) return fallback;
+  return {
+    activeActs: sanitizeActiveActs(value.activeActs, fallback.activeActs),
+    actsCompleted: Math.max(0, Math.floor(readNumber(value.actsCompleted, fallback.actsCompleted))),
+    rivals: sanitizeRivals(value.rivals, fallback.rivals),
+    lastRivalSpawnAt: Math.max(0, readNumber(value.lastRivalSpawnAt, fallback.lastRivalSpawnAt)),
+    survivedRivalEvent: readBoolean(value.survivedRivalEvent, fallback.survivedRivalEvent),
+    nextActId: Math.max(1, Math.floor(readNumber(value.nextActId, fallback.nextActId))),
+    nextRivalId: Math.max(1, Math.floor(readNumber(value.nextRivalId, fallback.nextRivalId)))
+  };
+}
+
 function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses {
   if (!isRecord(value)) return fallback;
   return {
@@ -113,7 +176,12 @@ function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses
     faithFloor: readBoolean(value.faithFloor, fallback.faithFloor),
     prophetThreshold: readBoolean(value.prophetThreshold, fallback.prophetThreshold),
     cultCostBase: readBoolean(value.cultCostBase, fallback.cultCostBase),
-    era1Gate: readBoolean(value.era1Gate, fallback.era1Gate)
+    era1Gate: readBoolean(value.era1Gate, fallback.era1Gate),
+    era2Gate: readBoolean(value.era2Gate, fallback.era2Gate),
+    actFloor: readBoolean(value.actFloor, fallback.actFloor),
+    actDiscount: readBoolean(value.actDiscount, fallback.actDiscount),
+    rivalDelay: readBoolean(value.rivalDelay, fallback.rivalDelay),
+    rivalWeaken: readBoolean(value.rivalWeaken, fallback.rivalWeaken)
   };
 }
 
@@ -126,6 +194,7 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const rawResources = isRecord(rawState.resources) ? rawState.resources : {};
   const rawActivity = isRecord(rawState.activity) ? rawState.activity : {};
   const rawStats = isRecord(rawState.stats) ? rawState.stats : {};
+  const rawDoctrine = isRecord(rawState.doctrine) ? rawState.doctrine : {};
 
   return {
     meta: {
@@ -158,6 +227,7 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
     stats: {
       totalBeliefEarned: Math.max(0, readNumber(rawStats.totalBeliefEarned, fallback.stats.totalBeliefEarned))
     },
+    doctrine: sanitizeDoctrine(rawDoctrine, fallback.doctrine),
     echoBonuses: sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses),
     era: readNumber(rawState.era, fallback.era) >= 3 ? 3 : readNumber(rawState.era, fallback.era) >= 2 ? 2 : 1,
     mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
@@ -184,7 +254,8 @@ type Migrator = (rawState: unknown, nowMs: number) => GameState;
 const MIGRATORS: Record<number, Migrator> = {
   1: migrateFromSchemaV1,
   2: migrateFromSchemaV2,
-  3: sanitizeState
+  3: sanitizeState,
+  4: sanitizeState
 };
 
 function toSaveEnvelope(state: GameState): SaveEnvelope {
