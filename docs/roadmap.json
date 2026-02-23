@@ -247,5 +247,84 @@
         "No high-severity simulation regressions"
       ]
     }
+  ],
+  "post_final_improvements": [
+    {
+      "id": "PF-01",
+      "title": "Bulk Domain Investing Controls",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Add invest options per domain: +1, +10%, +25%, +50%, Max (Belief-bounded)",
+        "Show projected spend and resulting level/XP before confirm",
+        "Preserve single-invest option for fine control"
+      ]
+    },
+    {
+      "id": "PF-02",
+      "title": "Strict Era-Locked UI Disclosure",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Hide all future-era systems until era unlock",
+        "Fix current leak: Cataclysm content must not appear in Era II",
+        "Add a shared reveal policy helper used by all panels"
+      ]
+    },
+    {
+      "id": "PF-03",
+      "title": "Anti-Clutter Layout Pass",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Reduce page scroll via docked tabs/section switcher",
+        "Collapse secondary panels by default after unlock",
+        "Move non-critical diagnostics to a compact Stats page"
+      ]
+    },
+    {
+      "id": "PF-04",
+      "title": "Runtime Formatting in Stats Page",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Format run time as days/hours/minutes/seconds",
+        "Keep primary HUD free of verbose timers",
+        "Ensure formatting consistency in offline summary and stats"
+      ]
+    },
+    {
+      "id": "PF-05",
+      "title": "Smoother Tick and Render Feel",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Separate simulation tick from UI paint rate where needed",
+        "Use interpolation/smoothing for displayed counters",
+        "Profile and remove frame hitching on long sessions"
+      ]
+    },
+    {
+      "id": "PF-06",
+      "title": "Omen Frequency and Authenticity Pass",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Reduce omen volume; prioritize milestone-significant events",
+        "Generate omen prose from event context with varied sentence structures",
+        "Add cooldown + de-duplication so repeated lines are rare"
+      ]
+    },
+    {
+      "id": "PF-07",
+      "title": "Progressive HUD Reveal and Explainability",
+      "status": "queued",
+      "execute_after": "M14",
+      "scope": [
+        "Hide Veil/Domain aggregate metrics until relevant unlocks",
+        "Introduce each metric with brief in-world explanation",
+        "Keep early UI near-minimal per manifesto progression intent"
+      ]
+    }
   ]
 }

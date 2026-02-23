@@ -366,6 +366,17 @@ Hard rule:
 - Compression should not push mastered runs below ~45 minutes.
 - If upgrades exceed this compression, apply floor-preserving constraints.
 
+## UI Disclosure and Legibility Progression
+
+The UI is the Veil. Information is progression and must be revealed intentionally.
+
+Rules:
+- Era-locked disclosure: do not show mechanics, panels, or labels for future eras before their era is unlocked.
+- Proximity reveal: show same-era locked actions only when the player is within ~10% of the requirement or has explicit prerequisite progress.
+- Early HUD minimalism: Era I top-level HUD should stay sparse. Metrics like Veil Thickness and Domain totals appear only after they are mechanically relevant and explained once.
+- First-contact explanation: when a new meter appears, attach one concise in-world explanation so players know what changed and why it matters.
+- Density budget: prioritize single-screen decision-making. Move long-form details to compact drawers, tabs, or a dedicated stats page.
+
 ## Design Rules (Do Not Break)
 
 1. Compression is earned by removing known pain points, not by gifting speed.
@@ -376,6 +387,9 @@ Hard rule:
 6. Mechanics must have narrative justification and consequence.
 7. Offline progression is generous but bounded: 8h cap at 85% efficiency.
 8. Large Belief values must always have meaningful destinations.
+9. Future-era systems must stay hidden until unlocked; no spoiler UI.
+10. Newly revealed UI must be introduced with context, not raw labels.
+11. As progression increases complexity, layout density must still preserve fast decisions and low scroll burden.
 
 ## Narrative Throughline
 
