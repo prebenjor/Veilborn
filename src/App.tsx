@@ -59,6 +59,7 @@ import {
   getFollowersForNextProphet,
   getHighestDomainLevel,
   getInfluenceCap,
+  getInfluenceRegenBreakdown,
   getGhostInfluenceTotals,
   getDomainPoisonRunsRemaining,
   getLineageConversionFactors,
@@ -370,6 +371,7 @@ export default function App() {
 
   const beliefPerSecond = getBeliefPerSecond(gameState, nowMs);
   const influenceCap = getInfluenceCap(gameState);
+  const influenceRegenBreakdown = getInfluenceRegenBreakdown(gameState);
   const whisperCost = getWhisperCost(gameState, nowMs);
   const recruitPreview = getRecruitPreview(gameState);
   const nextProphetFollowers = getFollowersForNextProphet(gameState);
@@ -1089,12 +1091,14 @@ export default function App() {
         </p>
         {showStatsDrawer ? (
           <StatsDrawer
+            era={gameState.era}
             runSeconds={elapsedSeconds}
             totalTicks={gameState.simulation.totalTicks}
             totalBeliefEarned={gameState.stats.totalBeliefEarned}
             secondsSinceLastEvent={secondsSinceLastEvent}
             whispersInWindow={gameState.activity.whispersInWindow}
             whisperResetInSeconds={whisperResetInSeconds}
+            influenceBreakdown={influenceRegenBreakdown}
             audioControls={audioControls}
             onEnableAudio={enableAudio}
             onDisableAudio={disableAudio}

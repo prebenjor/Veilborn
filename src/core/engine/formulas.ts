@@ -134,6 +134,18 @@ export interface GhostInfluenceTotals {
   faithDecayDelta: number;
 }
 
+export interface InfluenceRegenBreakdown {
+  totalPerSecond: number;
+  basePerSecond: number;
+  shrinePerSecond: number;
+  cultPerSecond: number;
+  echoPerSecond: number;
+  shrineCount: number;
+  cultCount: number;
+  cap: number;
+  fillTimeSeconds: number | null;
+}
+
 export interface EraOneGateStatus {
   beliefTarget: number;
   beliefReady: boolean;
@@ -468,19 +480,60 @@ export function getInfluenceCap(state: GameState): number {
   return INFLUENCE_BASE_CAP + state.prophets * INFLUENCE_CAP_PER_PROPHET + startBonus;
 }
 
-export function getInfluenceRegenPerSecond(state: GameState): number {
-  const baseRegen =
-    INFLUENCE_BASE_REGEN_PER_SECOND + state.prophets * INFLUENCE_REGEN_PER_PROPHET_PER_SECOND;
-  const shrineRegen = state.doctrine.shrinesBuilt * INFLUENCE_REGEN_PER_SHRINE_PER_SECOND;
+function getInfluenceBaseRegenPerSecond(state: GameState): number {
+  return INFLUENCE_BASE_REGEN_PER_SECOND + state.prophets * INFLUENCE_REGEN_PER_PROPHET_PER_SECOND;
+}
+
+function getInfluenceShrineRegenPerSecond(state: GameState): number {
+  return state.doctrine.shrinesBuilt * INFLUENCE_REGEN_PER_SHRINE_PER_SECOND;
+}
+
+function getInfluenceCultRegenPerSecond(state: GameState): { totalPerSecond: number; cultCount: number } {
   const cultCount = Math.max(0, Math.floor(state.cults));
-  const averageCultFollowers = cultCount > 0 ? state.resources.followers / cultCount : 0;
+  if (cultCount <= 0) {
+    return { totalPerSecond: 0, cultCount: 0 };
+  }
+
+  const averageCultFollowers = state.resources.followers / cultCount;
   const perCultRegen = Math.min(
     averageCultFollowers * INFLUENCE_REGEN_PER_CULT_FOLLOWER,
     INFLUENCE_REGEN_PER_CULT_CAP
   );
-  const cultRegen = cultCount > 0 ? perCultRegen * cultCount : 0;
-  const echoRegen = state.echoBonuses.resonantWord ? INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND : 0;
-  return baseRegen + shrineRegen + cultRegen + echoRegen;
+
+  return {
+    totalPerSecond: perCultRegen * cultCount,
+    cultCount
+  };
+}
+
+function getInfluenceEchoRegenPerSecond(state: GameState): number {
+  return state.echoBonuses.resonantWord ? INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND : 0;
+}
+
+export function getInfluenceRegenBreakdown(state: GameState): InfluenceRegenBreakdown {
+  const basePerSecond = getInfluenceBaseRegenPerSecond(state);
+  const shrinePerSecond = getInfluenceShrineRegenPerSecond(state);
+  const cultRegen = getInfluenceCultRegenPerSecond(state);
+  const echoPerSecond = getInfluenceEchoRegenPerSecond(state);
+  const totalPerSecond = basePerSecond + shrinePerSecond + cultRegen.totalPerSecond + echoPerSecond;
+  const cap = getInfluenceCap(state);
+  const fillTimeSeconds = totalPerSecond > 0 ? Math.ceil(cap / totalPerSecond) : null;
+
+  return {
+    totalPerSecond,
+    basePerSecond,
+    shrinePerSecond,
+    cultPerSecond: cultRegen.totalPerSecond,
+    echoPerSecond,
+    shrineCount: Math.max(0, Math.floor(state.doctrine.shrinesBuilt)),
+    cultCount: cultRegen.cultCount,
+    cap,
+    fillTimeSeconds
+  };
+}
+
+export function getInfluenceRegenPerSecond(state: GameState): number {
+  return getInfluenceRegenBreakdown(state).totalPerSecond;
 }
 
 export function normalizeWhisperCycle(activity: ActivityState, nowMs: number): NormalizedWhisperCycle {

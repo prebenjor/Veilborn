@@ -2,12 +2,23 @@ import { formatDurationCompact } from "../../core/ui/timeFormat";
 import { formatResource } from "../../core/ui/numberFormat";
 
 interface StatsDrawerProps {
+  era: 1 | 2 | 3;
   runSeconds: number;
   totalTicks: number;
   totalBeliefEarned: number;
   secondsSinceLastEvent: number;
   whispersInWindow: number;
   whisperResetInSeconds: number;
+  influenceBreakdown: {
+    totalPerSecond: number;
+    basePerSecond: number;
+    shrinePerSecond: number;
+    cultPerSecond: number;
+    echoPerSecond: number;
+    shrineCount: number;
+    cap: number;
+    fillTimeSeconds: number | null;
+  };
   audioControls: {
     supported: boolean;
     mode: "idle" | "running" | "fallback" | "error";
@@ -21,12 +32,14 @@ interface StatsDrawerProps {
 }
 
 export function StatsDrawer({
+  era,
   runSeconds,
   totalTicks,
   totalBeliefEarned,
   secondsSinceLastEvent,
   whispersInWindow,
   whisperResetInSeconds,
+  influenceBreakdown,
   audioControls,
   onEnableAudio,
   onDisableAudio,
@@ -61,6 +74,35 @@ export function StatsDrawer({
         <dt>Whisper Reset In</dt>
         <dd>{formatDurationCompact(whisperResetInSeconds)}</dd>
       </dl>
+      {era >= 2 ? (
+        <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+          <p className="uppercase tracking-[0.16em] text-veil/80">Influence</p>
+          <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
+            <dt>Regen per second</dt>
+            <dd>{formatResource(influenceBreakdown.totalPerSecond, 1)} /s</dd>
+            <dt>Base (prophets)</dt>
+            <dd>{formatResource(influenceBreakdown.basePerSecond, 1)} /s</dd>
+            <dt>Shrines ({formatResource(influenceBreakdown.shrineCount)})</dt>
+            <dd>{formatResource(influenceBreakdown.shrinePerSecond, 1)} /s</dd>
+            <dt>Cults (active)</dt>
+            <dd>{formatResource(influenceBreakdown.cultPerSecond, 1)} /s</dd>
+            {influenceBreakdown.echoPerSecond > 0 ? (
+              <>
+                <dt>Resonant Word</dt>
+                <dd>{formatResource(influenceBreakdown.echoPerSecond, 1)} /s</dd>
+              </>
+            ) : null}
+            <dt>Cap</dt>
+            <dd>{formatResource(influenceBreakdown.cap)}</dd>
+            <dt>Fill time (from 0)</dt>
+            <dd>
+              {influenceBreakdown.fillTimeSeconds === null
+                ? "-"
+                : `~${formatDurationCompact(influenceBreakdown.fillTimeSeconds)}`}
+            </dd>
+          </dl>
+        </div>
+      ) : null}
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
         <p className="uppercase tracking-[0.16em] text-veil/80">Audio</p>
         <p className="mt-1">
