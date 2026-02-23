@@ -384,7 +384,7 @@
     {
       "id": "PF-02",
       "title": "Strict Era-Locked UI Disclosure",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Hide all future-era systems until era unlock",
@@ -406,7 +406,7 @@
     {
       "id": "PF-04",
       "title": "Runtime Formatting in Stats Page",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Format run time as days/hours/minutes/seconds",
@@ -428,7 +428,7 @@
     {
       "id": "PF-06",
       "title": "Omen Frequency and Authenticity Pass",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Reduce omen volume; prioritize milestone-significant events",
@@ -439,7 +439,7 @@
     {
       "id": "PF-07",
       "title": "Progressive HUD Reveal and Explainability",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Hide Veil/Domain aggregate metrics until relevant unlocks",

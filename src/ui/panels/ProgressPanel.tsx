@@ -1,3 +1,5 @@
+import { shouldRevealCultControls } from "../../core/engine/revealPolicy";
+
 interface ProgressPanelProps {
   belief: number;
   era: number;
@@ -47,13 +49,12 @@ export function ProgressPanel({
   onAnointProphet,
   onFormCult
 }: ProgressPanelProps) {
-  const cultRevealThreshold = nextCultBeliefCost * 0.9;
-  const showCultControls = era >= 2 && (cults > 0 || belief >= cultRevealThreshold);
+  const showCultControls = shouldRevealCultControls(era as 1 | 2 | 3, belief, nextCultBeliefCost, cults);
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
       <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Doctrine Seeds</h2>
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
+      <div className={`mt-3 grid gap-3 ${era >= 2 ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
           <p className="mt-1 text-sm text-white">
@@ -70,14 +71,7 @@ export function ProgressPanel({
           </button>
         </article>
 
-        {era < 2 ? (
-          <article className="rounded-xl border border-white/10 bg-black/25 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
-            <p className="mt-1 text-sm text-veil/70">
-              Cult doctrine remains sealed in Era I. Unlock Era II to found cults.
-            </p>
-          </article>
-        ) : showCultControls ? (
+        {era >= 2 && showCultControls ? (
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-1 text-sm text-white">
@@ -92,14 +86,14 @@ export function ProgressPanel({
               Found Cult
             </button>
           </article>
-        ) : (
+        ) : era >= 2 ? (
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-1 text-sm text-veil/70">
               The doctrine remains fractured. Greater belief is required before a cult can be founded.
             </p>
           </article>
-        )}
+        ) : null}
       </div>
 
       <article className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">

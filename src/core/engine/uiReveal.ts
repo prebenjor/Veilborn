@@ -1,4 +1,11 @@
 import type { GameState } from "../state/gameState";
+import {
+  canRevealCataclysm,
+  canRevealDoctrine,
+  canRevealDomainAggregate,
+  canRevealPantheon,
+  canRevealVeilHud
+} from "./revealPolicy";
 
 export interface UiRevealState {
   legibility: number;
@@ -36,27 +43,27 @@ export function getUiRevealState(state: GameState): UiRevealState {
 
   const showFollowersHud = legibility >= 0.14 || state.resources.followers > 0;
   const showProphetsHud = legibility >= 0.2 || state.prophets > 0;
-  const showCultsHud = state.era >= 2;
-  const showVeilHud = state.era >= 3 || legibility >= 0.58;
-  const showDomainSumHud = state.era >= 2 || legibility >= 0.62;
+  const showCultsHud = canRevealDoctrine(state.era);
+  const showVeilHud = canRevealVeilHud(state.era);
+  const showDomainSumHud = canRevealDomainAggregate(state.era);
 
   return {
     legibility,
-    showHeaderSubtext: legibility >= 0.22 || state.era >= 2,
+    showHeaderSubtext: legibility >= 0.22 || canRevealDoctrine(state.era),
     showVeilHud,
     showFollowersHud,
     showProphetsHud,
     showCultsHud,
     showDomainSumHud,
-    showDomainPanel: legibility >= 0.18 || state.prophets > 0 || state.era >= 2,
-    showProgressPanel: legibility >= 0.2 || state.prophets > 0 || state.era >= 2,
-    showEraGatePanel: legibility >= 0.22 || state.prophets > 0 || state.era >= 2,
-    showDoctrinePanel: state.era >= 2,
-    showCataclysmPanel: state.era >= 3,
+    showDomainPanel: legibility >= 0.18 || state.prophets > 0 || canRevealDoctrine(state.era),
+    showProgressPanel: legibility >= 0.2 || state.prophets > 0 || canRevealDoctrine(state.era),
+    showEraGatePanel: legibility >= 0.22 || state.prophets > 0 || canRevealDoctrine(state.era),
+    showDoctrinePanel: canRevealDoctrine(state.era),
+    showCataclysmPanel: canRevealCataclysm(state.era),
     showAscensionPanel: state.prestige.completedRuns > 0 || state.era >= 3,
-    showPantheonPanel: state.pantheon.unlocked && state.era >= 2,
-    showStatsDrawer: legibility >= 0.28 || state.era >= 2,
-    omenVisibleCount: legibility < 0.2 ? 3 : legibility < 0.45 ? 5 : 8,
+    showPantheonPanel: canRevealPantheon(state.era, state.pantheon.unlocked),
+    showStatsDrawer: legibility >= 0.28 || canRevealDoctrine(state.era),
+    omenVisibleCount: legibility < 0.2 ? 2 : legibility < 0.45 ? 4 : 6,
     omenTitle: legibility < 0.3 ? "Murmurs" : "Omens"
   };
 }
@@ -75,4 +82,3 @@ export function veilMaskText(text: string, legibility: number): string {
     })
     .join("");
 }
-

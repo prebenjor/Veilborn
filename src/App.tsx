@@ -447,6 +447,7 @@ export default function App() {
             <article className="rounded-xl border border-white/10 bg-black/20 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Thickness</p>
               <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.veil)}</p>
+              <p className="mt-1 text-xs text-veil/65">Thinner Veil boosts belief, but collapse risk rises.</p>
             </article>
           ) : null}
         </section>
@@ -476,6 +477,9 @@ export default function App() {
               <article className="rounded-xl border border-white/10 bg-black/20 p-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Domain Level Sum</p>
                 <p className="mt-2 text-xl text-white">{formatNumber(totalDomainLevel)}</p>
+                <p className="mt-1 text-xs text-veil/65">
+                  Domain mastery amplifies prophet output and cult resonance.
+                </p>
               </article>
             ) : null}
           </section>

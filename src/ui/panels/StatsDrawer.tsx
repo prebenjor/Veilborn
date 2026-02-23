@@ -1,3 +1,5 @@
+import { formatDurationCompact } from "../../core/ui/timeFormat";
+
 interface StatsDrawerProps {
   runSeconds: number;
   totalTicks: number;
@@ -50,17 +52,17 @@ export function StatsDrawer({
       </summary>
       <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px] text-veil/70">
         <dt>Run Time</dt>
-        <dd>{formatNumber(runSeconds)}s</dd>
+        <dd>{formatDurationCompact(runSeconds)}</dd>
         <dt>Engine Ticks</dt>
         <dd>{formatNumber(totalTicks)}</dd>
         <dt>Total Belief</dt>
         <dd>{formatNumber(totalBeliefEarned)}</dd>
         <dt>Since Last Event</dt>
-        <dd>{formatNumber(secondsSinceLastEvent)}s</dd>
+        <dd>{formatDurationCompact(secondsSinceLastEvent)}</dd>
         <dt>Whispers This Cycle</dt>
         <dd>{formatNumber(whispersInWindow)}</dd>
         <dt>Whisper Reset In</dt>
-        <dd>{formatNumber(whisperResetInSeconds)}s</dd>
+        <dd>{formatDurationCompact(whisperResetInSeconds)}</dd>
       </dl>
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
         <p className="uppercase tracking-[0.16em] text-veil/80">Audio</p>

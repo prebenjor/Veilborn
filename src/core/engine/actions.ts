@@ -165,6 +165,56 @@ const ACT_LABELS: Record<ActType, string> = {
   proclaim: "Proclamation"
 };
 
+const MAJOR_OMEN_KINDS: OmenKind[] = [
+  "domainLevel",
+  "prophet",
+  "cult",
+  "suppress",
+  "miracle",
+  "civCollapse",
+  "veilCollapse",
+  "pantheonArrival",
+  "pantheonAlliance",
+  "pantheonBetrayal",
+  "echoTree",
+  "ascension",
+  "eraOneToTwo",
+  "eraTwoToThree"
+];
+
+function isMajorOmenKind(kind: OmenKind): boolean {
+  return MAJOR_OMEN_KINDS.includes(kind);
+}
+
+function getMinorOmenCooldownMs(kind: OmenKind): number {
+  if (kind === "whisper") return 18000;
+  if (kind === "recruit") return 18000;
+  if (kind === "act") return 22000;
+  if (kind === "domain") return 26000;
+  return 20000;
+}
+
+function getMinorOmenChance(kind: OmenKind): number {
+  if (kind === "whisper") return 0.32;
+  if (kind === "recruit") return 0.38;
+  if (kind === "act") return 0.45;
+  if (kind === "domain") return 0.3;
+  return 0.4;
+}
+
+function toOmenFingerprint(text: string): string {
+  const normalized = text
+    .toLowerCase()
+    .replace(/\d+/g, "#")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sentenceParts = normalized
+    .split(/[.!?]/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return sentenceParts[sentenceParts.length - 1] ?? normalized;
+}
+
 function nextRandom(rngState: number): RandomPick<number> {
   let x = rngState >>> 0;
   x ^= x << 13;
@@ -839,16 +889,46 @@ function createOmen(
 }
 
 function appendOmen(state: GameState, nowMs: number, kind: OmenKind, detail?: string): GameState {
-  const recentTexts = new Set(state.omenLog.slice(0, 4).map((entry) => entry.text));
+  const lastOmenAt = state.omenLog[0]?.at ?? 0;
+  const msSinceLastOmen = Math.max(0, nowMs - lastOmenAt);
   let rngState = state.rngState;
+
+  if (!isMajorOmenKind(kind)) {
+    const cooldownMs = getMinorOmenCooldownMs(kind);
+    if (msSinceLastOmen < cooldownMs) {
+      return state;
+    }
+    const roll = nextRandom(rngState);
+    rngState = roll.rngState;
+    if (roll.value > getMinorOmenChance(kind)) {
+      return {
+        ...state,
+        rngState
+      };
+    }
+  }
+
+  const recentTexts = new Set(state.omenLog.slice(0, 8).map((entry) => entry.text));
+  const recentFingerprints = new Set(
+    state.omenLog.slice(0, 8).map((entry) => toOmenFingerprint(entry.text))
+  );
   let chosen = createOmen(state, kind, nowMs, detail, rngState);
   rngState = chosen.rngState;
+  let chosenFingerprint = toOmenFingerprint(chosen.text);
 
-  for (let i = 0; i < 3; i += 1) {
-    if (!recentTexts.has(chosen.text)) break;
+  for (let i = 0; i < 8; i += 1) {
+    if (!recentTexts.has(chosen.text) && !recentFingerprints.has(chosenFingerprint)) break;
     const retry = createOmen(state, kind, nowMs, detail, rngState);
     rngState = retry.rngState;
     chosen = retry;
+    chosenFingerprint = toOmenFingerprint(chosen.text);
+  }
+
+  if (recentTexts.has(chosen.text) || recentFingerprints.has(chosenFingerprint)) {
+    return {
+      ...state,
+      rngState
+    };
   }
 
   return {
@@ -911,11 +991,17 @@ export function performWhisper(state: GameState, nowMs: number): GameState {
     skepticism: -LINEAGE_ACTION_RECOVERY_WHISPER * 0.25
   });
   const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
+  const detail = [
+    `${followerGain} new listeners held the whisper through the next bell.`,
+    flavor
+  ]
+    .filter((entry): entry is string => Boolean(entry))
+    .join(" ");
   return appendOmen(
     withPeakFollowers(withRecoveredLineage, withRecoveredLineage.resources.followers),
     nowMs,
     "whisper",
-    flavor
+    detail
   );
 }
 
@@ -960,11 +1046,17 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
     skepticism: -LINEAGE_ACTION_RECOVERY_RECRUIT * 0.35
   });
   const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
+  const detail = [
+    `${followerGain} followers answered before the watch changed shifts.`,
+    flavor
+  ]
+    .filter((entry): entry is string => Boolean(entry))
+    .join(" ");
   return appendOmen(
     withPeakFollowers(withRecoveredLineage, withRecoveredLineage.resources.followers),
     nowMs,
     "recruit",
-    flavor
+    detail
   );
 }
 

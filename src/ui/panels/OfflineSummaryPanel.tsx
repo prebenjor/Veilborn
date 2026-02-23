@@ -1,4 +1,5 @@
 import type { OfflineProgressSummary } from "../../core/state/persistence";
+import { formatDurationCompact } from "../../core/ui/timeFormat";
 
 interface OfflineSummaryPanelProps {
   summary: OfflineProgressSummary;
@@ -9,14 +10,6 @@ function formatNumber(value: number, maxFractionDigits = 1): string {
   return Intl.NumberFormat("en-US", { maximumFractionDigits: maxFractionDigits }).format(value);
 }
 
-function formatDuration(seconds: number): string {
-  const totalSeconds = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${Math.max(1, minutes)}m`;
-}
-
 export function OfflineSummaryPanel({ summary, onDismiss }: OfflineSummaryPanelProps) {
   return (
     <section className="rounded-2xl border border-omen/40 bg-omen/10 p-4 shadow-veil backdrop-blur-sm">
@@ -24,7 +17,7 @@ export function OfflineSummaryPanel({ summary, onDismiss }: OfflineSummaryPanelP
         <div>
           <h2 className="text-sm uppercase tracking-[0.25em] text-omen">Return Omen</h2>
           <p className="mt-2 text-sm text-veil/85">
-            {`Time moved for ${formatDuration(summary.elapsedSeconds)} while you slept in the dark.`}
+            {`Time moved for ${formatDurationCompact(summary.elapsedSeconds)} while you slept in the dark.`}
           </p>
           <p className="mt-1 text-sm text-veil/75">
             {summary.wasCapped

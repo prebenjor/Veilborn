@@ -1,3 +1,5 @@
+import { formatDurationCompact } from "../../core/ui/timeFormat";
+
 interface GateLineProps {
   label: string;
   value: string;
@@ -96,8 +98,8 @@ export function EraGatePanel({
             ready={unravelingMiraclesProgress >= unravelingMiraclesTarget}
           />
           <GateLine
-            label="Run Time (seconds)"
-            value={`${formatNumber(unravelingRunTimeProgressSeconds)} / ${formatNumber(unravelingRunTimeTargetSeconds)}`}
+            label="Run Time"
+            value={`${formatDurationCompact(unravelingRunTimeProgressSeconds)} / ${formatDurationCompact(unravelingRunTimeTargetSeconds)}`}
             ready={unravelingRunTimeProgressSeconds >= unravelingRunTimeTargetSeconds}
           />
         </div>
