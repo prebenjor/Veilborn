@@ -19,10 +19,11 @@ import {
   getWhisperCost
 } from "./core/engine/formulas";
 import { advanceWorld } from "./core/engine/worldTick";
-import { WORLD_TICK_MS, type DomainId, type GameState } from "./core/state/gameState";
+import { WHISPER_WINDOW_MS, WORLD_TICK_MS, type DomainId, type GameState } from "./core/state/gameState";
 import { loadGameState, saveGameState } from "./core/state/persistence";
 import { DomainPanel } from "./ui/panels/DomainPanel";
 import { ProgressPanel } from "./ui/panels/ProgressPanel";
+import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
 
 function formatNumber(value: number): string {
@@ -77,6 +78,12 @@ export default function App() {
   const canCreateProphet = canAnointProphet(gameState);
   const canCreateCult = canFormCult(gameState);
   const elapsedSeconds = Math.floor(gameState.simulation.totalElapsedMs / 1000);
+  const secondsSinceLastEvent = Math.max(0, (nowMs - gameState.activity.lastEventAt) / 1000);
+  const whisperCycleElapsed = Math.max(0, nowMs - gameState.activity.whisperWindowStartedAt);
+  const whisperResetInSeconds = Math.max(
+    0,
+    Math.ceil((WHISPER_WINDOW_MS - (whisperCycleElapsed % WHISPER_WINDOW_MS)) / 1000)
+  );
 
   const onWhisper = () => {
     setGameState((prev) => performWhisper(prev, Date.now()));
@@ -117,7 +124,7 @@ export default function App() {
           </p>
         </header>
 
-        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4">
+        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-3">
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Belief</p>
             <p className="mt-2 text-xl text-white">
@@ -138,16 +145,9 @@ export default function App() {
               {formatNumber(gameState.resources.veil)}
             </p>
           </article>
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Run Time</p>
-            <p className="mt-2 text-xl text-white">{formatNumber(elapsedSeconds)}s</p>
-            <p className="mt-1 text-xs text-veil/65">
-              Total earned: {formatNumber(gameState.stats.totalBeliefEarned)}
-            </p>
-          </article>
         </section>
 
-        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4">
+        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-3">
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
             <p className="mt-2 text-xl text-white">
@@ -161,12 +161,6 @@ export default function App() {
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-2 text-xl text-white">{formatNumber(gameState.cults)}</p>
-          </article>
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Faith Decay Anchor</p>
-            <p className="mt-2 text-xl text-white">
-              {formatNumber(Math.max(0, (nowMs - gameState.activity.lastEventAt) / 1000))}s
-            </p>
           </article>
         </section>
 
@@ -212,6 +206,15 @@ export default function App() {
             : "Influence is too thin; wait, then whisper again."}
           {" "}Domain investments cost belief and level through XP thresholds.
         </p>
+
+        <StatsDrawer
+          runSeconds={elapsedSeconds}
+          totalTicks={gameState.simulation.totalTicks}
+          totalBeliefEarned={gameState.stats.totalBeliefEarned}
+          secondsSinceLastEvent={secondsSinceLastEvent}
+          whispersInWindow={gameState.activity.whispersInWindow}
+          whisperResetInSeconds={whisperResetInSeconds}
+        />
       </motion.div>
     </main>
   );
