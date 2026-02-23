@@ -6,6 +6,17 @@ interface ProgressPanelProps {
   cults: number;
   nextProphetFollowers: number;
   nextCultBeliefCost: number;
+  lineageGeneration: number;
+  lineageTrustDebt: number;
+  lineageSkepticism: number;
+  lineageBetrayalScars: number;
+  lineageConversionModifier: number;
+  lineageRecentMarker: string | null;
+  lineageTraits: {
+    skeptical: number;
+    cautious: number;
+    zealous: number;
+  };
   canAnointProphet: boolean;
   canFormCult: boolean;
   onAnointProphet: () => void;
@@ -24,6 +35,13 @@ export function ProgressPanel({
   cults,
   nextProphetFollowers,
   nextCultBeliefCost,
+  lineageGeneration,
+  lineageTrustDebt,
+  lineageSkepticism,
+  lineageBetrayalScars,
+  lineageConversionModifier,
+  lineageRecentMarker,
+  lineageTraits,
   canAnointProphet,
   canFormCult,
   onAnointProphet,
@@ -83,7 +101,28 @@ export function ProgressPanel({
           </article>
         )}
       </div>
+
+      <article className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Lineage Memory</p>
+        <p className="mt-1 text-sm text-white">
+          Generation {formatNumber(lineageGeneration)} - conversion x
+          {formatNumber(lineageConversionModifier)}
+        </p>
+        <p className="mt-1 text-xs text-veil/65">
+          Trust debt {formatNumber(lineageTrustDebt)} | Skepticism {formatNumber(lineageSkepticism)} |
+          Betrayal scars {formatNumber(lineageBetrayalScars)}
+        </p>
+        <p className="mt-1 text-xs text-veil/65">
+          Traits: skeptical {formatNumber(lineageTraits.skeptical * 100)}% | cautious{" "}
+          {formatNumber(lineageTraits.cautious * 100)}% | zealous{" "}
+          {formatNumber(lineageTraits.zealous * 100)}%
+        </p>
+        <p className="mt-1 text-xs text-veil/60">
+          {lineageRecentMarker
+            ? `Latest memory: ${lineageRecentMarker}`
+            : "No lasting social memory has formed yet."}
+        </p>
+      </article>
     </section>
   );
 }
-

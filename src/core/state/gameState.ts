@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 7;
+export const GAME_STATE_SCHEMA_VERSION = 8;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -147,9 +147,33 @@ export const CIV_REGEN_PER_SHRINE_PER_MINUTE = 0.2;
 export const CIV_COLLAPSE_FOLLOWER_RETENTION = 0.15;
 export const CIV_REBUILD_BASE_SECONDS = 180;
 export const CIV_REBUILD_ECHO_MULTIPLIER = 0.6;
+export const LINEAGE_HISTORY_LIMIT = 40;
+export const LINEAGE_TRUST_DEBT_MAX = 100;
+export const LINEAGE_SKEPTICISM_MAX = 100;
+export const LINEAGE_ASCENSION_TRUST_DECAY = 0.7;
+export const LINEAGE_ASCENSION_SKEPTICISM_DECAY = 0.75;
+export const LINEAGE_SUPPRESS_TRUST_DEBT = 6;
+export const LINEAGE_SUPPRESS_SKEPTICISM = 4;
+export const LINEAGE_CIV_COLLAPSE_TRUST_DEBT = 12;
+export const LINEAGE_CIV_COLLAPSE_SKEPTICISM = 8;
+export const LINEAGE_VEIL_COLLAPSE_TRUST_DEBT = 10;
+export const LINEAGE_VEIL_COLLAPSE_SKEPTICISM = 6;
+export const LINEAGE_CIV_RECOVERY_TRUST_RECOVERY = 5;
+export const LINEAGE_CIV_RECOVERY_SKEPTICISM_RECOVERY = 3;
+export const LINEAGE_ACTION_RECOVERY_WHISPER = 0.2;
+export const LINEAGE_ACTION_RECOVERY_RECRUIT = 0.35;
+export const LINEAGE_ACTION_RECOVERY_ACT = 0.5;
 
 export type MortalTrait = "skeptical" | "zealous" | "cautious";
 export type DomainId = "fire" | "death" | "harvest" | "storm" | "memory" | "void";
+export type HistoryMarkerKind =
+  | "origin"
+  | "prophet_lineage"
+  | "rival_suppressed"
+  | "civ_collapse"
+  | "veil_collapse"
+  | "civ_rebuild"
+  | "ascension";
 
 export const DOMAIN_LABELS: Record<DomainId, string> = {
   fire: "Fire",
@@ -164,6 +188,27 @@ export interface Mortal {
   id: string;
   name: string;
   trait: MortalTrait;
+  generation: number;
+  parentId: string | null;
+}
+
+export interface HistoryMarker {
+  id: string;
+  at: number;
+  runId: string;
+  kind: HistoryMarkerKind;
+  text: string;
+  trustDebtDelta: number;
+  skepticismDelta: number;
+}
+
+export interface LineageState {
+  generation: number;
+  trustDebt: number;
+  skepticism: number;
+  betrayalScars: number;
+  history: HistoryMarker[];
+  nextMarkerId: number;
 }
 
 export interface DomainProgress {
@@ -294,6 +339,7 @@ export interface GameState {
   doctrine: DoctrineState;
   cataclysm: CataclysmState;
   prestige: PrestigeState;
+  lineage: LineageState;
   echoBonuses: EchoBonuses;
   era: 1 | 2 | 3;
   mortals: Mortal[];
@@ -363,11 +409,33 @@ export function createDefaultPrestigeState(): PrestigeState {
   };
 }
 
+export function createDefaultLineageState(nowMs: number, runId: string): LineageState {
+  return {
+    generation: 1,
+    trustDebt: 0,
+    skepticism: 6,
+    betrayalScars: 0,
+    history: [
+      {
+        id: "hist-0",
+        at: nowMs,
+        runId,
+        kind: "origin",
+        text: "The first listener kept your silence and named no witness.",
+        trustDebtDelta: 0,
+        skepticismDelta: 0
+      }
+    ],
+    nextMarkerId: 1
+  };
+}
+
 export function createInitialGameState(nowMs = Date.now()): GameState {
+  const runId = createRunId(nowMs);
   return {
     meta: {
       schemaVersion: GAME_STATE_SCHEMA_VERSION,
-      runId: createRunId(nowMs),
+      runId,
       createdAt: nowMs,
       updatedAt: nowMs
     },
@@ -416,13 +484,16 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       veilCollapseImmunityUntil: 0
     },
     prestige: createDefaultPrestigeState(),
+    lineage: createDefaultLineageState(nowMs, runId),
     echoBonuses: createDefaultEchoBonuses(),
     era: 1,
     mortals: [
       {
         id: "mortal-1",
         name: "Ilyr of the Hollow",
-        trait: "cautious"
+        trait: "cautious",
+        generation: 1,
+        parentId: null
       }
     ],
     domains: createDefaultDomains(),

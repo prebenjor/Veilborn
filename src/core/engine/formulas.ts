@@ -38,6 +38,8 @@ import {
   MIRACLE_INFLUENCE_COST,
   MIRACLE_VEIL_COST,
   MIRACLE_VEIL_COST_TIER_ONE_ECHO,
+  LINEAGE_SKEPTICISM_MAX,
+  LINEAGE_TRUST_DEBT_MAX,
   FAITH_DECAY_BASE,
   FAITH_DECAY_ECHO_FLOOR,
   FAITH_DECAY_FLOOR,
@@ -80,12 +82,34 @@ import {
   type EchoTreeId,
   type EchoTreeRanks,
   type GameState,
+  type MortalTrait,
   type MiracleTier
 } from "../state/gameState";
 
 interface NormalizedWhisperCycle {
   whisperWindowStartedAt: number;
   whispersInWindow: number;
+}
+
+const TRAIT_ORDER: MortalTrait[] = ["skeptical", "cautious", "zealous"];
+const TRAIT_CONVERSION_EFFECT: Record<MortalTrait, number> = {
+  skeptical: -0.08,
+  cautious: 0,
+  zealous: 0.08
+};
+
+export interface TraitDistribution {
+  skeptical: number;
+  cautious: number;
+  zealous: number;
+}
+
+export interface LineageConversionFactors {
+  traitBias: number;
+  trustDebtPenalty: number;
+  skepticismPenalty: number;
+  betrayalPenalty: number;
+  totalModifier: number;
 }
 
 export interface EraOneGateStatus {
@@ -329,6 +353,80 @@ export function getRecruitFollowerGainBase(state: GameState): number {
     state.prophets * RECRUIT_PROPHET_FOLLOWER_BONUS +
     Math.floor(getTotalDomainLevel(state) / RECRUIT_DOMAIN_FOLLOWER_DIVISOR)
   );
+}
+
+export function getLineageTraitDistribution(state: GameState): TraitDistribution {
+  const counts: TraitDistribution = {
+    skeptical: 0,
+    cautious: 0,
+    zealous: 0
+  };
+
+  for (const mortal of state.mortals) {
+    counts[mortal.trait] += 1;
+  }
+
+  const total = Math.max(1, state.mortals.length);
+  return {
+    skeptical: counts.skeptical / total,
+    cautious: counts.cautious / total,
+    zealous: counts.zealous / total
+  };
+}
+
+function getLineageTraitBias(state: GameState): number {
+  const distribution = getLineageTraitDistribution(state);
+  return TRAIT_ORDER.reduce((sum, trait) => {
+    return sum + distribution[trait] * TRAIT_CONVERSION_EFFECT[trait];
+  }, 0);
+}
+
+export function getLineageConversionFactors(state: GameState): LineageConversionFactors {
+  const traitBias = getLineageTraitBias(state);
+  const trustDebtPenalty = (Math.max(0, state.lineage.trustDebt) / LINEAGE_TRUST_DEBT_MAX) * 0.35;
+  const skepticismPenalty = (Math.max(0, state.lineage.skepticism) / LINEAGE_SKEPTICISM_MAX) * 0.25;
+  const betrayalPenalty = Math.min(0.2, Math.max(0, state.lineage.betrayalScars) * 0.02);
+  const totalModifier = Math.max(
+    0.35,
+    Math.min(1.25, 1 + traitBias - trustDebtPenalty - skepticismPenalty - betrayalPenalty)
+  );
+
+  return {
+    traitBias,
+    trustDebtPenalty,
+    skepticismPenalty,
+    betrayalPenalty,
+    totalModifier
+  };
+}
+
+export function getLineageConversionModifier(state: GameState): number {
+  return getLineageConversionFactors(state).totalModifier;
+}
+
+export function getLineageInheritanceWeights(state: GameState): TraitDistribution {
+  const distribution = getLineageTraitDistribution(state);
+  const skepticismRatio = Math.max(0, Math.min(1, state.lineage.skepticism / LINEAGE_SKEPTICISM_MAX));
+  const trustRatio = Math.max(0, Math.min(1, state.lineage.trustDebt / LINEAGE_TRUST_DEBT_MAX));
+  const betrayalPressure = Math.min(1, state.lineage.betrayalScars / 10);
+
+  let skeptical = distribution.skeptical + skepticismRatio * 0.45 + betrayalPressure * 0.2;
+  let cautious = distribution.cautious + trustRatio * 0.25 + skepticismRatio * 0.1;
+  let zealous =
+    distribution.zealous +
+    Math.max(0, 0.25 - skepticismRatio * 0.2) +
+    Math.max(0, 0.2 - trustRatio * 0.15);
+
+  const total = Math.max(0.0001, skeptical + cautious + zealous);
+  skeptical /= total;
+  cautious /= total;
+  zealous /= total;
+
+  return {
+    skeptical,
+    cautious,
+    zealous
+  };
 }
 
 export function getDomainInvestCost(domain: DomainProgress): number {

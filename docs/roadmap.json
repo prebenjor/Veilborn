@@ -147,7 +147,7 @@
     {
       "id": "M8",
       "title": "Social Memory and Lineages",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M7"],
       "deliverables": [
         "Trait inheritance",

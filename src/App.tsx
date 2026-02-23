@@ -42,6 +42,8 @@ import {
   getFollowersForNextProphet,
   getHighestDomainLevel,
   getInfluenceCap,
+  getLineageConversionFactors,
+  getLineageTraitDistribution,
   getMiracleBeliefGain,
   getMiracleCivDamage,
   getMiracleInfluenceCost,
@@ -182,6 +184,9 @@ export default function App() {
   const eraTwoGate = getEraTwoGateStatus(gameState);
   const unravelingGate = getUnravelingGateStatus(gameState);
   const ascensionEchoGain = getAscensionEchoGain(gameState.stats.totalBeliefEarned);
+  const lineageConversionFactors = getLineageConversionFactors(gameState);
+  const lineageTraits = getLineageTraitDistribution(gameState);
+  const lineageRecentMarker = gameState.lineage.history[0]?.text ?? null;
 
   const canUseWhisper = canWhisper(gameState, nowMs);
   const canUseRecruit = canRecruit(gameState);
@@ -325,7 +330,7 @@ export default function App() {
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
           <h1 className="text-2xl font-semibold text-veil md:text-4xl">Someone is listening.</h1>
           <p className="max-w-3xl text-sm text-veil/70">
-            M7 loop active: ascension and echo trees now reshape each new cycle.
+            M8 loop active: lineages now remember what you broke and what you restored.
           </p>
         </header>
 
@@ -444,6 +449,13 @@ export default function App() {
           cults={gameState.cults}
           nextProphetFollowers={nextProphetFollowers}
           nextCultBeliefCost={nextCultBeliefCost}
+          lineageGeneration={gameState.lineage.generation}
+          lineageTrustDebt={gameState.lineage.trustDebt}
+          lineageSkepticism={gameState.lineage.skepticism}
+          lineageBetrayalScars={gameState.lineage.betrayalScars}
+          lineageConversionModifier={lineageConversionFactors.totalModifier}
+          lineageRecentMarker={lineageRecentMarker}
+          lineageTraits={lineageTraits}
           canAnointProphet={canCreateProphet}
           canFormCult={canCreateCult}
           onAnointProphet={onAnointProphet}
