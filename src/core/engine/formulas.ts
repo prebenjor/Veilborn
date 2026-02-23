@@ -52,6 +52,8 @@ import {
   INFLUENCE_BASE_CAP,
   INFLUENCE_BASE_REGEN_PER_SECOND,
   INFLUENCE_CAP_PER_PROPHET,
+  INFLUENCE_REGEN_PER_CULT_CAP,
+  INFLUENCE_REGEN_PER_CULT_FOLLOWER,
   INFLUENCE_REGEN_PER_PROPHET_PER_SECOND,
   INFLUENCE_REGEN_PER_SHRINE_PER_SECOND,
   INFLUENCE_START_BONUS,
@@ -465,7 +467,14 @@ export function getInfluenceRegenPerSecond(state: GameState): number {
   const baseRegen =
     INFLUENCE_BASE_REGEN_PER_SECOND + state.prophets * INFLUENCE_REGEN_PER_PROPHET_PER_SECOND;
   const shrineRegen = state.doctrine.shrinesBuilt * INFLUENCE_REGEN_PER_SHRINE_PER_SECOND;
-  return baseRegen + shrineRegen;
+  const cultCount = Math.max(0, Math.floor(state.cults));
+  const averageCultFollowers = cultCount > 0 ? state.resources.followers / cultCount : 0;
+  const perCultRegen = Math.min(
+    averageCultFollowers * INFLUENCE_REGEN_PER_CULT_FOLLOWER,
+    INFLUENCE_REGEN_PER_CULT_CAP
+  );
+  const cultRegen = cultCount > 0 ? perCultRegen * cultCount : 0;
+  return baseRegen + shrineRegen + cultRegen;
 }
 
 export function normalizeWhisperCycle(activity: ActivityState, nowMs: number): NormalizedWhisperCycle {
