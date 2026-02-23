@@ -61,7 +61,6 @@ import {
   getFollowerRiteCost,
   getFollowerRiteFollowerGain,
   getFollowersForNextProphet,
-  getHighestDomainLevel,
   getInfluenceCap,
   getInfluenceRegenBreakdown,
   getGhostInfluenceTotals,
@@ -947,8 +946,8 @@ export default function App() {
       eraOneBeliefTarget={eraOneGate.beliefTarget}
       prophetsProgress={gameState.prophets}
       prophetsTarget={eraOneGate.prophetsTarget}
-      domainProgress={getHighestDomainLevel(gameState)}
-      domainTarget={eraOneGate.domainTarget}
+      followersProgress={gameState.resources.followers}
+      followersTarget={eraOneGate.followersTarget}
       eraOneReady={canAdvanceEraOne}
       eraTwoBeliefProgress={gameState.stats.totalBeliefEarned}
       eraTwoBeliefTarget={eraTwoGate.beliefTarget}
@@ -978,8 +977,8 @@ export default function App() {
       eraOneBeliefTarget={eraOneGate.beliefTarget}
       prophetsProgress={gameState.prophets}
       prophetsTarget={eraOneGate.prophetsTarget}
-      domainProgress={getHighestDomainLevel(gameState)}
-      domainTarget={eraOneGate.domainTarget}
+      followersProgress={gameState.resources.followers}
+      followersTarget={eraOneGate.followersTarget}
       eraOneReady={canAdvanceEraOne}
       eraTwoBeliefProgress={gameState.stats.totalBeliefEarned}
       eraTwoBeliefTarget={eraTwoGate.beliefTarget}

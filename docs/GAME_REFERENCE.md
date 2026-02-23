@@ -284,7 +284,7 @@ Civilization:
 Era I -> II:
 - belief earned target (`10000`, or x`0.7` with `era1Gate`)
 - `3` prophets
-- highest domain `>=3`
+- `500` followers
 
 Era II -> III:
 - belief earned target (`250000`, or x`0.75` with `era2Gate`)

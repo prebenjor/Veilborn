@@ -318,7 +318,7 @@ Echo costs (Fibonacci ranks):
 Era I -> Era II:
 - `totalBeliefEarned >= 10000 * (0.70 with era1_gate Echo else 1.0)`
 - `prophets >= 3`
-- `any domain >= level 3`
+- `followers >= 500`
 
 Era II -> Era III:
 - `totalBeliefEarned >= 250000 * (0.75 with era2_gate Echo else 1.0)`
@@ -331,6 +331,10 @@ Era III -> Unraveling:
 - `miraclesThisRun >= 2`
 - `runTime >= 240 minutes` soft gate
 - Soft gate may be bypassed on run 3+ with full Echo progression
+
+Revision note (Era I gate):
+- Domain condition removed. Domains are not accessible in Era I and cannot be a gate requirement for leaving it.
+- Replaced with `followers >= 500`, which tests active Era I engagement using systems the player can see and interact with.
 
 Gate design rule:
 - All gates are multi-condition.

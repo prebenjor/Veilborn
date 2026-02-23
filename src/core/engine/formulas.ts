@@ -26,7 +26,7 @@ import {
   ECHO_TREE_ORDER,
   ECHO_TREE_RANK_COSTS,
   ERA_ONE_BELIEF_GATE_BASE,
-  ERA_ONE_DOMAIN_LEVEL_GATE,
+  ERA_ONE_FOLLOWER_GATE,
   ERA_ONE_GATE_ECHO_MULTIPLIER,
   ERA_ONE_PROPHET_GATE,
   ERA_TWO_BELIEF_GATE_BASE,
@@ -184,8 +184,8 @@ export interface EraOneGateStatus {
   beliefReady: boolean;
   prophetsTarget: number;
   prophetsReady: boolean;
-  domainTarget: number;
-  domainReady: boolean;
+  followersTarget: number;
+  followersReady: boolean;
   ready: boolean;
 }
 
@@ -975,19 +975,19 @@ export function getEraOneBeliefGateTarget(state: GameState): number {
 export function getEraOneGateStatus(state: GameState): EraOneGateStatus {
   const beliefTarget = getEraOneBeliefGateTarget(state);
   const prophetsTarget = ERA_ONE_PROPHET_GATE;
-  const domainTarget = ERA_ONE_DOMAIN_LEVEL_GATE;
+  const followersTarget = ERA_ONE_FOLLOWER_GATE;
   const beliefReady = state.stats.totalBeliefEarned >= beliefTarget;
   const prophetsReady = state.prophets >= prophetsTarget;
-  const domainReady = getHighestDomainLevel(state) >= domainTarget;
+  const followersReady = state.resources.followers >= followersTarget;
 
   return {
     beliefTarget,
     beliefReady,
     prophetsTarget,
     prophetsReady,
-    domainTarget,
-    domainReady,
-    ready: beliefReady && prophetsReady && domainReady
+    followersTarget,
+    followersReady,
+    ready: beliefReady && prophetsReady && followersReady
   };
 }
 

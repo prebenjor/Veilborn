@@ -12,8 +12,8 @@ interface EraGatePanelProps {
   eraOneBeliefTarget: number;
   prophetsProgress: number;
   prophetsTarget: number;
-  domainProgress: number;
-  domainTarget: number;
+  followersProgress: number;
+  followersTarget: number;
   eraOneReady: boolean;
   eraTwoBeliefProgress: number;
   eraTwoBeliefTarget: number;
@@ -140,8 +140,8 @@ export function EraGatePanel({
   eraOneBeliefTarget,
   prophetsProgress,
   prophetsTarget,
-  domainProgress,
-  domainTarget,
+  followersProgress,
+  followersTarget,
   eraOneReady,
   eraTwoBeliefProgress,
   eraTwoBeliefTarget,
@@ -228,7 +228,7 @@ export function EraGatePanel({
     const conditionViews: GateConditionView[] = [
       buildGteCondition("belief", "Total Belief Earned", eraOneBeliefProgress, eraOneBeliefTarget),
       buildGteCondition("prophets", "Prophets", prophetsProgress, prophetsTarget),
-      buildGteCondition("domain", "Highest Domain", domainProgress, domainTarget)
+      buildGteCondition("followers", "Followers", followersProgress, followersTarget)
     ];
     return {
       title: "Threshold",
@@ -245,8 +245,8 @@ export function EraGatePanel({
     eraOneBeliefTarget,
     prophetsProgress,
     prophetsTarget,
-    domainProgress,
-    domainTarget,
+    followersProgress,
+    followersTarget,
     eraOneReady,
     eraTwoBeliefProgress,
     eraTwoBeliefTarget,
