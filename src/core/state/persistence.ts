@@ -5,6 +5,7 @@ import {
   LINEAGE_HISTORY_LIMIT,
   LINEAGE_SKEPTICISM_MAX,
   LINEAGE_TRUST_DEBT_MAX,
+  PANTHEON_UNLOCK_COMPLETED_RUNS,
   OFFLINE_BELIEF_EFFICIENCY,
   OFFLINE_INFLUENCE_RETURN_RATIO,
   OFFLINE_MAX_SECONDS,
@@ -18,6 +19,7 @@ import {
   type CataclysmState,
   type DoctrineState,
   type DomainId,
+  type DomainPoisonRuns,
   type DomainProgress,
   type EchoTreeId,
   type EchoBonuses,
@@ -28,6 +30,9 @@ import {
   type Mortal,
   type MortalTrait,
   type OmenEntry,
+  type PantheonAlly,
+  type PantheonLegacyState,
+  type PantheonState,
   type PrestigeState,
   type RivalState
 } from "./gameState";
@@ -122,6 +127,7 @@ function readHistoryMarkerKind(value: unknown): HistoryMarkerKind | null {
     value === "origin" ||
     value === "prophet_lineage" ||
     value === "rival_suppressed" ||
+    value === "pantheon_betrayal" ||
     value === "civ_collapse" ||
     value === "veil_collapse" ||
     value === "civ_rebuild" ||
@@ -129,6 +135,11 @@ function readHistoryMarkerKind(value: unknown): HistoryMarkerKind | null {
   ) {
     return value;
   }
+  return null;
+}
+
+function readPantheonDisposition(value: unknown): PantheonAlly["disposition"] | null {
+  if (value === "neutral" || value === "allied" || value === "betrayed") return value;
   return null;
 }
 
@@ -267,6 +278,82 @@ function sanitizeRivals(value: unknown, fallback: RivalState[]): RivalState[] {
   return sanitized.slice(0, 8);
 }
 
+function sanitizePantheonAllies(value: unknown, fallback: PantheonAlly[]): PantheonAlly[] {
+  if (!Array.isArray(value)) return fallback;
+
+  const sanitized = value
+    .map((entry, index) => {
+      if (!isRecord(entry)) return null;
+      const domain = readDomainId(entry.domain);
+      const disposition = readPantheonDisposition(entry.disposition);
+      if (!domain || !disposition) return null;
+      return {
+        id: readString(entry.id, `ally-${index + 1}`),
+        name: readString(entry.name, "Unnamed Forgotten"),
+        domain,
+        disposition,
+        joinedAt: Math.max(0, readNumber(entry.joinedAt, 0)),
+        betrayedAt:
+          typeof entry.betrayedAt === "number" && Number.isFinite(entry.betrayedAt)
+            ? Math.max(0, entry.betrayedAt)
+            : null
+      } satisfies PantheonAlly;
+    })
+    .filter((entry): entry is PantheonAlly => Boolean(entry));
+
+  return sanitized.slice(0, 8);
+}
+
+function sanitizeDomainPoisonRuns(value: unknown, fallback: DomainPoisonRuns): DomainPoisonRuns {
+  const normalized: DomainPoisonRuns = {
+    fire: fallback.fire,
+    death: fallback.death,
+    harvest: fallback.harvest,
+    storm: fallback.storm,
+    memory: fallback.memory,
+    void: fallback.void
+  };
+
+  if (!isRecord(value)) return normalized;
+
+  for (const domainId of Object.keys(normalized) as DomainId[]) {
+    normalized[domainId] = Math.max(0, Math.floor(readNumber(value[domainId], normalized[domainId])));
+  }
+
+  return normalized;
+}
+
+function sanitizePantheonLegacy(value: unknown, fallback: PantheonLegacyState): PantheonLegacyState {
+  if (!isRecord(value)) return fallback;
+  return {
+    domainPoisonRuns: sanitizeDomainPoisonRuns(value.domainPoisonRuns, fallback.domainPoisonRuns),
+    betrayalsLifetime: Math.max(0, Math.floor(readNumber(value.betrayalsLifetime, fallback.betrayalsLifetime))),
+    betrayedAllyEver: readBoolean(value.betrayedAllyEver, fallback.betrayedAllyEver)
+  };
+}
+
+function sanitizePantheon(value: unknown, fallback: PantheonState): PantheonState {
+  if (!isRecord(value)) return fallback;
+
+  const allies = sanitizePantheonAllies(value.allies, fallback.allies);
+  const activeAllyId = readNullableString(value.activeAllyId, fallback.activeAllyId);
+  const pendingPoisonDomains = Array.isArray(value.pendingPoisonDomains)
+    ? value.pendingPoisonDomains
+        .map((domain) => readDomainId(domain))
+        .filter((domain): domain is DomainId => Boolean(domain))
+        .slice(0, 6)
+    : fallback.pendingPoisonDomains;
+
+  return {
+    unlocked: readBoolean(value.unlocked, fallback.unlocked),
+    allies,
+    activeAllyId: activeAllyId && allies.some((ally) => ally.id === activeAllyId) ? activeAllyId : null,
+    pendingPoisonDomains,
+    betrayalsThisRun: Math.max(0, Math.floor(readNumber(value.betrayalsThisRun, fallback.betrayalsThisRun))),
+    nextAllyId: Math.max(1, Math.floor(readNumber(value.nextAllyId, fallback.nextAllyId)))
+  };
+}
+
 function sanitizeDoctrine(value: unknown, fallback: DoctrineState): DoctrineState {
   if (!isRecord(value)) return fallback;
   return {
@@ -368,7 +455,8 @@ function sanitizePrestige(
     const inferredTreeRanks = inferTreeRanksFromEchoBonuses(normalizedBonuses);
     return {
       ...fallback,
-      treeRanks: inferredTreeRanks
+      treeRanks: inferredTreeRanks,
+      pantheon: fallback.pantheon
     };
   }
 
@@ -405,7 +493,8 @@ function sanitizePrestige(
       )
     ),
     completedRuns: Math.max(0, Math.floor(readNumber(value.completedRuns, fallback.completedRuns))),
-    treeRanks
+    treeRanks,
+    pantheon: sanitizePantheonLegacy(value.pantheon, fallback.pantheon)
   };
 }
 
@@ -421,10 +510,14 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const rawDoctrine = isRecord(rawState.doctrine) ? rawState.doctrine : {};
   const rawCataclysm = isRecord(rawState.cataclysm) ? rawState.cataclysm : {};
   const rawLineage = isRecord(rawState.lineage) ? rawState.lineage : {};
+  const rawPantheon = isRecord(rawState.pantheon) ? rawState.pantheon : {};
   const normalizedEchoBonuses = sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses);
   const normalizedPrestige = sanitizePrestige(rawState.prestige, fallback.prestige, normalizedEchoBonuses);
   const syncedEchoBonuses = getEchoBonusesFromTreeRanks(normalizedPrestige.treeRanks);
   const normalizedLineage = sanitizeLineage(rawLineage, fallback.lineage);
+  const normalizedPantheon = sanitizePantheon(rawPantheon, fallback.pantheon);
+  const pantheonUnlocked =
+    normalizedPantheon.unlocked || normalizedPrestige.completedRuns >= PANTHEON_UNLOCK_COMPLETED_RUNS;
 
   return {
     meta: {
@@ -460,6 +553,10 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
     cataclysm: sanitizeCataclysm(rawCataclysm, fallback.cataclysm),
     prestige: normalizedPrestige,
     lineage: normalizedLineage,
+    pantheon: {
+      ...normalizedPantheon,
+      unlocked: pantheonUnlocked
+    },
     echoBonuses: syncedEchoBonuses,
     era: readNumber(rawState.era, fallback.era) >= 3 ? 3 : readNumber(rawState.era, fallback.era) >= 2 ? 2 : 1,
     mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
@@ -491,7 +588,8 @@ const MIGRATORS: Record<number, Migrator> = {
   5: sanitizeState,
   6: sanitizeState,
   7: sanitizeState,
-  8: sanitizeState
+  8: sanitizeState,
+  9: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

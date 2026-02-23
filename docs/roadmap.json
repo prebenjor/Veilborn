@@ -161,7 +161,7 @@
     {
       "id": "M9",
       "title": "Pantheon Layer (Run 2+)",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M7"],
       "deliverables": [
         "Pantheon entities",

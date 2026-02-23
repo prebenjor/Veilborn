@@ -40,6 +40,11 @@ import {
   MIRACLE_VEIL_COST_TIER_ONE_ECHO,
   LINEAGE_SKEPTICISM_MAX,
   LINEAGE_TRUST_DEBT_MAX,
+  PANTHEON_ALLIANCE_DOMAIN_BONUS_BASE,
+  PANTHEON_ALLIANCE_DOMAIN_BONUS_SCALE,
+  PANTHEON_ALLIANCE_SHARE_MULTIPLIER,
+  PANTHEON_DOMAIN_POISON_OUTPUT_MULTIPLIER,
+  PANTHEON_UNLOCK_COMPLETED_RUNS,
   FAITH_DECAY_BASE,
   FAITH_DECAY_ECHO_FLOOR,
   FAITH_DECAY_FLOOR,
@@ -78,6 +83,7 @@ import {
   type ActType,
   type ActivityState,
   type DomainProgress,
+  type DomainId,
   type EchoBonuses,
   type EchoTreeId,
   type EchoTreeRanks,
@@ -109,6 +115,12 @@ export interface LineageConversionFactors {
   trustDebtPenalty: number;
   skepticismPenalty: number;
   betrayalPenalty: number;
+  totalModifier: number;
+}
+
+export interface PantheonAllianceFactors {
+  sharePenalty: number;
+  domainBonus: number;
   totalModifier: number;
 }
 
@@ -226,7 +238,60 @@ export function getAscensionEchoGain(totalBeliefEarned: number): number {
 }
 
 export function getTotalDomainLevel(state: GameState): number {
-  return state.domains.reduce((sum, domain) => sum + domain.level, 0);
+  return state.domains.reduce((sum, domain) => sum + getEffectiveDomainLevel(state, domain.id), 0);
+}
+
+export function isPantheonUnlocked(state: GameState): boolean {
+  return state.pantheon.unlocked || state.prestige.completedRuns >= PANTHEON_UNLOCK_COMPLETED_RUNS;
+}
+
+export function hasPantheonBetrayalHook(state: GameState): boolean {
+  return state.prestige.pantheon.betrayedAllyEver;
+}
+
+export function getDomainPoisonRunsRemaining(state: GameState, domainId: DomainId): number {
+  if (!isPantheonUnlocked(state)) return 0;
+  return Math.max(0, state.prestige.pantheon.domainPoisonRuns[domainId] ?? 0);
+}
+
+export function isDomainPoisoned(state: GameState, domainId: DomainId): boolean {
+  return getDomainPoisonRunsRemaining(state, domainId) > 0;
+}
+
+export function getEffectiveDomainLevel(state: GameState, domainId: DomainId): number {
+  const domain = state.domains.find((item) => item.id === domainId);
+  if (!domain) return 0;
+  if (!isDomainPoisoned(state, domainId)) return domain.level;
+  return domain.level * PANTHEON_DOMAIN_POISON_OUTPUT_MULTIPLIER;
+}
+
+function getActivePantheonAllyDomain(state: GameState): DomainId | null {
+  if (!isPantheonUnlocked(state)) return null;
+  const activeId = state.pantheon.activeAllyId;
+  if (!activeId) return null;
+  const ally = state.pantheon.allies.find((entry) => entry.id === activeId);
+  if (!ally || ally.disposition !== "allied") return null;
+  return ally.domain;
+}
+
+export function getPantheonAllianceFactors(state: GameState): PantheonAllianceFactors {
+  const activeDomain = getActivePantheonAllyDomain(state);
+  if (!activeDomain) {
+    return {
+      sharePenalty: 1,
+      domainBonus: 1,
+      totalModifier: 1
+    };
+  }
+
+  const domainLevel = getEffectiveDomainLevel(state, activeDomain);
+  const sharePenalty = PANTHEON_ALLIANCE_SHARE_MULTIPLIER;
+  const domainBonus = 1 + PANTHEON_ALLIANCE_DOMAIN_BONUS_BASE + domainLevel * PANTHEON_ALLIANCE_DOMAIN_BONUS_SCALE;
+  return {
+    sharePenalty,
+    domainBonus,
+    totalModifier: Math.max(0.4, sharePenalty * domainBonus)
+  };
 }
 
 export function getHighestDomainLevel(state: GameState): number {
@@ -297,9 +362,10 @@ export function getBeliefPerSecond(state: GameState, nowMs: number): number {
   const prophetStack = state.prophets * prophetOutput * domainMultiplier * faithDecay;
   const cultStack = getCultOutput(state) * domainSynergy;
 
+  const pantheonModifier = getPantheonAllianceFactors(state).totalModifier;
   return Math.max(
     0,
-    (prophetStack + cultStack) * getVeilBonus(state.resources.veil) * GHOST_BONUS_BASE
+    (prophetStack + cultStack) * getVeilBonus(state.resources.veil) * GHOST_BONUS_BASE * pantheonModifier
   );
 }
 

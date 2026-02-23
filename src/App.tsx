@@ -5,11 +5,14 @@ import {
   canAdvanceEraOneToTwo,
   canAdvanceEraTwoToThree,
   canAnointProphet,
+  canBetrayPantheonAlly,
   canCastMiracle,
   canFormCult,
+  canFormPantheonAlliance,
   canPurchaseEchoTreeRank,
   canStartAct,
   canSuppressRival,
+  ensurePantheonInitialized,
   getActSlotCap,
   canWhisper,
   canRecruit,
@@ -17,9 +20,11 @@ import {
   performAdvanceEraOneToTwo,
   performAdvanceEraTwoToThree,
   performAscension,
+  performBetrayPantheonAlly,
   performCastMiracle,
   performCultFormation,
   performDomainInvestment,
+  performFormPantheonAlliance,
   performPurchaseEchoTreeRank,
   performProphetAnoint,
   performRecruit,
@@ -42,6 +47,7 @@ import {
   getFollowersForNextProphet,
   getHighestDomainLevel,
   getInfluenceCap,
+  getDomainPoisonRunsRemaining,
   getLineageConversionFactors,
   getLineageTraitDistribution,
   getMiracleBeliefGain,
@@ -52,6 +58,9 @@ import {
   getTotalRivalStrength,
   getTotalDomainLevel,
   getUnravelingGateStatus,
+  getPantheonAllianceFactors,
+  hasPantheonBetrayalHook,
+  isPantheonUnlocked,
   getVeilBonus,
   getVeilCollapseThreshold,
   getVeilErosionPerSecond,
@@ -60,6 +69,7 @@ import {
 } from "./core/engine/formulas";
 import { advanceWorld } from "./core/engine/worldTick";
 import {
+  DOMAIN_LABELS,
   MIRACLE_TIERS,
   RIVAL_DRAIN_RATE,
   RIVAL_SUPPRESS_INFLUENCE_COST,
@@ -83,6 +93,7 @@ import { DoctrinePanel } from "./ui/panels/DoctrinePanel";
 import { DomainPanel } from "./ui/panels/DomainPanel";
 import { EraGatePanel } from "./ui/panels/EraGatePanel";
 import { OfflineSummaryPanel } from "./ui/panels/OfflineSummaryPanel";
+import { PantheonPanel } from "./ui/panels/PantheonPanel";
 import { ProgressPanel } from "./ui/panels/ProgressPanel";
 import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
@@ -169,6 +180,10 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
 
+  useEffect(() => {
+    setGameState((prev) => ensurePantheonInitialized(prev, Date.now()));
+  }, [gameState.prestige.completedRuns]);
+
   const veilOpacity = useMemo(() => {
     const normalized = Math.max(0.15, Math.min(1, gameState.resources.veil / 100));
     return normalized;
@@ -187,6 +202,18 @@ export default function App() {
   const lineageConversionFactors = getLineageConversionFactors(gameState);
   const lineageTraits = getLineageTraitDistribution(gameState);
   const lineageRecentMarker = gameState.lineage.history[0]?.text ?? null;
+  const pantheonUnlocked = isPantheonUnlocked(gameState);
+  const pantheonAllianceFactors = getPantheonAllianceFactors(gameState);
+  const betrayedHookUnlocked = hasPantheonBetrayalHook(gameState);
+  const pantheonAllies = gameState.pantheon.allies.map((ally) => ({
+    id: ally.id,
+    name: ally.name,
+    domainLabel: DOMAIN_LABELS[ally.domain],
+    disposition: ally.disposition,
+    poisonRunsRemaining: getDomainPoisonRunsRemaining(gameState, ally.domain),
+    canAlliance: canFormPantheonAlliance(gameState, ally.id),
+    canBetray: canBetrayPantheonAlly(gameState, ally.id)
+  }));
 
   const canUseWhisper = canWhisper(gameState, nowMs);
   const canUseRecruit = canRecruit(gameState);
@@ -304,6 +331,14 @@ export default function App() {
 
   const onAscend = () => {
     setGameState((prev) => performAscension(prev, Date.now()));
+  };
+
+  const onFormPantheonAlliance = (allyId: string) => {
+    setGameState((prev) => performFormPantheonAlliance(prev, allyId, Date.now()));
+  };
+
+  const onBetrayPantheonAlly = (allyId: string) => {
+    setGameState((prev) => performBetrayPantheonAlly(prev, allyId, Date.now()));
   };
 
   const onAdvanceEraOne = () => {
@@ -439,6 +474,18 @@ export default function App() {
           treeViews={echoTreeViews}
           onPurchaseTree={onPurchaseEchoTreeRank}
           onAscend={onAscend}
+        />
+
+        <PantheonPanel
+          unlocked={pantheonUnlocked}
+          allies={pantheonAllies}
+          allianceTotalModifier={pantheonAllianceFactors.totalModifier}
+          allianceSharePenalty={pantheonAllianceFactors.sharePenalty}
+          allianceDomainBonus={pantheonAllianceFactors.domainBonus}
+          betrayalsLifetime={gameState.prestige.pantheon.betrayalsLifetime}
+          betrayedHookUnlocked={betrayedHookUnlocked}
+          onFormAlliance={onFormPantheonAlliance}
+          onBetray={onBetrayPantheonAlly}
         />
 
         <ProgressPanel

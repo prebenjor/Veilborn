@@ -9,11 +9,19 @@ import {
   LINEAGE_CIV_COLLAPSE_SKEPTICISM,
   LINEAGE_CIV_COLLAPSE_TRUST_DEBT,
   LINEAGE_HISTORY_LIMIT,
+  LINEAGE_PANTHEON_BETRAYAL_SKEPTICISM,
+  LINEAGE_PANTHEON_BETRAYAL_TRUST_DEBT,
   LINEAGE_SKEPTICISM_MAX,
   LINEAGE_SUPPRESS_SKEPTICISM,
   LINEAGE_SUPPRESS_TRUST_DEBT,
   LINEAGE_TRUST_DEBT_MAX,
+  PANTHEON_ALLY_COUNT,
+  PANTHEON_BETRAYAL_BELIEF_MIN,
+  PANTHEON_BETRAYAL_BELIEF_SECONDS,
+  PANTHEON_DOMAIN_POISON_RUNS,
+  PANTHEON_UNLOCK_COMPLETED_RUNS,
   type HistoryMarkerKind,
+  type PantheonAlly,
   RIVAL_SUPPRESS_INFLUENCE_COST,
   CADENCE_ACTION_BELIEF_BONUS,
   CADENCE_ACTION_FOLLOWER_BONUS,
@@ -36,6 +44,7 @@ import {
 } from "../state/gameState";
 import {
   getActBaseMultiplier,
+  getBeliefPerSecond,
   getAscensionEchoGain,
   getActCost,
   getActDurationSeconds,
@@ -51,6 +60,7 @@ import {
   getLineageConversionFactors,
   getLineageConversionModifier,
   getLineageInheritanceWeights,
+  isPantheonUnlocked,
   getMiracleBeliefGain,
   getMiracleCivDamage,
   getMiracleInfluenceCost,
@@ -75,6 +85,9 @@ type OmenKind =
   | "miracle"
   | "civCollapse"
   | "veilCollapse"
+  | "pantheonArrival"
+  | "pantheonAlliance"
+  | "pantheonBetrayal"
   | "echoTree"
   | "ascension"
   | "eraOneToTwo"
@@ -120,6 +133,30 @@ const DESCENDANT_NAME_SUFFIXES = [
   "of the Lantern Step",
   "of Pale Reeds",
   "of the Black Ford"
+] as const;
+
+const PANTHEON_NAME_PREFIXES = [
+  "Aster",
+  "Vel",
+  "Mourn",
+  "Thane",
+  "Oris",
+  "Nyx",
+  "Khar",
+  "Sable",
+  "Ith",
+  "Ruin"
+] as const;
+
+const PANTHEON_NAME_SUFFIXES = [
+  "Who Waits Below",
+  "Keeper of Knotted Suns",
+  "Bearer of Quiet Thunder",
+  "The Patient Flame",
+  "Warden of Broken Oaths",
+  "Mistress of Hollow Fields",
+  "He Who Drinks Dawn",
+  "Singer in Black Rivers"
 ] as const;
 
 const ACT_LABELS: Record<ActType, string> = {
@@ -311,6 +348,129 @@ function addLineageDescendant(state: GameState, nowMs: number): GameState {
     "prophet_lineage",
     `${descendant.name} inherited a ${descendant.trait} temperament from older bloodlines.`,
     {}
+  );
+}
+
+function createPantheonName(rngState: number): RandomPick<string> {
+  const a = pickOne(rngState, PANTHEON_NAME_PREFIXES);
+  const b = pickOne(a.rngState, PANTHEON_NAME_SUFFIXES);
+  return {
+    rngState: b.rngState,
+    value: `${a.value}, ${b.value}`
+  };
+}
+
+function pickPantheonDomains(state: GameState, rngState: number): RandomPick<DomainId[]> {
+  const domains = state.domains.map((domain) => domain.id);
+  const picked: DomainId[] = [];
+  let nextState = rngState;
+
+  while (picked.length < PANTHEON_ALLY_COUNT && domains.length > 0) {
+    const roll = nextRandom(nextState);
+    nextState = roll.rngState;
+    const index = Math.min(domains.length - 1, Math.floor(roll.value * domains.length));
+    const [chosen] = domains.splice(index, 1);
+    if (chosen) picked.push(chosen);
+  }
+
+  return {
+    rngState: nextState,
+    value: picked
+  };
+}
+
+function withPoisonWindowsAdvanced(state: GameState): GameState {
+  const nextPoisonRuns = {
+    ...state.prestige.pantheon.domainPoisonRuns
+  };
+
+  for (const domain of state.domains) {
+    const current = nextPoisonRuns[domain.id] ?? 0;
+    nextPoisonRuns[domain.id] = Math.max(0, current - 1);
+  }
+
+  return {
+    ...state,
+    prestige: {
+      ...state.prestige,
+      pantheon: {
+        ...state.prestige.pantheon,
+        domainPoisonRuns: nextPoisonRuns
+      }
+    }
+  };
+}
+
+function withPendingPoisonApplied(state: GameState): GameState {
+  if (state.pantheon.pendingPoisonDomains.length <= 0) return state;
+
+  const nextPoisonRuns = {
+    ...state.prestige.pantheon.domainPoisonRuns
+  };
+  for (const domainId of state.pantheon.pendingPoisonDomains) {
+    nextPoisonRuns[domainId] = Math.max(nextPoisonRuns[domainId] ?? 0, PANTHEON_DOMAIN_POISON_RUNS);
+  }
+
+  return {
+    ...state,
+    prestige: {
+      ...state.prestige,
+      pantheon: {
+        ...state.prestige.pantheon,
+        domainPoisonRuns: nextPoisonRuns
+      }
+    }
+  };
+}
+
+export function shouldInitializePantheon(state: GameState): boolean {
+  if (!isPantheonUnlocked(state)) return false;
+  return state.pantheon.allies.length <= 0;
+}
+
+export function ensurePantheonInitialized(state: GameState, nowMs: number): GameState {
+  if (!shouldInitializePantheon(state)) return state;
+
+  const domainPick = pickPantheonDomains(state, state.rngState);
+  let rngState = domainPick.rngState;
+  const allies: PantheonAlly[] = [];
+  let nextAllyId = state.pantheon.nextAllyId;
+
+  for (const domain of domainPick.value) {
+    const nameRoll = createPantheonName(rngState);
+    rngState = nameRoll.rngState;
+    allies.push({
+      id: `ally-${nextAllyId}`,
+      name: nameRoll.value,
+      domain,
+      disposition: "neutral",
+      joinedAt: nowMs,
+      betrayedAt: null
+    });
+    nextAllyId += 1;
+  }
+
+  const initialized = {
+    ...state,
+    rngState,
+    pantheon: {
+      ...state.pantheon,
+      unlocked: true,
+      allies,
+      activeAllyId: null,
+      nextAllyId
+    },
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(
+    initialized,
+    nowMs,
+    "pantheonArrival",
+    "Other forgotten gods have crossed into your silence."
   );
 }
 
@@ -508,6 +668,27 @@ function createOmen(
     "You relinquished the world and carried only distilled remembrance."
   ] as const;
 
+  const pantheonArrivalStarts = [
+    "A second silence answered yours from beyond the Veil.",
+    "Forgotten names stirred at the edge of your domain.",
+    "Other abandoned gods noticed your return and stepped closer.",
+    "Three alien constellations appeared where none belonged."
+  ] as const;
+
+  const pantheonAllianceStarts = [
+    "A pact was etched in dream-ink between your altar and another.",
+    "Two forgotten wills aligned and the faithful felt the strain.",
+    "Your doctrine braided with a rival divinity for shared reach.",
+    "An alliance formed in secret and mortals paid its tithe."
+  ] as const;
+
+  const pantheonBetrayalStarts = [
+    "You broke faith with an allied god and drank the fallout.",
+    "A divine oath snapped, and the world heard it like thunder.",
+    "You chose betrayal over balance and power rushed in.",
+    "Their name curdled in the hymns the moment you turned."
+  ] as const;
+
   if (kind === "whisper") {
     const a = pickOne(rngSeed, whisperStarts);
     const b = pickOne(a.rngState, whisperMiddles);
@@ -604,6 +785,30 @@ function createOmen(
 
   if (kind === "ascension") {
     const a = pickOne(rngSeed, ascensionStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} ${detail ?? ""}`.trim()
+    };
+  }
+
+  if (kind === "pantheonArrival") {
+    const a = pickOne(rngSeed, pantheonArrivalStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} ${detail ?? ""}`.trim()
+    };
+  }
+
+  if (kind === "pantheonAlliance") {
+    const a = pickOne(rngSeed, pantheonAllianceStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} ${detail ?? ""}`.trim()
+    };
+  }
+
+  if (kind === "pantheonBetrayal") {
+    const a = pickOne(rngSeed, pantheonBetrayalStarts);
     return {
       rngState: a.rngState,
       text: `${a.value} ${detail ?? ""}`.trim()
@@ -1056,6 +1261,145 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
   return appendOmen(withMiracleOmen, nowMs, "civCollapse");
 }
 
+export function canFormPantheonAlliance(state: GameState, allyId: string): boolean {
+  if (!isPantheonUnlocked(state)) return false;
+  const ally = state.pantheon.allies.find((entry) => entry.id === allyId);
+  if (!ally) return false;
+  if (ally.disposition === "betrayed") return false;
+  if (state.pantheon.activeAllyId === allyId && ally.disposition === "allied") return false;
+  return true;
+}
+
+export function performFormPantheonAlliance(
+  state: GameState,
+  allyId: string,
+  nowMs: number
+): GameState {
+  if (!canFormPantheonAlliance(state, allyId)) return state;
+
+  const ally = state.pantheon.allies.find((entry) => entry.id === allyId);
+  if (!ally) return state;
+
+  const nextAllies = state.pantheon.allies.map((entry) => {
+    if (entry.id === allyId) {
+      return {
+        ...entry,
+        disposition: "allied" as const
+      };
+    }
+    if (entry.disposition === "allied") {
+      return {
+        ...entry,
+        disposition: "neutral" as const
+      };
+    }
+    return entry;
+  });
+
+  const withAlliance = {
+    ...state,
+    pantheon: {
+      ...state.pantheon,
+      unlocked: true,
+      allies: nextAllies,
+      activeAllyId: allyId
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(
+    withAlliance,
+    nowMs,
+    "pantheonAlliance",
+    `You now share doctrine with ${ally.name} (${DOMAIN_LABELS[ally.domain]}).`
+  );
+}
+
+export function canBetrayPantheonAlly(state: GameState, allyId?: string): boolean {
+  if (!isPantheonUnlocked(state)) return false;
+  const targetId = allyId ?? state.pantheon.activeAllyId;
+  if (!targetId) return false;
+  const ally = state.pantheon.allies.find((entry) => entry.id === targetId);
+  if (!ally) return false;
+  return ally.disposition === "allied";
+}
+
+export function performBetrayPantheonAlly(state: GameState, allyId: string, nowMs: number): GameState {
+  if (!canBetrayPantheonAlly(state, allyId)) return state;
+
+  const ally = state.pantheon.allies.find((entry) => entry.id === allyId);
+  if (!ally) return state;
+
+  const beliefPerSecond = getBeliefPerSecond(state, nowMs);
+  const betrayalBeliefGain = Math.max(
+    PANTHEON_BETRAYAL_BELIEF_MIN,
+    beliefPerSecond * PANTHEON_BETRAYAL_BELIEF_SECONDS
+  );
+
+  const nextAllies = state.pantheon.allies.map((entry) => {
+    if (entry.id !== allyId) return entry;
+    return {
+      ...entry,
+      disposition: "betrayed" as const,
+      betrayedAt: nowMs
+    };
+  });
+
+  const pendingPoisonDomains = state.pantheon.pendingPoisonDomains.includes(ally.domain)
+    ? state.pantheon.pendingPoisonDomains
+    : [...state.pantheon.pendingPoisonDomains, ally.domain];
+
+  const withBetrayal = {
+    ...state,
+    resources: {
+      ...state.resources,
+      belief: state.resources.belief + betrayalBeliefGain
+    },
+    stats: {
+      ...state.stats,
+      totalBeliefEarned: state.stats.totalBeliefEarned + betrayalBeliefGain
+    },
+    pantheon: {
+      ...state.pantheon,
+      unlocked: true,
+      allies: nextAllies,
+      activeAllyId: state.pantheon.activeAllyId === allyId ? null : state.pantheon.activeAllyId,
+      pendingPoisonDomains,
+      betrayalsThisRun: state.pantheon.betrayalsThisRun + 1
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  const withLineageMarker = appendHistoryMarker(
+    withBetrayal,
+    nowMs,
+    "pantheon_betrayal",
+    `You betrayed ${ally.name}; mortals now fear your pacts as temporary bargains.`,
+    {
+      trustDebt: LINEAGE_PANTHEON_BETRAYAL_TRUST_DEBT,
+      skepticism: LINEAGE_PANTHEON_BETRAYAL_SKEPTICISM,
+      betrayalScars: 2
+    }
+  );
+
+  return appendOmen(
+    withLineageMarker,
+    nowMs,
+    "pantheonBetrayal",
+    `${ally.name} was cast down. You seized ${Math.floor(
+      betrayalBeliefGain
+    )} belief and poisoned ${DOMAIN_LABELS[ally.domain]} for future cycles.`
+  );
+}
+
 export function canPurchaseEchoTreeRank(state: GameState, treeId: EchoTreeId): boolean {
   const nextCost = getEchoTreeNextCost(state, treeId);
   if (nextCost === null) return false;
@@ -1110,6 +1454,10 @@ export function performAscension(state: GameState, nowMs: number): GameState {
   if (!canAscend(state)) return state;
 
   const gainedEchoes = getAscensionEchoGain(state.stats.totalBeliefEarned);
+  const poisonAdvanced = withPoisonWindowsAdvanced(state);
+  const poisonApplied = withPendingPoisonApplied(poisonAdvanced);
+  const pantheonUnlocksOnNextRun =
+    poisonApplied.prestige.completedRuns + 1 >= PANTHEON_UNLOCK_COMPLETED_RUNS;
   const carriedLineage = {
     ...state.lineage,
     trustDebt: clampLineageMetric(
@@ -1123,10 +1471,17 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     history: state.lineage.history.slice(0, LINEAGE_HISTORY_LIMIT)
   };
   const nextPrestige = {
-    ...state.prestige,
-    echoes: state.prestige.echoes + gainedEchoes,
-    lifetimeEchoes: state.prestige.lifetimeEchoes + gainedEchoes,
-    completedRuns: state.prestige.completedRuns + 1
+    ...poisonApplied.prestige,
+    echoes: poisonApplied.prestige.echoes + gainedEchoes,
+    lifetimeEchoes: poisonApplied.prestige.lifetimeEchoes + gainedEchoes,
+    completedRuns: poisonApplied.prestige.completedRuns + 1,
+    pantheon: {
+      ...poisonApplied.prestige.pantheon,
+      betrayalsLifetime:
+        poisonApplied.prestige.pantheon.betrayalsLifetime + poisonApplied.pantheon.betrayalsThisRun,
+      betrayedAllyEver:
+        poisonApplied.prestige.pantheon.betrayedAllyEver || poisonApplied.pantheon.betrayalsThisRun > 0
+    }
   };
   const nextEchoBonuses = getEchoBonusesFromTreeRanks(nextPrestige.treeRanks);
 
@@ -1135,6 +1490,10 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     ...resetState,
     prestige: nextPrestige,
     lineage: carriedLineage,
+    pantheon: {
+      ...resetState.pantheon,
+      unlocked: pantheonUnlocksOnNextRun
+    },
     echoBonuses: nextEchoBonuses
   };
 
@@ -1155,12 +1514,14 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     {}
   );
 
-  return appendOmen(
+  const withAscensionOmen = appendOmen(
     withAscensionMemory,
     nowMs,
     "ascension",
     `You carried ${gainedEchoes} echoes into the next cycle.`
   );
+
+  return ensurePantheonInitialized(withAscensionOmen, nowMs);
 }
 
 export function canAdvanceEraOneToTwo(state: GameState): boolean {

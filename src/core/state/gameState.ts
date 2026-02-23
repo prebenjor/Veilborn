@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 8;
+export const GAME_STATE_SCHEMA_VERSION = 9;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -163,6 +163,18 @@ export const LINEAGE_CIV_RECOVERY_SKEPTICISM_RECOVERY = 3;
 export const LINEAGE_ACTION_RECOVERY_WHISPER = 0.2;
 export const LINEAGE_ACTION_RECOVERY_RECRUIT = 0.35;
 export const LINEAGE_ACTION_RECOVERY_ACT = 0.5;
+export const LINEAGE_PANTHEON_BETRAYAL_TRUST_DEBT = 16;
+export const LINEAGE_PANTHEON_BETRAYAL_SKEPTICISM = 10;
+
+export const PANTHEON_UNLOCK_COMPLETED_RUNS = 1;
+export const PANTHEON_ALLY_COUNT = 3;
+export const PANTHEON_ALLIANCE_SHARE_MULTIPLIER = 0.75;
+export const PANTHEON_ALLIANCE_DOMAIN_BONUS_BASE = 0.12;
+export const PANTHEON_ALLIANCE_DOMAIN_BONUS_SCALE = 0.07;
+export const PANTHEON_BETRAYAL_BELIEF_SECONDS = 240;
+export const PANTHEON_BETRAYAL_BELIEF_MIN = 12000;
+export const PANTHEON_DOMAIN_POISON_RUNS = 3;
+export const PANTHEON_DOMAIN_POISON_OUTPUT_MULTIPLIER = 0.65;
 
 export type MortalTrait = "skeptical" | "zealous" | "cautious";
 export type DomainId = "fire" | "death" | "harvest" | "storm" | "memory" | "void";
@@ -170,6 +182,7 @@ export type HistoryMarkerKind =
   | "origin"
   | "prophet_lineage"
   | "rival_suppressed"
+  | "pantheon_betrayal"
   | "civ_collapse"
   | "veil_collapse"
   | "civ_rebuild"
@@ -248,6 +261,14 @@ export interface EchoBonuses {
   civRebuild: boolean;
 }
 
+export type DomainPoisonRuns = Record<DomainId, number>;
+
+export interface PantheonLegacyState {
+  domainPoisonRuns: DomainPoisonRuns;
+  betrayalsLifetime: number;
+  betrayedAllyEver: boolean;
+}
+
 export type EchoTreeId = "whispers" | "doctrine" | "cataclysm";
 export const ECHO_TREE_ORDER: EchoTreeId[] = ["whispers", "doctrine", "cataclysm"];
 
@@ -262,6 +283,27 @@ export interface PrestigeState {
   lifetimeEchoes: number;
   completedRuns: number;
   treeRanks: EchoTreeRanks;
+  pantheon: PantheonLegacyState;
+}
+
+export type PantheonDisposition = "neutral" | "allied" | "betrayed";
+
+export interface PantheonAlly {
+  id: string;
+  name: string;
+  domain: DomainId;
+  disposition: PantheonDisposition;
+  joinedAt: number;
+  betrayedAt: number | null;
+}
+
+export interface PantheonState {
+  unlocked: boolean;
+  allies: PantheonAlly[];
+  activeAllyId: string | null;
+  pendingPoisonDomains: DomainId[];
+  betrayalsThisRun: number;
+  nextAllyId: number;
 }
 
 export interface ActivityState {
@@ -340,6 +382,7 @@ export interface GameState {
   cataclysm: CataclysmState;
   prestige: PrestigeState;
   lineage: LineageState;
+  pantheon: PantheonState;
   echoBonuses: EchoBonuses;
   era: 1 | 2 | 3;
   mortals: Mortal[];
@@ -380,6 +423,25 @@ export function createDefaultEchoTreeRanks(): EchoTreeRanks {
   };
 }
 
+export function createDefaultDomainPoisonRuns(): DomainPoisonRuns {
+  return {
+    fire: 0,
+    death: 0,
+    harvest: 0,
+    storm: 0,
+    memory: 0,
+    void: 0
+  };
+}
+
+export function createDefaultPantheonLegacyState(): PantheonLegacyState {
+  return {
+    domainPoisonRuns: createDefaultDomainPoisonRuns(),
+    betrayalsLifetime: 0,
+    betrayedAllyEver: false
+  };
+}
+
 export function createDefaultEchoBonuses(): EchoBonuses {
   return {
     startInf: false,
@@ -405,7 +467,19 @@ export function createDefaultPrestigeState(): PrestigeState {
     echoes: 0,
     lifetimeEchoes: 0,
     completedRuns: 0,
-    treeRanks: createDefaultEchoTreeRanks()
+    treeRanks: createDefaultEchoTreeRanks(),
+    pantheon: createDefaultPantheonLegacyState()
+  };
+}
+
+export function createDefaultPantheonState(): PantheonState {
+  return {
+    unlocked: false,
+    allies: [],
+    activeAllyId: null,
+    pendingPoisonDomains: [],
+    betrayalsThisRun: 0,
+    nextAllyId: 1
   };
 }
 
@@ -485,6 +559,7 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     },
     prestige: createDefaultPrestigeState(),
     lineage: createDefaultLineageState(nowMs, runId),
+    pantheon: createDefaultPantheonState(),
     echoBonuses: createDefaultEchoBonuses(),
     era: 1,
     mortals: [
