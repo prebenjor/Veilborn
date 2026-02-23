@@ -63,11 +63,16 @@ import {
   type GameState,
   type MiracleTier
 } from "./core/state/gameState";
-import { loadGameState, saveGameState } from "./core/state/persistence";
+import {
+  loadGameStateWithOffline,
+  saveGameState,
+  type OfflineProgressSummary
+} from "./core/state/persistence";
 import { CataclysmPanel } from "./ui/panels/CataclysmPanel";
 import { DoctrinePanel } from "./ui/panels/DoctrinePanel";
 import { DomainPanel } from "./ui/panels/DomainPanel";
 import { EraGatePanel } from "./ui/panels/EraGatePanel";
+import { OfflineSummaryPanel } from "./ui/panels/OfflineSummaryPanel";
 import { ProgressPanel } from "./ui/panels/ProgressPanel";
 import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
@@ -77,7 +82,11 @@ function formatNumber(value: number): string {
 }
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameState>(() => loadGameState());
+  const [initialLoad] = useState(() => loadGameStateWithOffline());
+  const [gameState, setGameState] = useState<GameState>(initialLoad.state);
+  const [offlineSummary, setOfflineSummary] = useState<OfflineProgressSummary | null>(
+    initialLoad.offlineSummary
+  );
   const gameStateRef = useRef(gameState);
   const nowMs = gameState.meta.updatedAt;
 
@@ -245,10 +254,13 @@ export default function App() {
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
           <h1 className="text-2xl font-semibold text-veil md:text-4xl">Someone is listening.</h1>
           <p className="max-w-3xl text-sm text-veil/70">
-            M5 loop active: miracles, civilization strain, and Veil collapse pressure now govern
-            the late run.
+            M6 loop active: offline simulation now returns lore summaries with bounded progression.
           </p>
         </header>
+
+        {offlineSummary ? (
+          <OfflineSummaryPanel summary={offlineSummary} onDismiss={() => setOfflineSummary(null)} />
+        ) : null}
 
         <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4">
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">

@@ -1,7 +1,12 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 5;
+export const GAME_STATE_SCHEMA_VERSION = 6;
 export const WORLD_TICK_MS = 250;
+export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
+export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
+export const OFFLINE_INFLUENCE_RETURN_RATIO = 0.5;
+export const OFFLINE_RIVAL_DRAIN_MULTIPLIER = 0.5;
+export const OFFLINE_VEIL_FLOOR = 15;
 
 export const PROPHET_OUTPUT_BASE = 2;
 export const PROPHET_DOMAIN_OUTPUT_SCALE = 0.1;

@@ -1,5 +1,14 @@
 import {
+  CIV_HEALTH_MAX,
   GAME_STATE_SCHEMA_VERSION,
+  OFFLINE_BELIEF_EFFICIENCY,
+  OFFLINE_INFLUENCE_RETURN_RATIO,
+  OFFLINE_MAX_SECONDS,
+  OFFLINE_RIVAL_DRAIN_MULTIPLIER,
+  OFFLINE_VEIL_FLOOR,
+  RIVAL_DRAIN_RATE,
+  RIVAL_EVENT_DURATION_MS,
+  VEIL_MAX,
   createInitialGameState,
   type ActiveAct,
   type CataclysmState,
@@ -13,6 +22,15 @@ import {
   type OmenEntry,
   type RivalState
 } from "./gameState";
+import {
+  getBeliefPerSecond,
+  getCivilizationRegenPerSecond,
+  getCultOutput,
+  getFaithDecay,
+  getInfluenceCap,
+  getVeilErosionPerSecond,
+  getVeilRegenPerSecond
+} from "../engine/formulas";
 
 const SAVE_KEY = "veilborn.save";
 
@@ -20,6 +38,22 @@ interface SaveEnvelope {
   schemaVersion: number;
   savedAt: number;
   state: unknown;
+}
+
+export interface OfflineProgressSummary {
+  elapsedSeconds: number;
+  wasCapped: boolean;
+  beliefGained: number;
+  veilDelta: number;
+  followersDelta: number;
+  influenceAfter: number;
+  faithDecayMultiplier: number;
+  veilFloorHit: boolean;
+}
+
+export interface LoadGameStateResult {
+  state: GameState;
+  offlineSummary: OfflineProgressSummary | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -227,12 +261,11 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
       schemaVersion: GAME_STATE_SCHEMA_VERSION,
       runId: readString(rawMeta.runId, fallback.meta.runId),
       createdAt: readNumber(rawMeta.createdAt, fallback.meta.createdAt),
-      updatedAt: nowMs
+      updatedAt: Math.max(0, readNumber(rawMeta.updatedAt, nowMs))
     },
     simulation: {
       tickMs: fallback.simulation.tickMs,
-      // Keep last tick anchored to now until dedicated offline simulation milestone.
-      lastTickAt: nowMs,
+      lastTickAt: Math.max(0, readNumber(rawSimulation.lastTickAt, readNumber(rawMeta.updatedAt, nowMs))),
       accumulatedMs: Math.max(0, readNumber(rawSimulation.accumulatedMs, 0)),
       totalTicks: Math.max(0, Math.floor(readNumber(rawSimulation.totalTicks, 0))),
       totalElapsedMs: Math.max(0, readNumber(rawSimulation.totalElapsedMs, 0))
@@ -283,8 +316,155 @@ const MIGRATORS: Record<number, Migrator> = {
   2: migrateFromSchemaV2,
   3: sanitizeState,
   4: sanitizeState,
-  5: sanitizeState
+  5: sanitizeState,
+  6: sanitizeState
 };
+
+function applyReturnAnchor(state: GameState, nowMs: number): GameState {
+  return {
+    ...state,
+    activity: {
+      ...state.activity,
+      cadencePromptActive: false
+    },
+    simulation: {
+      ...state.simulation,
+      lastTickAt: nowMs,
+      accumulatedMs: 0
+    },
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+}
+
+function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameStateResult {
+  const lastSeenAt = Math.max(state.meta.updatedAt, state.simulation.lastTickAt, state.meta.createdAt);
+  const rawElapsedSeconds = Math.max(0, (nowMs - lastSeenAt) / 1000);
+
+  if (rawElapsedSeconds < 1) {
+    return {
+      state: applyReturnAnchor(state, nowMs),
+      offlineSummary: null
+    };
+  }
+
+  const elapsedSeconds = Math.min(OFFLINE_MAX_SECONDS, rawElapsedSeconds);
+  const wasCapped = rawElapsedSeconds > OFFLINE_MAX_SECONDS;
+  const beliefPerSecondAtClose = getBeliefPerSecond(state, lastSeenAt);
+  const beliefGained = beliefPerSecondAtClose * elapsedSeconds * OFFLINE_BELIEF_EFFICIENCY;
+  const influenceCap = getInfluenceCap(state);
+  const influenceAfter = influenceCap * OFFLINE_INFLUENCE_RETURN_RATIO;
+
+  const veilDeltaRaw = (getVeilRegenPerSecond(state) - getVeilErosionPerSecond(state)) * elapsedSeconds;
+  const veilBefore = state.resources.veil;
+  const veilRaw = veilBefore + veilDeltaRaw;
+  const veilAfter = Math.max(OFFLINE_VEIL_FLOOR, Math.min(VEIL_MAX, veilRaw));
+  const veilDelta = veilAfter - veilBefore;
+  const veilFloorHit = veilRaw < OFFLINE_VEIL_FLOOR;
+
+  const cultOutputAtClose = getCultOutput(state);
+  const totalRivalStrength = state.doctrine.rivals.reduce((sum, rival) => sum + rival.strength, 0);
+  const rivalDrainApplies = totalRivalStrength > cultOutputAtClose * 0.5;
+  let followerDrain = 0;
+  const rivalsAfter = state.doctrine.rivals
+    .map((rival) => {
+      const ageAtCloseSeconds = Math.max(0, (lastSeenAt - rival.spawnedAt) / 1000);
+      const remainingSeconds = Math.max(0, RIVAL_EVENT_DURATION_MS / 1000 - ageAtCloseSeconds);
+      const activeSecondsOffline = Math.min(elapsedSeconds, remainingSeconds);
+
+      if (rivalDrainApplies) {
+        followerDrain +=
+          rival.strength * RIVAL_DRAIN_RATE * OFFLINE_RIVAL_DRAIN_MULTIPLIER * activeSecondsOffline;
+      }
+
+      const remainingAfterOffline = remainingSeconds - activeSecondsOffline;
+      if (remainingAfterOffline <= 0) return null;
+
+      const ageAtReturnSeconds = RIVAL_EVENT_DURATION_MS / 1000 - remainingAfterOffline;
+      return {
+        ...rival,
+        spawnedAt: nowMs - ageAtReturnSeconds * 1000
+      } satisfies RivalState;
+    })
+    .filter((rival): rival is RivalState => Boolean(rival));
+
+  const followersBefore = state.resources.followers;
+  const followersAfter = Math.max(0, followersBefore - followerDrain);
+  const followersDelta = followersAfter - followersBefore;
+  const activeActsAfter = state.doctrine.activeActs.filter((act) => act.endsAt > nowMs);
+
+  let civilizationHealth = state.cataclysm.civilizationHealth;
+  let civilizationCollapsed = state.cataclysm.civilizationCollapsed;
+  let civilizationRebuildEndsAt = state.cataclysm.civilizationRebuildEndsAt;
+
+  if (civilizationCollapsed) {
+    if (civilizationRebuildEndsAt > 0 && nowMs >= civilizationRebuildEndsAt) {
+      civilizationCollapsed = false;
+      civilizationHealth = CIV_HEALTH_MAX;
+      civilizationRebuildEndsAt = 0;
+    } else {
+      civilizationHealth = 0;
+    }
+  } else {
+    civilizationHealth = Math.min(
+      CIV_HEALTH_MAX,
+      civilizationHealth + getCivilizationRegenPerSecond(state) * elapsedSeconds
+    );
+  }
+
+  const nextState = applyReturnAnchor(
+    {
+      ...state,
+      resources: {
+        ...state.resources,
+        belief: state.resources.belief + beliefGained,
+        influence: influenceAfter,
+        veil: veilAfter,
+        followers: followersAfter
+      },
+      stats: {
+        ...state.stats,
+        totalBeliefEarned: state.stats.totalBeliefEarned + beliefGained
+      },
+      doctrine: {
+        ...state.doctrine,
+        activeActs: activeActsAfter,
+        rivals: rivalsAfter
+      },
+      cataclysm: {
+        ...state.cataclysm,
+        civilizationHealth,
+        civilizationCollapsed,
+        civilizationRebuildEndsAt,
+        peakFollowers: Math.max(state.cataclysm.peakFollowers, followersAfter),
+        wasBelowVeilCollapseThreshold: state.cataclysm.wasBelowVeilCollapseThreshold || veilFloorHit
+      },
+      simulation: {
+        ...state.simulation,
+        totalElapsedMs: state.simulation.totalElapsedMs + elapsedSeconds * 1000
+      }
+    },
+    nowMs
+  );
+
+  const faithDecayMultiplier = getFaithDecay(nextState, nowMs);
+
+  return {
+    state: nextState,
+    offlineSummary: {
+      elapsedSeconds,
+      wasCapped,
+      beliefGained,
+      veilDelta,
+      followersDelta,
+      influenceAfter,
+      faithDecayMultiplier,
+      veilFloorHit
+    }
+  };
+}
 
 function toSaveEnvelope(state: GameState): SaveEnvelope {
   return {
@@ -304,28 +484,59 @@ export function saveGameState(state: GameState): void {
   }
 }
 
-export function loadGameState(nowMs = Date.now()): GameState {
-  if (typeof window === "undefined") return createInitialGameState(nowMs);
+export function loadGameStateWithOffline(nowMs = Date.now()): LoadGameStateResult {
+  if (typeof window === "undefined") {
+    return {
+      state: createInitialGameState(nowMs),
+      offlineSummary: null
+    };
+  }
 
   let raw = "";
   try {
     raw = window.localStorage.getItem(SAVE_KEY) ?? "";
   } catch {
-    return createInitialGameState(nowMs);
+    return {
+      state: createInitialGameState(nowMs),
+      offlineSummary: null
+    };
   }
 
-  if (!raw) return createInitialGameState(nowMs);
+  if (!raw) {
+    return {
+      state: createInitialGameState(nowMs),
+      offlineSummary: null
+    };
+  }
 
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed)) return createInitialGameState(nowMs);
+    if (!isRecord(parsed)) {
+      return {
+        state: createInitialGameState(nowMs),
+        offlineSummary: null
+      };
+    }
 
     const schemaVersion = Math.floor(readNumber(parsed.schemaVersion, 0));
     const migrator = MIGRATORS[schemaVersion];
-    if (!migrator) return createInitialGameState(nowMs);
+    if (!migrator) {
+      return {
+        state: createInitialGameState(nowMs),
+        offlineSummary: null
+      };
+    }
 
-    return migrator(parsed.state, nowMs);
+    const sanitized = migrator(parsed.state, nowMs);
+    return simulateOfflineProgress(sanitized, nowMs);
   } catch {
-    return createInitialGameState(nowMs);
+    return {
+      state: createInitialGameState(nowMs),
+      offlineSummary: null
+    };
   }
+}
+
+export function loadGameState(nowMs = Date.now()): GameState {
+  return loadGameStateWithOffline(nowMs).state;
 }
