@@ -289,7 +289,10 @@
       ],
       "notes": "Consolidates PF-02 and PF-03 scope into a dedicated milestone for era shell structure, anti-clutter flow, and strict reveal behavior.",
       "deliverables": [
-        "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+lite META), Era III full ACTIVE/GROWTH/META",
+        "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+constrained META content), Era III full ACTIVE/GROWTH/META",
+        "Era II tab contract: ACTIVE is Whisper/Recruit cadence only; GROWTH order is Domains -> Doctrine -> Doctrine Seeds -> Rivals -> Threshold",
+        "Era II rivals collapse to one-line status when inactive and expand to full controls when active",
+        "Era II threshold sits at the bottom of GROWTH (not ACTIVE) and defaults to collapsed",
         "ACTIVE tab prioritizes Cataclysm, rivals, whispers, and influence pressure in Era III",
         "Unraveling gate as persistent strip in Era III",
         "Echo trees constrained to META view; between-run systems removed from active flow",

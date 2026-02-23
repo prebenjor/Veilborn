@@ -171,7 +171,6 @@ export function DoctrinePanel({
 
         {showRivals ? (
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Rivals</p>
             {hasRivals ? (
               <p className="mt-1 text-sm text-white">
                 {formatResource(rivalsCount)} active, strength {formatResource(rivalStrength)}
@@ -185,7 +184,9 @@ export function DoctrinePanel({
               </p>
             ) : null}
             <p className="mt-1 text-xs text-veil/65">
-              Next spawn in ~{formatDurationCompact(nextRivalInSeconds)}
+              {nextRivalInSeconds <= 0
+                ? "Next spawn imminent"
+                : `Next spawn in ~${formatDurationCompact(nextRivalInSeconds)}`}
             </p>
             <button
               type="button"

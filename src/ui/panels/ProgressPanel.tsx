@@ -62,7 +62,8 @@ export function ProgressPanel({
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
           <p className="mt-1 text-sm text-white">
-            {formatResource(prophets)} active · {formatResource(nextProphetFollowers)} followers to next
+            {formatResource(prophets)} active {" \u00b7 "}
+            {formatResource(nextProphetFollowers)} followers to next
           </p>
           <button
             type="button"
@@ -78,7 +79,9 @@ export function ProgressPanel({
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-1 text-sm text-white">
-              {formatResource(cults)} formed · next costs {formatResource(nextCultBeliefCost)}
+              {cults <= 0
+                ? `None yet \u00b7 costs ${formatResource(nextCultBeliefCost)} to found`
+                : `${formatResource(cults)} formed \u00b7 next costs ${formatResource(nextCultBeliefCost)}`}
             </p>
             <button
               type="button"
@@ -86,7 +89,7 @@ export function ProgressPanel({
               onClick={onFormCult}
               className="mt-2 rounded-lg border border-ember/60 px-2 py-1 text-xs text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
             >
-              Found Cult
+              Found a Cult
             </button>
           </article>
         ) : era >= 2 ? (
@@ -103,15 +106,14 @@ export function ProgressPanel({
         <article className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Lineage Memory</p>
           <p className="mt-1 text-sm text-white">
-            Generation {formatResource(lineageGeneration)} · x
-            {formatRate(lineageConversionModifier)}
-            {" "}conversion
+            Generation {formatResource(lineageGeneration)} {" \u00b7 "}x
+            {formatRate(lineageConversionModifier)} conversion
           </p>
           <p className="mt-1 text-xs text-veil/65">
-            Trust {formatResource(lineageTrustDebt)} · Skepticism {formatResource(lineageSkepticism)} ·
+            Trust {formatResource(lineageTrustDebt)} {" \u00b7 "} Skepticism {formatResource(lineageSkepticism)} {" \u00b7 "}
             Scars {formatResource(lineageBetrayalScars)}
           </p>
-          <p className="mt-1 text-xs text-veil/65">{dominantTraits.join(" · ")}</p>
+          <p className="mt-1 text-xs text-veil/65">{dominantTraits.join(" \u00b7 ")}</p>
           <p className="mt-1 text-xs text-veil/60">
             {lineageRecentMarker
               ? `Latest memory: ${lineageRecentMarker}`

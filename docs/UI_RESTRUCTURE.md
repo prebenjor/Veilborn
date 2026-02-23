@@ -45,7 +45,13 @@ Stats visibility rule:
 
 - Era I: minimal single-column surface, no tabs.
 - Era I: Whisper/Recruit actions and Prophet conversion live in one merged card.
-- Era II: `ACTIVE` and `GROWTH`, with light `META`.
+- Era II: `ACTIVE` and `GROWTH`, with constrained `META` content.
+- Era II tab contract:
+  - `ACTIVE`: Whisper/Recruit only (no extra subtitle; cadence prompt and optional rival-drain nudge line only).
+  - `GROWTH` order: Domains -> Doctrine (Acts) -> Doctrine Seeds -> Rivals -> Threshold.
+  - Rivals collapse to a single line when inactive and expand to full panel only when active.
+  - Threshold is not rendered in `ACTIVE`; it sits at the bottom of `GROWTH`, collapsed by default.
+  - Meta tab label is always `Meta` (no `Meta (Lite)` suffix).
 - Era III: full `ACTIVE`, `GROWTH`, `META`.
 - Era III critical actions must be reachable without long scroll.
 

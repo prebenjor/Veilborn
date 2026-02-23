@@ -373,6 +373,13 @@ Era II+:
 - sticky tab dock
 
 Era II:
+- `active` contains Whisper/Recruit only; threshold and rivals are removed from the active flow
+- era-II whisper surface keeps controls/cadence only (no additional subtitle text)
+- `growth` order: Domains -> Doctrine (Acts) -> Doctrine Seeds -> Rivals -> Threshold
+- rivals render as a single-line summary when inactive and expand to full panel when active
+- threshold renders at the bottom of `growth` (not in `active`)
+- threshold defaults to collapsed in Era II
+- meta tab label is `Meta` (no lite suffix)
 - event log header: `Whispers`
 - gate label: `Threshold`
 - bottom status: one directive line

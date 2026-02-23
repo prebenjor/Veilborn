@@ -253,8 +253,13 @@ Notes:
 Deliverables:
 - Era-locked shell behavior:
   - Era I: minimal single-column layout, no tabs
-  - Era II: ACTIVE + GROWTH (+ light META) tabbed structure
+  - Era II: ACTIVE + GROWTH (+ constrained META content) tabbed structure
   - Era III: full ACTIVE/GROWTH/META flow with low-scroll decision surfaces
+- Era II tab contract:
+  - ACTIVE contains Whisper/Recruit cadence interactions only
+  - GROWTH order: Domains, Doctrine, Doctrine Seeds, Rivals, Threshold
+  - Rivals collapse to one-line summary when inactive and expand only when active
+  - Threshold sits at bottom of GROWTH (not ACTIVE) and defaults to collapsed
 - ACTIVE tab prioritizes time-sensitive systems (Cataclysm, rivals, whispers, Influence pressure).
 - Unraveling gate as persistent strip in Era III.
 - Echo trees and other between-run systems constrained to META view.

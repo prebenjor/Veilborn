@@ -9,6 +9,7 @@ interface WhisperPanelProps {
   recruitCost: number;
   recruitPreview: string;
   cadencePromptActive: boolean;
+  rivalDrainWarning?: string | null;
   onWhisper: () => void;
   onRecruit: () => void;
 }
@@ -21,6 +22,7 @@ export function WhisperPanel({
   recruitCost,
   recruitPreview,
   cadencePromptActive,
+  rivalDrainWarning,
   onWhisper,
   onRecruit
 }: WhisperPanelProps) {
@@ -39,6 +41,7 @@ export function WhisperPanel({
           Silence is thickening. Act now for a cadence bonus.
         </p>
       ) : null}
+      {rivalDrainWarning ? <p className="mt-2 text-xs text-ember/80">{rivalDrainWarning}</p> : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"

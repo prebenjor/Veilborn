@@ -70,6 +70,11 @@ function loadGateExpandedState(gateId: GateId): boolean {
     if (storedExpanded === "0") return false;
 
     const seen = window.localStorage.getItem(seenKey) === "1";
+    if (gateId === "era2" && !seen) {
+      window.localStorage.setItem(seenKey, "1");
+      window.localStorage.setItem(expandedKey, "0");
+      return false;
+    }
     if (!seen) {
       window.localStorage.setItem(seenKey, "1");
       window.localStorage.setItem(expandedKey, "1");

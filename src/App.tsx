@@ -149,6 +149,7 @@ import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
 import { RemembrancePanel } from "./ui/panels/RemembrancePanel";
 import { formatRate, formatResource } from "./core/ui/numberFormat";
+import { formatDurationCompact } from "./core/ui/timeFormat";
 import { getVeilStabilityView } from "./core/ui/veilPresentation";
 
 const UI_TAB_KEY = "veilborn.ui.active_tab.v1";
@@ -539,6 +540,7 @@ export default function App() {
     gameState.era >= 2 && gameState.cults > 0
       ? Math.max(0, Math.ceil((gameState.doctrine.lastRivalSpawnAt + rivalSpawnIntervalMs - nowMs) / 1000))
       : 0;
+  const hasActiveRivals = gameState.doctrine.rivals.length > 0;
   const canUseSuppressRival = canSuppressRival(gameState);
 
   const veilBonus = getVeilBonus(gameState.resources.veil);
@@ -937,6 +939,7 @@ export default function App() {
       recruitCost={RECRUIT_INFLUENCE_COST}
       recruitPreview={recruitPreview}
       cadencePromptActive={gameState.activity.cadencePromptActive}
+      rivalDrainWarning={era === 2 && rivalDrainPerSecond > 0 ? "A rival is drawing followers away." : null}
       onWhisper={onWhisper}
       onRecruit={onRecruit}
     />
@@ -1039,6 +1042,26 @@ export default function App() {
     />
   );
 
+  const eraTwoRivalsContent =
+    era === 2 ? (
+      hasActiveRivals ? (
+        doctrineRivalsPanel
+      ) : (
+        <section className="px-1 py-1">
+          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
+            RIVALS{" "}
+            <span className="normal-case tracking-normal text-veil/75">
+              {gameState.cults <= 0
+                ? "No rivals present"
+                : nextRivalInSeconds <= 0
+                  ? "No rivals present \u00b7 next spawn imminent"
+                  : `No rivals present \u00b7 next in ~${formatDurationCompact(nextRivalInSeconds)}`}
+            </span>
+          </p>
+        </section>
+      )
+    ) : null;
+
   const activeTabContent = (
     <>
       {era >= 3 ? (
@@ -1057,9 +1080,8 @@ export default function App() {
           onCastMiracle={onCastMiracle}
         />
       ) : null}
-      {doctrineRivalsPanel}
+      {era >= 3 ? doctrineRivalsPanel : null}
       {whisperPanel}
-      {era === 2 ? eraGatePanel : null}
     </>
   );
 
@@ -1068,6 +1090,8 @@ export default function App() {
       {domainPanel}
       {doctrineGrowthPanel}
       {progressPanel}
+      {eraTwoRivalsContent}
+      {era === 2 ? eraGatePanel : null}
     </>
   );
 
@@ -1304,7 +1328,7 @@ export default function App() {
                       : "text-veil/70 hover:bg-white/8 hover:text-veil"
                   }`}
                 >
-                  {tab === "active" ? "Active" : tab === "growth" ? "Growth" : era === 2 ? "Meta (Lite)" : "Meta"}
+                  {tab === "active" ? "Active" : tab === "growth" ? "Growth" : "Meta"}
                 </button>
               ))}
             </div>
