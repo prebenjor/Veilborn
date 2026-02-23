@@ -46,14 +46,14 @@ export function PantheonPanel({
       <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Pantheon</h2>
       <p className="mt-2 text-sm text-veil/70">
         Other forgotten gods now answer your rise. Alliances share power and cost income; betrayal grants
-        immediate belief and poisons domains in future runs.
+        immediate Belief and poisons domains in future runs.
       </p>
       <p className="mt-1 text-xs text-veil/65">
         Alliance modifier x{formatResource(allianceTotalModifier, 2)} (share x
         {formatResource(allianceSharePenalty, 2)} and domain x{formatResource(allianceDomainBonus, 2)})
       </p>
       <p className="mt-1 text-xs text-veil/65">
-        Betrayals lifetime: {formatResource(betrayalsLifetime)} | Name-letter betrayal hook:{" "}
+        Betrayals lifetime: {formatResource(betrayalsLifetime)} · Name-letter betrayal hook:{" "}
         {betrayedHookUnlocked ? "recorded" : "not recorded"}
       </p>
 

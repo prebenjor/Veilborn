@@ -1,6 +1,7 @@
 import type { MiracleTier } from "../../core/state/gameState";
 import { formatResource } from "../../core/ui/numberFormat";
 import { formatDurationCompact } from "../../core/ui/timeFormat";
+import { getVeilStabilityView } from "../../core/ui/veilPresentation";
 
 interface MiracleOption {
   tier: MiracleTier;
@@ -13,13 +14,11 @@ interface MiracleOption {
 
 interface CataclysmPanelProps {
   era: number;
-  influence: number;
   veil: number;
   veilBonus: number;
   veilRegenPerSecond: number;
   veilErosionPerSecond: number;
   veilCollapseThreshold: number;
-  shrinesBuilt: number;
   civilizationHealth: number;
   civilizationCollapsed: boolean;
   civilizationRebuildInSeconds: number;
@@ -30,13 +29,11 @@ interface CataclysmPanelProps {
 
 export function CataclysmPanel({
   era,
-  influence,
   veil,
   veilBonus,
   veilRegenPerSecond,
   veilErosionPerSecond,
   veilCollapseThreshold,
-  shrinesBuilt,
   civilizationHealth,
   civilizationCollapsed,
   civilizationRebuildInSeconds,
@@ -45,22 +42,23 @@ export function CataclysmPanel({
   onCastMiracle
 }: CataclysmPanelProps) {
   if (era < 3) return null;
+  const stability = getVeilStabilityView(veil, veilCollapseThreshold);
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
       <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Cataclysm</h2>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Pressure</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Stability</p>
           <p className="mt-1 text-sm text-white">
-            Veil {formatResource(veil)} (collapse at {formatResource(veilCollapseThreshold)})
+            {formatResource(veil)} <span className="text-veil/55">·</span>{" "}
+            <span className={stability.cssClass}>{stability.label}</span>
+          </p>
+          <p className="mt-1 text-xs text-veil/65">
+            Collapses at {formatResource(veilCollapseThreshold)} · Regen {formatResource(veilRegenPerSecond, 3)}/s
+            · Erosion {formatResource(veilErosionPerSecond, 3)}/s
           </p>
           <p className="mt-1 text-xs text-veil/65">Belief bonus x{formatResource(veilBonus, 2)}</p>
-          <p className="mt-1 text-xs text-veil/65">
-            Regen {formatResource(veilRegenPerSecond, 3)}/s, erosion {formatResource(veilErosionPerSecond, 3)}
-            /s
-          </p>
-          <p className="mt-1 text-xs text-veil/65">Shrines built: {formatResource(shrinesBuilt)}</p>
         </article>
 
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
@@ -74,7 +72,6 @@ export function CataclysmPanel({
             <p className="mt-1 text-xs text-veil/65">Stable enough to sustain miracle returns.</p>
           )}
           <p className="mt-1 text-xs text-veil/65">Miracles this run: {formatResource(miraclesThisRun)}</p>
-          <p className="mt-1 text-xs text-veil/65">Influence available: {formatResource(influence)}</p>
         </article>
       </div>
 

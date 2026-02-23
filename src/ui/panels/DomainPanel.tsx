@@ -78,13 +78,13 @@ export function DomainPanel({
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
       <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Domains</h2>
       <p className="mt-2 text-xs text-veil/65">
-        Active synergy x{formatResource(domainSynergy, 2)} from {formatResource(matchingDomainPairs)} matching
-        pair(s).
+        Active synergy x{formatResource(domainSynergy, 2)} · {formatResource(matchingDomainPairs)} matched
+        pairs
       </p>
       {pairNames.length > 0 ? (
         <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
           <summary className="cursor-pointer text-xs text-veil/75">Matched domain pairs</summary>
-          <p className="mt-1 text-[11px] text-veil/65">{pairNames.join(" | ")}</p>
+          <p className="mt-1 text-[11px] text-veil/65">{pairNames.join(" · ")}</p>
         </details>
       ) : null}
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -116,7 +116,7 @@ export function DomainPanel({
                 {DOMAIN_LABELS[domain.id]}
               </p>
               <p className="mt-1 text-sm text-white">
-                Level {formatResource(domain.level)} - XP {formatResource(domain.xp)}/{formatResource(xpNeeded)}
+                Level {formatResource(domain.level)} · XP {formatResource(domain.xp)}/{formatResource(xpNeeded)}
               </p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {INVEST_MODE_OPTIONS.map((option) => (
@@ -142,8 +142,8 @@ export function DomainPanel({
               <p className="mt-2 text-[11px] text-veil/65">
                 {targetSimulation.investments > 0 ? (
                   <>
-                    Projected spend {formatResource(targetSimulation.totalCost)} Belief to Level{" "}
-                    {formatResource(targetSimulation.resultingDomain.level)} - XP{" "}
+                    {formatResource(targetSimulation.totalCost)} Belief to Lv
+                    {formatResource(targetSimulation.resultingDomain.level)} · XP{" "}
                     {formatResource(targetSimulation.resultingDomain.xp)}/{formatResource(projectedXpNeeded)}
                     {targetSimulation.levelsGained > 0
                       ? ` (+${formatResource(targetSimulation.levelsGained)} level${
@@ -161,12 +161,12 @@ export function DomainPanel({
                 onClick={() => onInvest(domain.id, targetSimulation.investments)}
                 className="mt-2 rounded-lg border border-veil/50 px-2 py-1 text-xs text-veil transition hover:bg-veil/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
               >
-                {mode === "one" ? "Invest +1" : `Invest ${INVEST_MODE_OPTIONS.find((entry) => entry.id === mode)?.label}`}
-                {" "}
-                ({formatResource(targetSimulation.totalCost)} Belief)
+                {mode === "one"
+                  ? "Invest +1"
+                  : `Invest ${INVEST_MODE_OPTIONS.find((entry) => entry.id === mode)?.label}`}
               </button>
               <p className="mt-1 text-[10px] text-veil/55">
-                Single cost: {formatResource(singleCost)} | Max buys now: {formatResource(maxAffordable)}
+                Single {formatResource(singleCost)} · Max {formatResource(maxAffordable)}
               </p>
             </article>
           );
@@ -175,5 +175,3 @@ export function DomainPanel({
     </section>
   );
 }
-
-

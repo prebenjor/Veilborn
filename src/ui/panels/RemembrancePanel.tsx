@@ -28,9 +28,9 @@ const BELIEF_RULE_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { id: "orthodox", label: "Orthodox", description: "Balanced belief output." },
-  { id: "fervor", label: "Fervor", description: "Higher belief, harsher faith decay." },
-  { id: "litany", label: "Litany", description: "Lower belief, gentler faith decay." }
+  { id: "orthodox", label: "Orthodox", description: "Balanced Belief output." },
+  { id: "fervor", label: "Fervor", description: "Higher Belief, harsher faith decay." },
+  { id: "litany", label: "Litany", description: "Lower Belief, gentler faith decay." }
 ];
 
 const CIV_RULE_OPTIONS: Array<{
@@ -127,7 +127,7 @@ export function RemembrancePanel({
             <p className="mt-1 text-[11px] opacity-80">
               {condition.unlocked
                 ? "Condition complete."
-                : `${condition.targetLabel} | ${condition.progressText}`}
+                : `${condition.targetLabel} · ${condition.progressText}`}
             </p>
           </article>
         ))}

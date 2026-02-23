@@ -4,7 +4,6 @@ import { formatRate, formatResource } from "../../core/ui/numberFormat";
 interface ProgressPanelProps {
   belief: number;
   era: number;
-  followers: number;
   prophets: number;
   cults: number;
   nextProphetFollowers: number;
@@ -29,7 +28,6 @@ interface ProgressPanelProps {
 export function ProgressPanel({
   belief,
   era,
-  followers,
   prophets,
   cults,
   nextProphetFollowers,
@@ -47,6 +45,15 @@ export function ProgressPanel({
   onFormCult
 }: ProgressPanelProps) {
   const showCultControls = shouldRevealCultControls(era as 1 | 2 | 3, belief, nextCultBeliefCost, cults);
+  const traitEntries = [
+    { key: "skeptical", label: "Skeptical lineage", value: lineageTraits.skeptical },
+    { key: "cautious", label: "Cautious lineage", value: lineageTraits.cautious },
+    { key: "zealous", label: "Zealous lineage", value: lineageTraits.zealous }
+  ];
+  const dominantTraitValue = Math.max(...traitEntries.map((entry) => entry.value));
+  const dominantTraits = traitEntries
+    .filter((entry) => Math.abs(entry.value - dominantTraitValue) < 0.0001)
+    .map((entry) => entry.label);
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -55,9 +62,8 @@ export function ProgressPanel({
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
           <p className="mt-1 text-sm text-white">
-            {formatResource(prophets)} active - next requires {formatResource(nextProphetFollowers)} followers
+            {formatResource(prophets)} active · {formatResource(nextProphetFollowers)} followers to next
           </p>
-          <p className="mt-1 text-xs text-veil/70">Current followers: {formatResource(followers)}</p>
           <button
             type="button"
             disabled={!canAnointProphet}
@@ -72,7 +78,7 @@ export function ProgressPanel({
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-1 text-sm text-white">
-              {formatResource(cults)} formed - next costs {formatResource(nextCultBeliefCost)} belief
+              {formatResource(cults)} formed · next costs {formatResource(nextCultBeliefCost)}
             </p>
             <button
               type="button"
@@ -87,33 +93,32 @@ export function ProgressPanel({
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-1 text-sm text-veil/70">
-              The doctrine remains fractured. Greater belief is required before a cult can be founded.
+              The doctrine remains fractured. Greater Belief is required before a cult can be founded.
             </p>
           </article>
         ) : null}
       </div>
 
-      <article className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Lineage Memory</p>
-        <p className="mt-1 text-sm text-white">
-          Generation {formatResource(lineageGeneration)} - conversion x
-          {formatRate(lineageConversionModifier)}
-        </p>
-        <p className="mt-1 text-xs text-veil/65">
-          Trust debt {formatResource(lineageTrustDebt)} | Skepticism {formatResource(lineageSkepticism)} |
-          Betrayal scars {formatResource(lineageBetrayalScars)}
-        </p>
-        <p className="mt-1 text-xs text-veil/65">
-          Traits: skeptical {formatResource(lineageTraits.skeptical * 100)}% | cautious{" "}
-          {formatResource(lineageTraits.cautious * 100)}% | zealous{" "}
-          {formatResource(lineageTraits.zealous * 100)}%
-        </p>
-        <p className="mt-1 text-xs text-veil/60">
-          {lineageRecentMarker
-            ? `Latest memory: ${lineageRecentMarker}`
-            : "No lasting social memory has formed yet."}
-        </p>
-      </article>
+      {era >= 2 ? (
+        <article className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Lineage Memory</p>
+          <p className="mt-1 text-sm text-white">
+            Generation {formatResource(lineageGeneration)} · x
+            {formatRate(lineageConversionModifier)}
+            {" "}conversion
+          </p>
+          <p className="mt-1 text-xs text-veil/65">
+            Trust {formatResource(lineageTrustDebt)} · Skepticism {formatResource(lineageSkepticism)} ·
+            Scars {formatResource(lineageBetrayalScars)}
+          </p>
+          <p className="mt-1 text-xs text-veil/65">{dominantTraits.join(" · ")}</p>
+          <p className="mt-1 text-xs text-veil/60">
+            {lineageRecentMarker
+              ? `Latest memory: ${lineageRecentMarker}`
+              : "No lasting social memory has formed yet."}
+          </p>
+        </article>
+      ) : null}
     </section>
   );
 }

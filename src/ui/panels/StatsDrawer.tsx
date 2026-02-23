@@ -19,6 +19,7 @@ interface StatsDrawerProps {
     cap: number;
     fillTimeSeconds: number | null;
   };
+  shrinesBuilt: number;
   currentFollowers: number;
   passiveFollowerRate: number;
   rivalFollowerDrainPerSecond: number;
@@ -57,6 +58,7 @@ export function StatsDrawer({
   whispersInWindow,
   whisperResetInSeconds,
   influenceBreakdown,
+  shrinesBuilt,
   currentFollowers,
   passiveFollowerRate,
   rivalFollowerDrainPerSecond,
@@ -130,6 +132,8 @@ export function StatsDrawer({
             <dd>{formatResource(influenceBreakdown.basePerSecond, 1)} /s</dd>
             <dt>Shrines ({formatResource(influenceBreakdown.shrineCount)})</dt>
             <dd>{formatResource(influenceBreakdown.shrinePerSecond, 1)} /s</dd>
+            <dt>Shrines built</dt>
+            <dd>{formatResource(shrinesBuilt)}</dd>
             <dt>Cults (active)</dt>
             <dd>{formatResource(influenceBreakdown.cultPerSecond, 1)} /s</dd>
             {influenceBreakdown.echoPerSecond > 0 ? (
@@ -162,13 +166,16 @@ export function StatsDrawer({
               return (
                 <li key={run.id} className="rounded border border-white/10 bg-black/20 px-2 py-1">
                   <p>
-                    Run {formatResource(run.runNumber)} | {formatDurationCompact(run.runSeconds)} | +{formatResource(run.echoesGained)}E
+                    Run {formatResource(run.runNumber)} · {formatDurationCompact(run.runSeconds)} · +
+                    {formatResource(run.echoesGained)}E
                   </p>
                   <p className="text-[10px] text-veil/65">
-                    Peak {formatResource(run.peakBeliefPerSecond, 2)}/s | Belief {formatResource(run.totalBeliefEarned)}
+                    Peak {formatResource(run.peakBeliefPerSecond, 2)}/s · Belief{" "}
+                    {formatResource(run.totalBeliefEarned)}
                   </p>
                   <p className="text-[10px] text-veil/65">
-                    Collapses V:{formatResource(run.veilCollapseCount)} C:{formatResource(run.civilizationCollapseCount)} | Miracles {formatResource(miracleTotal)}
+                    Collapses V:{formatResource(run.veilCollapseCount)} C:
+                    {formatResource(run.civilizationCollapseCount)} · Miracles {formatResource(miracleTotal)}
                   </p>
                 </li>
               );

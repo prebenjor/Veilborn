@@ -149,6 +149,7 @@ import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
 import { RemembrancePanel } from "./ui/panels/RemembrancePanel";
 import { formatRate, formatResource } from "./core/ui/numberFormat";
+import { getVeilStabilityView } from "./core/ui/veilPresentation";
 
 const UI_TAB_KEY = "veilborn.ui.active_tab.v1";
 
@@ -205,11 +206,11 @@ const FOLLOWER_RITE_META: Record<
 > = {
   procession: {
     label: "Pilgrim Procession",
-    hint: "High-cost migration through shrine routes."
+    hint: "Draws followers along shrine paths."
   },
   convergence: {
     label: "Convergence March",
-    hint: "Very high-cost mass conversion wave."
+    hint: "A great movement, difficult to sustain."
   }
 };
 
@@ -243,12 +244,6 @@ function saveUiTabPreference(tab: UiTab): void {
 function getSafeTab(tab: UiTab, available: UiTab[]): UiTab {
   if (available.includes(tab)) return tab;
   return "active";
-}
-
-function getVeilZone(veil: number): "stable" | "optimal" | "danger" {
-  if (veil < 30) return "danger";
-  if (veil <= 55) return "optimal";
-  return "stable";
 }
 
 function formatSnapshotLabel(snapshotMeta: SnapshotMeta | null): string | null {
@@ -587,7 +582,7 @@ export default function App() {
   const visibleOmens = gameState.omenLog.slice(0, omenPreviewCount);
   const showPersistentOmenSurface = era >= 2;
   const showStatsDrawer = uiReveal.showStatsDrawer && era >= 2;
-  const veilZone = getVeilZone(gameState.resources.veil);
+  const veilStability = getVeilStabilityView(gameState.resources.veil, veilCollapseThreshold);
   const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
   const surfaceOmenPreview = gameState.omenLog.slice(0, surfaceOmenPreviewCount);
   const surfaceOmenExpanded = gameState.omenLog.slice(surfaceOmenPreviewCount, era >= 3 ? 6 : 4);
@@ -880,21 +875,17 @@ export default function App() {
     setSnapshotMeta(getRecoverySnapshotMeta());
   };
 
-  const doctrinePanel = era >= 2 ? (
+  const doctrineGrowthPanel = era >= 2 ? (
     <DoctrinePanel
       era={gameState.era}
-      cults={gameState.cults}
-      influence={gameState.resources.influence}
       cultOutput={cultOutput}
       domainSynergy={domainSynergy}
-      matchingDomainPairs={gameState.matchingDomainPairs}
       actSlotCap={actSlotCap}
       activeActs={activeActs}
       actCosts={actCosts}
       actDurations={actDurations}
       actProjectedBelief={actProjectedBelief}
       actResonantBonus={gameState.matchingDomainPairs * 0.2}
-      actFloorMultiplier={gameState.echoBonuses.actFloor ? 1.5 : 1.0}
       canStartAct={canStartActs}
       onStartAct={onStartAct}
       followerRites={followerRiteOptions}
@@ -906,6 +897,35 @@ export default function App() {
       canSuppressRival={canUseSuppressRival}
       suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
       onSuppressRival={onSuppressRival}
+      showActs
+      showRivals={false}
+    />
+  ) : null;
+
+  const doctrineRivalsPanel = era >= 2 ? (
+    <DoctrinePanel
+      era={gameState.era}
+      cultOutput={cultOutput}
+      domainSynergy={domainSynergy}
+      actSlotCap={actSlotCap}
+      activeActs={activeActs}
+      actCosts={actCosts}
+      actDurations={actDurations}
+      actProjectedBelief={actProjectedBelief}
+      actResonantBonus={gameState.matchingDomainPairs * 0.2}
+      canStartAct={canStartActs}
+      onStartAct={onStartAct}
+      followerRites={followerRiteOptions}
+      onPerformFollowerRite={onPerformFollowerRite}
+      rivalsCount={gameState.doctrine.rivals.length}
+      rivalStrength={rivalStrength}
+      rivalDrainPerSecond={rivalDrainPerSecond}
+      nextRivalInSeconds={nextRivalInSeconds}
+      canSuppressRival={canUseSuppressRival}
+      suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
+      onSuppressRival={onSuppressRival}
+      showActs={false}
+      showRivals
     />
   ) : null;
 
@@ -969,7 +989,6 @@ export default function App() {
     <ProgressPanel
       belief={gameState.resources.belief}
       era={gameState.era}
-      followers={gameState.resources.followers}
       prophets={gameState.prophets}
       cults={gameState.cults}
       nextProphetFollowers={nextProphetFollowers}
@@ -993,13 +1012,11 @@ export default function App() {
       {era >= 3 ? (
         <CataclysmPanel
           era={gameState.era}
-          influence={gameState.resources.influence}
           veil={gameState.resources.veil}
           veilBonus={veilBonus}
           veilRegenPerSecond={veilRegenPerSecond}
           veilErosionPerSecond={veilErosionPerSecond}
           veilCollapseThreshold={veilCollapseThreshold}
-          shrinesBuilt={gameState.doctrine.shrinesBuilt}
           civilizationHealth={gameState.cataclysm.civilizationHealth}
           civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
           civilizationRebuildInSeconds={civilizationRebuildSeconds}
@@ -1008,7 +1025,7 @@ export default function App() {
           onCastMiracle={onCastMiracle}
         />
       ) : null}
-      {era >= 3 || (era === 2 && gameState.doctrine.rivals.length > 0) ? doctrinePanel : null}
+      {doctrineRivalsPanel}
       {whisperPanel}
       {era === 2 ? eraGatePanel : null}
     </>
@@ -1017,7 +1034,7 @@ export default function App() {
   const growthTabContent = (
     <>
       {domainPanel}
-      {era === 2 ? doctrinePanel : null}
+      {doctrineGrowthPanel}
       {progressPanel}
     </>
   );
@@ -1042,7 +1059,8 @@ export default function App() {
     <>
       <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
         <p>
-          Cycle overview: Era {formatResource(era)} | Completed runs {formatResource(gameState.prestige.completedRuns)}.
+          Cycle overview: Era {formatResource(era)} · Completed runs{" "}
+          {formatResource(gameState.prestige.completedRuns)}.
         </p>
       </section>
       {uiReveal.showAscensionPanel ? (
@@ -1111,8 +1129,10 @@ export default function App() {
       data-era={gameState.era}
       className={`veil-shell relative min-h-screen overflow-hidden text-slate-100 ${
         gameState.era >= 3 ? "md:pr-[21.5rem]" : ""
-      } ${gameState.era >= 3 ? `veil-zone-${veilZone}` : ""} ${
-        gameState.era >= 3 && gameState.resources.veil < 15 ? "veil-zone-critical" : ""
+      } ${gameState.era >= 3 ? `veil-zone-${veilStability.backgroundZone}` : ""} ${
+        gameState.era >= 3 && (veilStability.id === "critical" || veilStability.id === "unraveling")
+          ? "veil-zone-critical"
+          : ""
       }`}
     >
       <div className="veil-backdrop pointer-events-none absolute inset-0" style={{ opacity: veilOpacity }} />
@@ -1161,29 +1181,19 @@ export default function App() {
             <p className="mt-2 text-xl text-white">
               {formatResource(gameState.resources.influence)} / {formatResource(influenceCap)}
             </p>
-            <p className="mt-1 text-xs text-veil/65">Whisper: {formatResource(whisperCost)}</p>
           </article>
           {era >= 2 ? (
             <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
               <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.followers)}</p>
-              <p className="mt-1 text-xs text-veil/65">Prophets: {formatResource(gameState.prophets)}</p>
             </article>
           ) : null}
           {era >= 3 ? (
             <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Thickness</p>
-              <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.veil)}</p>
-              <p
-                className={`mt-1 text-xs ${
-                  veilZone === "stable"
-                    ? "text-veil/70"
-                    : veilZone === "optimal"
-                      ? "text-omen"
-                      : "text-ember"
-                }`}
-              >
-                {veilZone === "stable" ? "Stable" : veilZone === "optimal" ? "Optimal Risk" : "Danger"}
+              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Stability</p>
+              <p className="mt-2 text-xl text-white">
+                {formatResource(gameState.resources.veil)} <span className="text-veil/55">·</span>{" "}
+                <span className={`${veilStability.cssClass} text-base`}>{veilStability.label}</span>
               </p>
             </article>
           ) : null}
@@ -1255,6 +1265,7 @@ export default function App() {
             whispersInWindow={gameState.activity.whispersInWindow}
             whisperResetInSeconds={whisperResetInSeconds}
             influenceBreakdown={influenceRegenBreakdown}
+            shrinesBuilt={gameState.doctrine.shrinesBuilt}
             currentFollowers={gameState.resources.followers}
             passiveFollowerRate={passiveFollowerRate}
             rivalFollowerDrainPerSecond={rivalDrainPerSecond}

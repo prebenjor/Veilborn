@@ -35,3 +35,15 @@ export function formatRate(value: number): string {
     minimumSignificantDigits: 2
   }).format(value);
 }
+
+export function formatProjected(value: number): string {
+  if (!Number.isFinite(value)) return "~0";
+  const absolute = Math.abs(value);
+  const formatted = Intl.NumberFormat("en-US", {
+    notation: absolute >= 10000 ? "compact" : "standard",
+    compactDisplay: "short",
+    maximumSignificantDigits: 3,
+    minimumSignificantDigits: 1
+  }).format(value);
+  return `~${formatted}`;
+}
