@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 11;
+export const GAME_STATE_SCHEMA_VERSION = 12;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -83,6 +83,33 @@ export const ACT_RETURN_FACTOR = 0.3;
 export const ACT_FLOOR_BASE = 1.0;
 export const ACT_FLOOR_ECHO = 1.5;
 export const ACT_COST_DISCOUNT = 0.85;
+
+export type FollowerRiteType = "procession" | "convergence";
+export const FOLLOWER_RITE_TYPES: FollowerRiteType[] = ["procession", "convergence"];
+export const FOLLOWER_RITE_BASE_INFLUENCE_COST: Record<FollowerRiteType, number> = {
+  procession: 220,
+  convergence: 680
+};
+export const FOLLOWER_RITE_BASE_BELIEF_COST: Record<FollowerRiteType, number> = {
+  procession: 12000,
+  convergence: 90000
+};
+export const FOLLOWER_RITE_COST_SCALAR: Record<FollowerRiteType, number> = {
+  procession: 1.28,
+  convergence: 1.35
+};
+export const FOLLOWER_RITE_BASE_FOLLOWERS: Record<FollowerRiteType, number> = {
+  procession: 180,
+  convergence: 900
+};
+export const FOLLOWER_RITE_PER_CULT_SCALE = 0.08;
+export const FOLLOWER_RITE_PER_SHRINE_SCALE = 0.06;
+export const FOLLOWER_RITE_PER_PROPHET_SCALE = 0.04;
+export const FOLLOWER_RITE_PER_DOMAIN_PAIR_SCALE = 0.07;
+export const FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE = 0.01;
+export const FOLLOWER_RITE_VEIL_SAFE_MULTIPLIER = 0.95;
+export const FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER = 1.1;
+export const FOLLOWER_RITE_VEIL_DANGER_MULTIPLIER = 1.2;
 
 export const RIVAL_SPAWN_BASE_MS = 300 * 1000;
 export const RIVAL_SPAWN_ECHO_DELAY_MS = 60 * 1000;
@@ -421,6 +448,7 @@ export interface DoctrineState {
   activeActs: ActiveAct[];
   actsCompleted: number;
   shrinesBuilt: number;
+  followerRitesUsed: Record<FollowerRiteType, number>;
   rivals: RivalState[];
   lastRivalSpawnAt: number;
   survivedRivalEvent: boolean;
@@ -671,6 +699,10 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       activeActs: [],
       actsCompleted: 0,
       shrinesBuilt: 0,
+      followerRitesUsed: {
+        procession: 0,
+        convergence: 0
+      },
       rivals: [],
       lastRivalSpawnAt: nowMs,
       survivedRivalEvent: false,

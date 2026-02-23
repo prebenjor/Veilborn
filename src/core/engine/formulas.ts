@@ -64,6 +64,18 @@ import {
   INFLUENCE_REGEN_PER_SHRINE_PER_SECOND,
   INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND,
   INFLUENCE_START_BONUS,
+  FOLLOWER_RITE_BASE_BELIEF_COST,
+  FOLLOWER_RITE_BASE_FOLLOWERS,
+  FOLLOWER_RITE_BASE_INFLUENCE_COST,
+  FOLLOWER_RITE_COST_SCALAR,
+  FOLLOWER_RITE_PER_CULT_SCALE,
+  FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE,
+  FOLLOWER_RITE_PER_DOMAIN_PAIR_SCALE,
+  FOLLOWER_RITE_PER_PROPHET_SCALE,
+  FOLLOWER_RITE_PER_SHRINE_SCALE,
+  FOLLOWER_RITE_VEIL_DANGER_MULTIPLIER,
+  FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER,
+  FOLLOWER_RITE_VEIL_SAFE_MULTIPLIER,
   PROPHET_DOMAIN_OUTPUT_SCALE,
   PROPHET_OUTPUT_BASE,
   PROPHET_THRESHOLD_BASE,
@@ -96,6 +108,7 @@ import {
   type DomainId,
   type EchoBonuses,
   type EchoTreeId,
+  type FollowerRiteType,
   type EchoTreeRanks,
   type GameState,
   type MortalTrait,
@@ -150,6 +163,12 @@ export interface InfluenceRegenBreakdown {
   cultCount: number;
   cap: number;
   fillTimeSeconds: number | null;
+}
+
+export interface FollowerRiteCost {
+  influenceCost: number;
+  beliefCost: number;
+  uses: number;
 }
 
 export interface EraOneGateStatus {
@@ -439,6 +458,12 @@ function getPassiveFollowerVeilZoneMultiplier(veil: number): number {
   return PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER;
 }
 
+function getFollowerRiteVeilZoneMultiplier(veil: number): number {
+  if (veil > 55) return FOLLOWER_RITE_VEIL_SAFE_MULTIPLIER;
+  if (veil < 30) return FOLLOWER_RITE_VEIL_DANGER_MULTIPLIER;
+  return FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER;
+}
+
 export function getPassiveFollowerRate(state: GameState, nowMs: number): number {
   if (state.era < 3) return 0;
   if (state.cataclysm.civilizationHealth <= 0) return 0;
@@ -453,6 +478,57 @@ export function getPassiveFollowerRate(state: GameState, nowMs: number): number 
   const civHealthMultiplier = Math.max(0, state.cataclysm.civilizationHealth / 100);
   const veilZoneMultiplier = getPassiveFollowerVeilZoneMultiplier(state.resources.veil);
   return Math.max(0, baseRate * faithDecay * civHealthMultiplier * veilZoneMultiplier);
+}
+
+export function getFollowerRiteUses(state: GameState, type: FollowerRiteType): number {
+  return Math.max(0, Math.floor(state.doctrine.followerRitesUsed?.[type] ?? 0));
+}
+
+export function getFollowerRiteCost(state: GameState, type: FollowerRiteType): FollowerRiteCost {
+  const uses = getFollowerRiteUses(state, type);
+  return {
+    influenceCost: Math.ceil(
+      FOLLOWER_RITE_BASE_INFLUENCE_COST[type] * Math.pow(FOLLOWER_RITE_COST_SCALAR[type], uses)
+    ),
+    beliefCost: Math.ceil(
+      FOLLOWER_RITE_BASE_BELIEF_COST[type] * Math.pow(FOLLOWER_RITE_COST_SCALAR[type], uses)
+    ),
+    uses
+  };
+}
+
+export function getFollowerRiteFollowerGain(
+  state: GameState,
+  type: FollowerRiteType,
+  nowMs: number
+): number {
+  if (state.era < 3) return 0;
+  if (state.cults <= 0) return 0;
+  if (state.cataclysm.civilizationHealth <= 0) return 0;
+
+  const baseFollowers = FOLLOWER_RITE_BASE_FOLLOWERS[type];
+  const infrastructureMultiplier =
+    1 +
+    state.cults * FOLLOWER_RITE_PER_CULT_SCALE +
+    state.doctrine.shrinesBuilt * FOLLOWER_RITE_PER_SHRINE_SCALE +
+    state.prophets * FOLLOWER_RITE_PER_PROPHET_SCALE +
+    state.matchingDomainPairs * FOLLOWER_RITE_PER_DOMAIN_PAIR_SCALE +
+    getTotalDomainLevel(state) * FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE;
+  const faithDecay = getFaithDecay(state, nowMs);
+  const civHealthMultiplier = Math.max(0, Math.min(1, state.cataclysm.civilizationHealth / 100));
+  const veilMultiplier = getFollowerRiteVeilZoneMultiplier(state.resources.veil);
+  const lineageMultiplier = getLineageConversionModifier(state);
+  return Math.max(
+    1,
+    Math.floor(
+      baseFollowers *
+        infrastructureMultiplier *
+        faithDecay *
+        civHealthMultiplier *
+        veilMultiplier *
+        lineageMultiplier
+    )
+  );
 }
 
 export function getVeilRegenPerSecond(state: GameState): number {

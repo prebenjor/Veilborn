@@ -35,6 +35,7 @@ import {
   type MortalTrait,
   type OmenEntry,
   type FinalChoice,
+  type FollowerRiteType,
   type PantheonAlly,
   type PantheonLegacyState,
   type PantheonState,
@@ -506,10 +507,21 @@ function sanitizeGhostState(value: unknown, fallback: GhostState): GhostState {
 
 function sanitizeDoctrine(value: unknown, fallback: DoctrineState): DoctrineState {
   if (!isRecord(value)) return fallback;
+  const followerRitesUsed: Record<FollowerRiteType, number> = {
+    procession: Math.max(
+      0,
+      Math.floor(readNumber(isRecord(value.followerRitesUsed) ? value.followerRitesUsed.procession : null, fallback.followerRitesUsed.procession))
+    ),
+    convergence: Math.max(
+      0,
+      Math.floor(readNumber(isRecord(value.followerRitesUsed) ? value.followerRitesUsed.convergence : null, fallback.followerRitesUsed.convergence))
+    )
+  };
   return {
     activeActs: sanitizeActiveActs(value.activeActs, fallback.activeActs),
     actsCompleted: Math.max(0, Math.floor(readNumber(value.actsCompleted, fallback.actsCompleted))),
     shrinesBuilt: Math.max(0, Math.floor(readNumber(value.shrinesBuilt, fallback.shrinesBuilt))),
+    followerRitesUsed,
     rivals: sanitizeRivals(value.rivals, fallback.rivals),
     lastRivalSpawnAt: Math.max(0, readNumber(value.lastRivalSpawnAt, fallback.lastRivalSpawnAt)),
     survivedRivalEvent: readBoolean(value.survivedRivalEvent, fallback.survivedRivalEvent),
@@ -810,7 +822,8 @@ const MIGRATORS: Record<number, Migrator> = {
   8: sanitizeState,
   9: sanitizeState,
   10: sanitizeState,
-  11: sanitizeState
+  11: sanitizeState,
+  12: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

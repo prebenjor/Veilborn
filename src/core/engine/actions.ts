@@ -43,6 +43,7 @@ import {
   type DomainId,
   type EchoTreeId,
   type FinalChoice,
+  type FollowerRiteType,
   type GameState,
   type MiracleTier
 } from "../state/gameState";
@@ -80,6 +81,8 @@ import {
   getLineageInheritanceWeights,
   getMatchingDomainPairs,
   getDomainSynergy,
+  getFollowerRiteCost,
+  getFollowerRiteFollowerGain,
   simulateDomainInvestments,
   isPantheonUnlocked,
   getMiracleBeliefGain,
@@ -102,6 +105,7 @@ type OmenKind =
   | "prophet"
   | "cult"
   | "act"
+  | "followerRite"
   | "suppress"
   | "miracle"
   | "civCollapse"
@@ -193,10 +197,16 @@ const ACT_LABELS: Record<ActType, string> = {
   proclaim: "Proclamation"
 };
 
+const FOLLOWER_RITE_LABELS: Record<FollowerRiteType, string> = {
+  procession: "Pilgrim Procession",
+  convergence: "Convergence March"
+};
+
 const MAJOR_OMEN_KINDS: OmenKind[] = [
   "domainLevel",
   "prophet",
   "cult",
+  "followerRite",
   "suppress",
   "miracle",
   "civCollapse",
@@ -785,6 +795,14 @@ function createOmen(
     `In the salt quarter, a ${detail?.toLowerCase() ?? "rite"} started without proclamation.`
   ] as const;
 
+  const followerRiteStarts = [
+    "Caravans turned toward your shrines without summons.",
+    "Processions crossed district lines by torchlight and did not turn back.",
+    "Door by door, your sign was offered and taken.",
+    "The old roads filled with pilgrims who spoke your silence aloud.",
+    "At first bell, the squares were already crowded with listeners."
+  ] as const;
+
   const suppressStarts = [
     "You bent rival doctrine until it cracked.",
     "A splinter faith was silenced before it found a second voice.",
@@ -924,6 +942,14 @@ function createOmen(
     return {
       rngState: a.rngState,
       text: `${a.value} The doctrine tightened around a single intention.`
+    };
+  }
+
+  if (kind === "followerRite") {
+    const a = pickOne(rngSeed, followerRiteStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} ${detail ?? "The faithful arrived in numbers that no clerk could count twice."}`
     };
   }
 
@@ -1462,6 +1488,63 @@ export function performStartAct(state: GameState, type: ActType, nowMs: number):
     skepticism: -LINEAGE_ACTION_RECOVERY_ACT * 0.25
   });
   return appendOmen(withLineageRecovery, nowMs, "act", ACT_LABELS[type]);
+}
+
+export function canPerformFollowerRite(state: GameState, type: FollowerRiteType): boolean {
+  if (state.era < 3) return false;
+  if (state.cults <= 0) return false;
+  if (state.cataclysm.civilizationCollapsed) return false;
+  const cost = getFollowerRiteCost(state, type);
+  return (
+    state.resources.influence >= cost.influenceCost && state.resources.belief >= cost.beliefCost
+  );
+}
+
+export function performFollowerRite(
+  state: GameState,
+  type: FollowerRiteType,
+  nowMs: number
+): GameState {
+  if (!canPerformFollowerRite(state, type)) return state;
+
+  const cost = getFollowerRiteCost(state, type);
+  const followerGain = getFollowerRiteFollowerGain(state, type, nowMs);
+  const nextUses = Math.max(0, state.doctrine.followerRitesUsed?.[type] ?? 0) + 1;
+
+  const withRite = {
+    ...state,
+    resources: {
+      ...state.resources,
+      influence: state.resources.influence - cost.influenceCost,
+      belief: state.resources.belief - cost.beliefCost,
+      followers: state.resources.followers + followerGain
+    },
+    doctrine: {
+      ...state.doctrine,
+      followerRitesUsed: {
+        ...(state.doctrine.followerRitesUsed ?? { procession: 0, convergence: 0 }),
+        [type]: nextUses
+      }
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  const withLineageRecovery = applyLineageDelta(withRite, {
+    trustDebt: -LINEAGE_ACTION_RECOVERY_ACT * 1.4,
+    skepticism: -LINEAGE_ACTION_RECOVERY_ACT * 0.4
+  });
+
+  const detail = `${FOLLOWER_RITE_LABELS[type]} gathered ${followerGain} followers. Uses this run: ${nextUses}.`;
+  return appendOmen(
+    withPeakFollowers(withLineageRecovery, withLineageRecovery.resources.followers),
+    nowMs,
+    "followerRite",
+    detail
+  );
 }
 
 export function canSuppressRival(state: GameState): boolean {

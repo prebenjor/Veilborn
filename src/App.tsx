@@ -8,6 +8,7 @@ import {
   canBetrayPantheonAlly,
   canCastMiracle,
   canFormCult,
+  canPerformFollowerRite,
   canFormPantheonAlliance,
   canInvokeFinalChoice,
   canPurchaseEchoTreeRank,
@@ -28,6 +29,7 @@ import {
   performCultFormation,
   performDomainInvestment,
   performFormPantheonAlliance,
+  performFollowerRite,
   performImportGhostSignatures,
   performDomainInvestments,
   performPurchaseEchoTreeRank,
@@ -56,6 +58,8 @@ import {
   getEraOneGateStatus,
   getEraTwoGateStatus,
   getEchoTreeNextCost,
+  getFollowerRiteCost,
+  getFollowerRiteFollowerGain,
   getFollowersForNextProphet,
   getHighestDomainLevel,
   getInfluenceCap,
@@ -109,6 +113,7 @@ import {
   type DomainId,
   type EchoTreeId,
   type FinalChoice,
+  type FollowerRiteType,
   type GameState,
   type MiracleTier
 } from "./core/state/gameState";
@@ -190,6 +195,23 @@ const ECHO_TREE_META: Array<{
     ]
   }
 ];
+
+const FOLLOWER_RITE_META: Record<
+  FollowerRiteType,
+  {
+    label: string;
+    hint: string;
+  }
+> = {
+  procession: {
+    label: "Pilgrim Procession",
+    hint: "High-cost migration through shrine routes."
+  },
+  convergence: {
+    label: "Convergence March",
+    hint: "Very high-cost mass conversion wave."
+  }
+};
 
 function getAvailableTabs(era: EraValue): UiTab[] {
   if (era <= 1) return [];
@@ -506,6 +528,19 @@ export default function App() {
     ritual: canStartAct(gameState, "ritual"),
     proclaim: canStartAct(gameState, "proclaim")
   };
+  const followerRiteOptions = (Object.keys(FOLLOWER_RITE_META) as FollowerRiteType[]).map((type) => {
+    const costs = getFollowerRiteCost(gameState, type);
+    return {
+      type,
+      label: FOLLOWER_RITE_META[type].label,
+      hint: FOLLOWER_RITE_META[type].hint,
+      influenceCost: costs.influenceCost,
+      beliefCost: costs.beliefCost,
+      projectedFollowers: getFollowerRiteFollowerGain(gameState, type, nowMs),
+      uses: costs.uses,
+      canPerform: canPerformFollowerRite(gameState, type)
+    };
+  });
   const activeActs = gameState.doctrine.activeActs.map((act) => ({
     id: act.id,
     type: act.type,
@@ -611,6 +646,10 @@ export default function App() {
 
   const onStartAct = (type: ActType) => {
     setGameState((prev) => performStartAct(prev, type, Date.now()));
+  };
+
+  const onPerformFollowerRite = (type: FollowerRiteType) => {
+    setGameState((prev) => performFollowerRite(prev, type, Date.now()));
   };
 
   const onSuppressRival = () => {
@@ -858,6 +897,8 @@ export default function App() {
       actFloorMultiplier={gameState.echoBonuses.actFloor ? 1.5 : 1.0}
       canStartAct={canStartActs}
       onStartAct={onStartAct}
+      followerRites={followerRiteOptions}
+      onPerformFollowerRite={onPerformFollowerRite}
       rivalsCount={gameState.doctrine.rivals.length}
       rivalStrength={rivalStrength}
       rivalDrainPerSecond={rivalDrainPerSecond}
