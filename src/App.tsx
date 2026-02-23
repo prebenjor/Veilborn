@@ -181,6 +181,7 @@ export default function App() {
         </div>
 
         <ProgressPanel
+          belief={gameState.resources.belief}
           followers={gameState.resources.followers}
           prophets={gameState.prophets}
           cults={gameState.cults}
