@@ -49,7 +49,7 @@ import {
   getActRewardBelief,
   getAscensionEchoGain,
   getActDurationSeconds,
-  getBeliefPerSecond,
+  getBeliefGenerationBreakdown,
   getCultFormationCost,
   getCultOutput,
   getDomainSynergy,
@@ -254,20 +254,6 @@ function formatSnapshotLabel(snapshotMeta: SnapshotMeta | null): string | null {
   return `${reasonLabel} at ${new Date(snapshotMeta.savedAt).toLocaleString()}`;
 }
 
-function renderGateChip(label: string, ready: boolean): JSX.Element {
-  return (
-    <span
-      className={
-        ready
-          ? "rounded-full border border-omen/40 bg-omen/10 px-2 py-0.5 text-[11px] text-omen"
-          : "rounded-full border border-white/15 bg-black/20 px-2 py-0.5 text-[11px] text-veil/70"
-      }
-    >
-      {label}: {ready ? "Met" : "Pending"}
-    </span>
-  );
-}
-
 export default function App() {
   const [initialLoad] = useState(() => loadGameStateWithOffline());
   const [gameState, setGameState] = useState<GameState>(initialLoad.state);
@@ -404,7 +390,8 @@ export default function App() {
     return normalized;
   }, [gameState.resources.veil]);
 
-  const beliefPerSecond = getBeliefPerSecond(gameState, nowMs);
+  const beliefBreakdown = getBeliefGenerationBreakdown(gameState, nowMs);
+  const beliefPerSecond = beliefBreakdown.totalPerSecond;
   const influenceCap = getInfluenceCap(gameState);
   const influenceRegenBreakdown = getInfluenceRegenBreakdown(gameState);
   const passiveFollowerRate = getPassiveFollowerRate(gameState, nowMs);
@@ -945,6 +932,38 @@ export default function App() {
   const eraGatePanel = era <= 2 ? (
     <EraGatePanel
       era={gameState.era}
+      presentation="panel"
+      eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
+      eraOneBeliefTarget={eraOneGate.beliefTarget}
+      prophetsProgress={gameState.prophets}
+      prophetsTarget={eraOneGate.prophetsTarget}
+      domainProgress={getHighestDomainLevel(gameState)}
+      domainTarget={eraOneGate.domainTarget}
+      eraOneReady={canAdvanceEraOne}
+      eraTwoBeliefProgress={gameState.stats.totalBeliefEarned}
+      eraTwoBeliefTarget={eraTwoGate.beliefTarget}
+      cultsProgress={gameState.cults}
+      cultsTarget={eraTwoGate.cultsTarget}
+      rivalEventReady={eraTwoGate.rivalEventReady}
+      eraTwoReady={canAdvanceEraTwo}
+      unravelingBeliefProgress={gameState.stats.totalBeliefEarned}
+      unravelingBeliefTarget={unravelingGate.beliefTarget}
+      unravelingVeilProgress={gameState.resources.veil}
+      unravelingVeilTarget={unravelingGate.veilTarget}
+      unravelingMiraclesProgress={gameState.cataclysm.miraclesThisRun}
+      unravelingMiraclesTarget={unravelingGate.miraclesTarget}
+      unravelingRunTimeProgressSeconds={gameState.simulation.totalElapsedMs / 1000}
+      unravelingRunTimeTargetSeconds={unravelingGate.runTimeTargetSeconds}
+      unravelingReady={unravelingGate.ready}
+      onAdvanceEraOne={onAdvanceEraOne}
+      onAdvanceEraTwo={onAdvanceEraTwo}
+    />
+  ) : null;
+
+  const unravelingGateStrip = era >= 3 ? (
+    <EraGatePanel
+      era={gameState.era}
+      presentation="strip"
       eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
       eraOneBeliefTarget={eraOneGate.beliefTarget}
       prophetsProgress={gameState.prophets}
@@ -1059,7 +1078,7 @@ export default function App() {
     <>
       <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
         <p>
-          Cycle overview: Era {formatResource(era)} · Completed runs{" "}
+          Cycle overview: Era {formatResource(era)} &middot; Completed runs{" "}
           {formatResource(gameState.prestige.completedRuns)}.
         </p>
       </section>
@@ -1168,7 +1187,7 @@ export default function App() {
         ) : null}
         <section
           className={`veil-statbar grid gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 ${
-            era === 1 ? "md:grid-cols-2" : era === 2 ? "md:grid-cols-3" : "md:grid-cols-4"
+            era === 1 ? "md:grid-cols-3" : era === 2 ? "md:grid-cols-3" : "md:grid-cols-4"
           }`}
         >
           <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
@@ -1182,7 +1201,7 @@ export default function App() {
               {formatResource(gameState.resources.influence)} / {formatResource(influenceCap)}
             </p>
           </article>
-          {era >= 2 ? (
+          {era >= 1 ? (
             <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
               <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.followers)}</p>
@@ -1192,32 +1211,13 @@ export default function App() {
             <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Stability</p>
               <p className="mt-2 text-xl text-white">
-                {formatResource(gameState.resources.veil)} <span className="text-veil/55">·</span>{" "}
+                {formatResource(gameState.resources.veil)} <span className="text-veil/55">&middot;</span>{" "}
                 <span className={`${veilStability.cssClass} text-base`}>{veilStability.label}</span>
               </p>
             </article>
           ) : null}
         </section>
-        {era >= 3 ? (
-          <section className="veil-gate-strip rounded-xl border border-white/15 bg-black/30 p-3">
-            <p className="text-xs uppercase tracking-[0.22em] text-veil/70">Unraveling Gate</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {renderGateChip("Belief", unravelingGate.beliefReady)}
-              {renderGateChip("Veil", unravelingGate.veilReady)}
-              {renderGateChip("Miracles", unravelingGate.miraclesReady)}
-              {renderGateChip("Run Time", unravelingGate.runTimeReady)}
-              <span
-                className={
-                  unravelingGate.ready
-                    ? "rounded-full border border-ember/50 bg-ember/15 px-2 py-0.5 text-[11px] text-ember"
-                    : "rounded-full border border-white/15 bg-black/20 px-2 py-0.5 text-[11px] text-veil/70"
-                }
-              >
-                {unravelingGate.ready ? "Ascension Available" : "Still Sealed"}
-              </span>
-            </div>
-          </section>
-        ) : null}
+        {unravelingGateStrip}
         {era >= 2 ? (
           <nav className="veil-tab-dock sticky top-2 z-20 rounded-xl border border-white/15 bg-black/40 p-1 backdrop-blur-sm">
             <div className="flex flex-wrap gap-1">
@@ -1264,6 +1264,7 @@ export default function App() {
             secondsSinceLastEvent={secondsSinceLastEvent}
             whispersInWindow={gameState.activity.whispersInWindow}
             whisperResetInSeconds={whisperResetInSeconds}
+            beliefBreakdown={beliefBreakdown}
             influenceBreakdown={influenceRegenBreakdown}
             shrinesBuilt={gameState.doctrine.shrinesBuilt}
             currentFollowers={gameState.resources.followers}
@@ -1311,3 +1312,4 @@ export default function App() {
     </main>
   );
 }
+

@@ -1,14 +1,13 @@
+import { useEffect, useMemo, useState } from "react";
 import { formatDurationCompact } from "../../core/ui/timeFormat";
 import { formatResource } from "../../core/ui/numberFormat";
 
-interface GateLineProps {
-  label: string;
-  value: string;
-  ready: boolean;
-}
+type EraGatePresentation = "panel" | "strip";
+type GateId = "era1" | "era2" | "unraveling";
 
 interface EraGatePanelProps {
   era: number;
+  presentation?: EraGatePresentation;
   eraOneBeliefProgress: number;
   eraOneBeliefTarget: number;
   prophetsProgress: number;
@@ -35,19 +34,108 @@ interface EraGatePanelProps {
   onAdvanceEraTwo: () => void;
 }
 
-function GateLine({ label, value, ready }: GateLineProps) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-white/10 bg-black/25 px-2 py-1">
-      <span className="text-xs text-veil/70">{label}</span>
-      <span className={ready ? "text-xs text-omen" : "text-xs text-veil/75"}>
-        {ready ? "Ready" : value}
-      </span>
-    </div>
-  );
+interface GateConditionView {
+  id: string;
+  label: string;
+  progressText: string;
+  ratio: number;
+  ready: boolean;
+}
+
+function clamp(value: number, min = 0, max = 1): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getGateId(era: number): GateId {
+  if (era >= 3) return "unraveling";
+  if (era === 2) return "era2";
+  return "era1";
+}
+
+function getExpandedKey(gateId: GateId): string {
+  return `veilborn.ui.gate.${gateId}.expanded.v1`;
+}
+
+function getSeenKey(gateId: GateId): string {
+  return `veilborn.ui.gate.${gateId}.seen.v1`;
+}
+
+function loadGateExpandedState(gateId: GateId): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const expandedKey = getExpandedKey(gateId);
+    const seenKey = getSeenKey(gateId);
+    const storedExpanded = window.localStorage.getItem(expandedKey);
+    if (storedExpanded === "1") return true;
+    if (storedExpanded === "0") return false;
+
+    const seen = window.localStorage.getItem(seenKey) === "1";
+    if (!seen) {
+      window.localStorage.setItem(seenKey, "1");
+      window.localStorage.setItem(expandedKey, "1");
+      return true;
+    }
+    window.localStorage.setItem(expandedKey, "0");
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function persistGateExpandedState(gateId: GateId, expanded: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(getSeenKey(gateId), "1");
+    window.localStorage.setItem(getExpandedKey(gateId), expanded ? "1" : "0");
+  } catch {
+    // Ignore localStorage write failures.
+  }
+}
+
+function buildGteCondition(id: string, label: string, current: number, target: number): GateConditionView {
+  const ratio = target <= 0 ? 1 : clamp(current / target);
+  return {
+    id,
+    label,
+    progressText: `${formatResource(current)} / ${formatResource(target)}`,
+    ratio,
+    ready: current >= target
+  };
+}
+
+function buildLteCondition(
+  id: string,
+  label: string,
+  current: number,
+  target: number,
+  worstCase = 100
+): GateConditionView {
+  let ratio = 1;
+  if (current > target) {
+    ratio = worstCase <= target ? 0 : clamp((worstCase - current) / (worstCase - target));
+  }
+  return {
+    id,
+    label,
+    progressText: `${formatResource(current)} / ${formatResource(target)}`,
+    ratio,
+    ready: current <= target
+  };
+}
+
+function buildBooleanCondition(id: string, label: string, ready: boolean): GateConditionView {
+  return {
+    id,
+    label,
+    progressText: ready ? "1 / 1" : "0 / 1",
+    ratio: ready ? 1 : 0,
+    ready
+  };
 }
 
 export function EraGatePanel({
   era,
+  presentation = "panel",
   eraOneBeliefProgress,
   eraOneBeliefTarget,
   prophetsProgress,
@@ -73,105 +161,206 @@ export function EraGatePanel({
   onAdvanceEraOne,
   onAdvanceEraTwo
 }: EraGatePanelProps) {
-  if (era === 3) {
-    return (
-      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Unraveling Gate</h2>
-        <p className="mt-2 text-sm text-veil/70">Meet all conditions to prepare ascension.</p>
-        <div className="mt-3 grid gap-2">
-          <GateLine
-            label="Total Belief Earned"
-            value={`${formatResource(unravelingBeliefProgress)} / ${formatResource(unravelingBeliefTarget)}`}
-            ready={unravelingBeliefProgress >= unravelingBeliefTarget}
-          />
-          <GateLine
-            label="Veil at or below"
-            value={`${formatResource(unravelingVeilProgress)} / ${formatResource(unravelingVeilTarget)}`}
-            ready={unravelingVeilProgress <= unravelingVeilTarget}
-          />
-          <GateLine
-            label="Miracles This Run"
-            value={`${formatResource(unravelingMiraclesProgress)} / ${formatResource(unravelingMiraclesTarget)}`}
-            ready={unravelingMiraclesProgress >= unravelingMiraclesTarget}
-          />
-          <GateLine
-            label="Run Time"
-            value={`${formatDurationCompact(unravelingRunTimeProgressSeconds)} / ${formatDurationCompact(unravelingRunTimeTargetSeconds)}`}
-            ready={unravelingRunTimeProgressSeconds >= unravelingRunTimeTargetSeconds}
-          />
-        </div>
-        <p className="mt-2 text-xs text-veil/65">
-          {unravelingReady
-            ? "Gate conditions met. Ascend from the Echo Trees panel."
-            : "Pressure the world through miracles and Veil risk to unlock the gate."}
-        </p>
-      </section>
-    );
-  }
+  const gateId = getGateId(era);
+  const [expanded, setExpanded] = useState<boolean>(() => loadGateExpandedState(gateId));
 
-  if (era === 2) {
-    return (
-      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Era II Gate</h2>
-        <p className="mt-2 text-sm text-veil/70">Meet all conditions to open Era III.</p>
-        <div className="mt-3 grid gap-2">
-          <GateLine
-            label="Total Belief Earned"
-            value={`${formatResource(eraTwoBeliefProgress)} / ${formatResource(eraTwoBeliefTarget)}`}
-            ready={eraTwoBeliefProgress >= eraTwoBeliefTarget}
-          />
-          <GateLine
-            label="Cults Formed"
-            value={`${formatResource(cultsProgress)} / ${formatResource(cultsTarget)}`}
-            ready={cultsProgress >= cultsTarget}
-          />
-          <GateLine
-            label="Rival Event Survived"
-            value="Awaiting first rival"
-            ready={rivalEventReady}
-          />
-        </div>
-        <button
-          type="button"
-          disabled={!eraTwoReady}
-          onClick={onAdvanceEraTwo}
-          className="mt-3 rounded-xl border border-veil/60 px-3 py-2 text-sm text-veil transition hover:bg-veil/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-        >
-          Enter Era III
-        </button>
-      </section>
-    );
-  }
+  useEffect(() => {
+    setExpanded(loadGateExpandedState(gateId));
+  }, [gateId]);
+
+  const {
+    title,
+    thresholdLabel,
+    subtitle,
+    conditions,
+    ready,
+    crossAction,
+    crossLabel,
+    readyHint
+  } = useMemo(() => {
+    if (era >= 3) {
+      const conditionViews: GateConditionView[] = [
+        buildGteCondition(
+          "belief",
+          "Total Belief Earned",
+          unravelingBeliefProgress,
+          unravelingBeliefTarget
+        ),
+        buildLteCondition("veil", "Veil at or below", unravelingVeilProgress, unravelingVeilTarget, 100),
+        buildGteCondition(
+          "miracles",
+          "Miracles This Run",
+          unravelingMiraclesProgress,
+          unravelingMiraclesTarget
+        ),
+        {
+          id: "runtime",
+          label: "Run Time",
+          progressText: `${formatDurationCompact(unravelingRunTimeProgressSeconds)} / ${formatDurationCompact(
+            unravelingRunTimeTargetSeconds
+          )}`,
+          ratio:
+            unravelingRunTimeTargetSeconds <= 0
+              ? 1
+              : clamp(unravelingRunTimeProgressSeconds / unravelingRunTimeTargetSeconds),
+          ready: unravelingRunTimeProgressSeconds >= unravelingRunTimeTargetSeconds
+        }
+      ];
+      return {
+        title: "Unraveling Gate",
+        thresholdLabel: "UNRAVELING THRESHOLD",
+        subtitle: "Meet all conditions to prepare ascension.",
+        conditions: conditionViews,
+        ready: unravelingReady,
+        crossAction: null as (() => void) | null,
+        crossLabel: "",
+        readyHint: unravelingReady
+          ? "Gate conditions met. Ascend from the Echo Trees panel."
+          : "Pressure the world through miracles and Veil risk to unlock the gate."
+      };
+    }
+
+    if (era === 2) {
+      const conditionViews: GateConditionView[] = [
+        buildGteCondition("belief", "Total Belief Earned", eraTwoBeliefProgress, eraTwoBeliefTarget),
+        buildGteCondition("cults", "Cults Formed", cultsProgress, cultsTarget),
+        buildBooleanCondition("rival", "Rival Event Survived", rivalEventReady)
+      ];
+      return {
+        title: "Era II Gate",
+        thresholdLabel: "ERA II THRESHOLD",
+        subtitle: "Meet all conditions to open Era III.",
+        conditions: conditionViews,
+        ready: eraTwoReady,
+        crossAction: onAdvanceEraTwo,
+        crossLabel: "Cross the Threshold",
+        readyHint: ""
+      };
+    }
+
+    const conditionViews: GateConditionView[] = [
+      buildGteCondition("belief", "Total Belief Earned", eraOneBeliefProgress, eraOneBeliefTarget),
+      buildGteCondition("prophets", "Prophets", prophetsProgress, prophetsTarget),
+      buildGteCondition("domain", "Highest Domain", domainProgress, domainTarget)
+    ];
+    return {
+      title: "Era I Gate",
+      thresholdLabel: "THRESHOLD",
+      subtitle: "Meet all conditions to open Era II.",
+      conditions: conditionViews,
+      ready: eraOneReady,
+      crossAction: onAdvanceEraOne,
+      crossLabel: "Cross the Threshold",
+      readyHint: ""
+    };
+  }, [
+    era,
+    eraOneBeliefProgress,
+    eraOneBeliefTarget,
+    prophetsProgress,
+    prophetsTarget,
+    domainProgress,
+    domainTarget,
+    eraOneReady,
+    eraTwoBeliefProgress,
+    eraTwoBeliefTarget,
+    cultsProgress,
+    cultsTarget,
+    rivalEventReady,
+    eraTwoReady,
+    unravelingBeliefProgress,
+    unravelingBeliefTarget,
+    unravelingVeilProgress,
+    unravelingVeilTarget,
+    unravelingMiraclesProgress,
+    unravelingMiraclesTarget,
+    unravelingRunTimeProgressSeconds,
+    unravelingRunTimeTargetSeconds,
+    unravelingReady,
+    onAdvanceEraOne,
+    onAdvanceEraTwo
+  ]);
+
+  const metCount = conditions.filter((condition) => condition.ready).length;
+  const totalCount = conditions.length;
+  const completionRatio = totalCount <= 0 ? 0 : metCount / totalCount;
+
+  const onToggleExpanded = () => {
+    setExpanded((previous) => {
+      const next = !previous;
+      persistGateExpandedState(gateId, next);
+      return next;
+    });
+  };
+
+  const containerClass =
+    presentation === "strip"
+      ? "veil-gate-strip rounded-xl border border-white/15 bg-black/30 p-3"
+      : "rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm";
 
   return (
-    <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-      <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Era I Gate</h2>
-      <p className="mt-2 text-sm text-veil/70">Meet all conditions to open Era II.</p>
-      <div className="mt-3 grid gap-2">
-        <GateLine
-          label="Total Belief Earned"
-          value={`${formatResource(eraOneBeliefProgress)} / ${formatResource(eraOneBeliefTarget)}`}
-          ready={eraOneBeliefProgress >= eraOneBeliefTarget}
-        />
-        <GateLine
-          label="Prophets"
-          value={`${formatResource(prophetsProgress)} / ${formatResource(prophetsTarget)}`}
-          ready={prophetsProgress >= prophetsTarget}
-        />
-        <GateLine
-          label="Highest Domain"
-          value={`${formatResource(domainProgress)} / ${formatResource(domainTarget)}`}
-          ready={domainProgress >= domainTarget}
-        />
-      </div>
+    <section className={containerClass}>
+      {presentation === "panel" ? (
+        <>
+          <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">{title}</h2>
+          <p className="mt-2 text-sm text-veil/70">{subtitle}</p>
+        </>
+      ) : (
+        <p className="text-xs uppercase tracking-[0.22em] text-veil/70">{title}</p>
+      )}
+
       <button
         type="button"
-        disabled={!eraOneReady}
-        onClick={onAdvanceEraOne}
-        className="mt-3 rounded-xl border border-veil/60 px-3 py-2 text-sm text-veil transition hover:bg-veil/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+        onClick={onToggleExpanded}
+        className="mt-2 flex w-full items-center justify-between rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-left transition hover:border-white/25"
       >
-        Enter Era II
+        <span className="text-xs uppercase tracking-[0.18em] text-veil/75">
+          {ready ? "Ready to cross" : thresholdLabel}
+        </span>
+        <span className="text-xs text-veil/80">
+          {formatResource(metCount)} / {formatResource(totalCount)} {expanded ? "▾" : "▸"}
+        </span>
       </button>
+
+      <div className="mt-2 h-2 overflow-hidden rounded-full border border-white/15 bg-black/40">
+        <div
+          className={ready ? "h-full bg-ember/70" : "h-full bg-veil/60"}
+          style={{ width: `${(completionRatio * 100).toFixed(2)}%` }}
+        />
+      </div>
+
+      {expanded ? (
+        <div className="mt-3 space-y-2">
+          {conditions.map((condition) => (
+            <article key={condition.id} className="rounded-lg border border-white/10 bg-black/20 p-2">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-veil/75">{condition.label}</span>
+                <span className={condition.ready ? "text-omen" : "text-veil/70"}>
+                  {condition.ready ? `✓ ${condition.progressText}` : condition.progressText}
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full border border-white/10 bg-black/40">
+                <div
+                  className={condition.ready ? "h-full bg-omen/70" : "h-full bg-veil/55"}
+                  style={{ width: `${(condition.ratio * 100).toFixed(2)}%` }}
+                />
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {crossAction && ready ? (
+        <button
+          type="button"
+          onClick={crossAction}
+          className="mt-3 rounded-xl border border-ember/60 px-3 py-2 text-sm text-ember transition hover:bg-ember/10"
+        >
+          {crossLabel}
+        </button>
+      ) : null}
+
+      {era >= 3 && readyHint ? <p className="mt-2 text-xs text-veil/65">{readyHint}</p> : null}
     </section>
   );
 }

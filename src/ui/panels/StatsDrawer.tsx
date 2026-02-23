@@ -6,6 +6,12 @@ interface StatsDrawerProps {
   runSeconds: number;
   totalTicks: number;
   totalBeliefEarned: number;
+  beliefBreakdown: {
+    totalPerSecond: number;
+    prophetPerSecond: number;
+    cultPerSecond: number;
+    followerPerSecond: number;
+  };
   secondsSinceLastEvent: number;
   whispersInWindow: number;
   whisperResetInSeconds: number;
@@ -54,6 +60,7 @@ export function StatsDrawer({
   runSeconds,
   totalTicks,
   totalBeliefEarned,
+  beliefBreakdown,
   secondsSinceLastEvent,
   whispersInWindow,
   whisperResetInSeconds,
@@ -101,6 +108,23 @@ export function StatsDrawer({
         <dt>Whisper Reset In</dt>
         <dd>{formatDurationCompact(whisperResetInSeconds)}</dd>
       </dl>
+      <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+        <p className="uppercase tracking-[0.16em] text-veil/80">Belief</p>
+        <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
+          <dt>Total</dt>
+          <dd>{formatResource(beliefBreakdown.totalPerSecond, 2)} /s</dd>
+          <dt>Prophets</dt>
+          <dd>{formatResource(beliefBreakdown.prophetPerSecond, 2)} /s</dd>
+          <dt>Cults</dt>
+          <dd>{formatResource(beliefBreakdown.cultPerSecond, 2)} /s</dd>
+          {beliefBreakdown.followerPerSecond > 0 ? (
+            <>
+              <dt>Followers</dt>
+              <dd>{formatResource(beliefBreakdown.followerPerSecond, 2)} /s</dd>
+            </>
+          ) : null}
+        </dl>
+      </div>
       {era >= 2 ? (
         <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
           <p className="uppercase tracking-[0.16em] text-veil/80">Followers</p>

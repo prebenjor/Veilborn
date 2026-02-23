@@ -21,6 +21,7 @@ export const CULT_OUTPUT_SCALE = 0.08;
 export const DOMAIN_SYNERGY_SCALE = 0.25;
 export const VEIL_BONUS_SCALE = 0.008;
 export const GHOST_BONUS_BASE = 1;
+export const FOLLOWER_BELIEF_TRICKLE_PER_FOLLOWER = 0.002;
 
 export const INFLUENCE_BASE_CAP = 100;
 export const INFLUENCE_CAP_PER_PROPHET = 20;

@@ -76,6 +76,7 @@ import {
   FOLLOWER_RITE_VEIL_DANGER_MULTIPLIER,
   FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER,
   FOLLOWER_RITE_VEIL_SAFE_MULTIPLIER,
+  FOLLOWER_BELIEF_TRICKLE_PER_FOLLOWER,
   PROPHET_DOMAIN_OUTPUT_SCALE,
   PROPHET_OUTPUT_BASE,
   PROPHET_THRESHOLD_BASE,
@@ -163,6 +164,13 @@ export interface InfluenceRegenBreakdown {
   cultCount: number;
   cap: number;
   fillTimeSeconds: number | null;
+}
+
+export interface BeliefGenerationBreakdown {
+  totalPerSecond: number;
+  prophetPerSecond: number;
+  cultPerSecond: number;
+  followerPerSecond: number;
 }
 
 export interface FollowerRiteCost {
@@ -556,7 +564,11 @@ export function getCultOutput(state: GameState): number {
   return state.prophets * state.resources.followers * CULT_OUTPUT_SCALE * getDomainSynergy(state);
 }
 
-export function getBeliefPerSecond(state: GameState, nowMs: number): number {
+function getFollowerBeliefTrickle(state: GameState): number {
+  return Math.max(0, state.resources.followers) * FOLLOWER_BELIEF_TRICKLE_PER_FOLLOWER;
+}
+
+export function getBeliefGenerationBreakdown(state: GameState, nowMs: number): BeliefGenerationBreakdown {
   const totalDomainLevel = getTotalDomainLevel(state);
   const prophetOutput = getProphetOutput(totalDomainLevel);
   const domainMultiplier = getDomainMultiplier(totalDomainLevel);
@@ -565,18 +577,29 @@ export function getBeliefPerSecond(state: GameState, nowMs: number): number {
 
   const prophetStack = state.prophets * prophetOutput * domainMultiplier * faithDecay;
   const cultStack = getCultOutput(state) * domainSynergy;
+  const followerTrickle = getFollowerBeliefTrickle(state);
 
   const pantheonModifier = getPantheonAllianceFactors(state).totalModifier;
   const architectureBeliefModifier =
     getArchitectureBeliefModifier(state) * getFinalChoiceBeliefModifier(state);
-  return Math.max(
-    0,
-    (prophetStack + cultStack) *
-      getVeilBonus(state.resources.veil) *
-      GHOST_BONUS_BASE *
-      pantheonModifier *
-      architectureBeliefModifier
-  );
+  const globalModifier =
+    getVeilBonus(state.resources.veil) * GHOST_BONUS_BASE * pantheonModifier * architectureBeliefModifier;
+
+  const prophetPerSecond = prophetStack * globalModifier;
+  const cultPerSecond = cultStack * globalModifier;
+  const followerPerSecond = followerTrickle * globalModifier;
+  const totalPerSecond = Math.max(0, prophetPerSecond + cultPerSecond + followerPerSecond);
+
+  return {
+    totalPerSecond,
+    prophetPerSecond,
+    cultPerSecond,
+    followerPerSecond
+  };
+}
+
+export function getBeliefPerSecond(state: GameState, nowMs: number): number {
+  return getBeliefGenerationBreakdown(state, nowMs).totalPerSecond;
 }
 
 export function getInfluenceCap(state: GameState): number {
