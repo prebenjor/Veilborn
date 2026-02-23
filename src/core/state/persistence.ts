@@ -2,6 +2,7 @@ import {
   GAME_STATE_SCHEMA_VERSION,
   createInitialGameState,
   type ActiveAct,
+  type CataclysmState,
   type DoctrineState,
   type DomainId,
   type DomainProgress,
@@ -161,11 +162,30 @@ function sanitizeDoctrine(value: unknown, fallback: DoctrineState): DoctrineStat
   return {
     activeActs: sanitizeActiveActs(value.activeActs, fallback.activeActs),
     actsCompleted: Math.max(0, Math.floor(readNumber(value.actsCompleted, fallback.actsCompleted))),
+    shrinesBuilt: Math.max(0, Math.floor(readNumber(value.shrinesBuilt, fallback.shrinesBuilt))),
     rivals: sanitizeRivals(value.rivals, fallback.rivals),
     lastRivalSpawnAt: Math.max(0, readNumber(value.lastRivalSpawnAt, fallback.lastRivalSpawnAt)),
     survivedRivalEvent: readBoolean(value.survivedRivalEvent, fallback.survivedRivalEvent),
     nextActId: Math.max(1, Math.floor(readNumber(value.nextActId, fallback.nextActId))),
     nextRivalId: Math.max(1, Math.floor(readNumber(value.nextRivalId, fallback.nextRivalId)))
+  };
+}
+
+function sanitizeCataclysm(value: unknown, fallback: CataclysmState): CataclysmState {
+  if (!isRecord(value)) return fallback;
+  return {
+    miraclesThisRun: Math.max(0, Math.floor(readNumber(value.miraclesThisRun, fallback.miraclesThisRun))),
+    civilizationHealth: Math.max(0, Math.min(100, readNumber(value.civilizationHealth, fallback.civilizationHealth))),
+    civilizationCollapsed: readBoolean(value.civilizationCollapsed, fallback.civilizationCollapsed),
+    civilizationRebuildEndsAt: Math.max(0, readNumber(value.civilizationRebuildEndsAt, fallback.civilizationRebuildEndsAt)),
+    civilizationRebuilds: Math.max(0, Math.floor(readNumber(value.civilizationRebuilds, fallback.civilizationRebuilds))),
+    peakFollowers: Math.max(0, Math.floor(readNumber(value.peakFollowers, fallback.peakFollowers))),
+    wasBelowVeilCollapseThreshold: readBoolean(
+      value.wasBelowVeilCollapseThreshold,
+      fallback.wasBelowVeilCollapseThreshold
+    ),
+    totalVeilCollapses: Math.max(0, Math.floor(readNumber(value.totalVeilCollapses, fallback.totalVeilCollapses))),
+    veilCollapseImmunityUntil: Math.max(0, readNumber(value.veilCollapseImmunityUntil, fallback.veilCollapseImmunityUntil))
   };
 }
 
@@ -181,7 +201,12 @@ function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses
     actFloor: readBoolean(value.actFloor, fallback.actFloor),
     actDiscount: readBoolean(value.actDiscount, fallback.actDiscount),
     rivalDelay: readBoolean(value.rivalDelay, fallback.rivalDelay),
-    rivalWeaken: readBoolean(value.rivalWeaken, fallback.rivalWeaken)
+    rivalWeaken: readBoolean(value.rivalWeaken, fallback.rivalWeaken),
+    veilRegen: readBoolean(value.veilRegen, fallback.veilRegen),
+    miracleVeilDiscount: readBoolean(value.miracleVeilDiscount, fallback.miracleVeilDiscount),
+    collapseThreshold: readBoolean(value.collapseThreshold, fallback.collapseThreshold),
+    collapseImmunity: readBoolean(value.collapseImmunity, fallback.collapseImmunity),
+    civRebuild: readBoolean(value.civRebuild, fallback.civRebuild)
   };
 }
 
@@ -195,6 +220,7 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const rawActivity = isRecord(rawState.activity) ? rawState.activity : {};
   const rawStats = isRecord(rawState.stats) ? rawState.stats : {};
   const rawDoctrine = isRecord(rawState.doctrine) ? rawState.doctrine : {};
+  const rawCataclysm = isRecord(rawState.cataclysm) ? rawState.cataclysm : {};
 
   return {
     meta: {
@@ -228,6 +254,7 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
       totalBeliefEarned: Math.max(0, readNumber(rawStats.totalBeliefEarned, fallback.stats.totalBeliefEarned))
     },
     doctrine: sanitizeDoctrine(rawDoctrine, fallback.doctrine),
+    cataclysm: sanitizeCataclysm(rawCataclysm, fallback.cataclysm),
     echoBonuses: sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses),
     era: readNumber(rawState.era, fallback.era) >= 3 ? 3 : readNumber(rawState.era, fallback.era) >= 2 ? 2 : 1,
     mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
@@ -255,7 +282,8 @@ const MIGRATORS: Record<number, Migrator> = {
   1: migrateFromSchemaV1,
   2: migrateFromSchemaV2,
   3: sanitizeState,
-  4: sanitizeState
+  4: sanitizeState,
+  5: sanitizeState
 };
 
 function toSaveEnvelope(state: GameState): SaveEnvelope {

@@ -6,6 +6,11 @@ import {
   ACT_FLOOR_BASE,
   ACT_FLOOR_ECHO,
   ACT_RETURN_FACTOR,
+  CIV_HEALTH_MAX,
+  CIV_REBUILD_BASE_SECONDS,
+  CIV_REBUILD_ECHO_MULTIPLIER,
+  CIV_REGEN_PER_MINUTE,
+  CIV_REGEN_PER_SHRINE_PER_MINUTE,
   CULT_COST_BASE,
   CULT_COST_ECHO_BASE,
   CULT_COST_SCALAR,
@@ -23,6 +28,12 @@ import {
   ERA_TWO_BELIEF_GATE_BASE,
   ERA_TWO_CULT_GATE,
   ERA_TWO_GATE_ECHO_MULTIPLIER,
+  MIRACLE_BASE_GAIN,
+  MIRACLE_CIV_DAMAGE,
+  MIRACLE_DOMAIN_BONUS_SCALE,
+  MIRACLE_INFLUENCE_COST,
+  MIRACLE_VEIL_COST,
+  MIRACLE_VEIL_COST_TIER_ONE_ECHO,
   FAITH_DECAY_BASE,
   FAITH_DECAY_ECHO_FLOOR,
   FAITH_DECAY_FLOOR,
@@ -44,14 +55,25 @@ import {
   RIVAL_SPAWN_ECHO_DELAY_MS,
   RIVAL_STRENGTH_SCALE,
   RIVAL_WEAKENED_MULTIPLIER,
+  UNRAVELING_BELIEF_GATE,
+  UNRAVELING_MIRACLES_GATE,
+  UNRAVELING_RUNTIME_GATE_SECONDS,
+  UNRAVELING_VEIL_GATE,
+  VEIL_COLLAPSE_THRESHOLD_BASE,
+  VEIL_COLLAPSE_THRESHOLD_ECHO,
   VEIL_BONUS_SCALE,
+  VEIL_EROSION_LOG_SCALE,
+  VEIL_REGEN_BASE_SECONDS,
+  VEIL_REGEN_ECHO_SECONDS,
+  VEIL_REGEN_PER_SHRINE_SECONDS,
   WHISPER_BASE_COST,
   WHISPER_COST_SCALAR,
   WHISPER_WINDOW_MS,
   type ActType,
   type ActivityState,
   type DomainProgress,
-  type GameState
+  type GameState,
+  type MiracleTier
 } from "../state/gameState";
 
 interface NormalizedWhisperCycle {
@@ -78,12 +100,28 @@ export interface EraTwoGateStatus {
   ready: boolean;
 }
 
+export interface UnravelingGateStatus {
+  beliefTarget: number;
+  beliefReady: boolean;
+  veilTarget: number;
+  veilReady: boolean;
+  miraclesTarget: number;
+  miraclesReady: boolean;
+  runTimeTargetSeconds: number;
+  runTimeReady: boolean;
+  ready: boolean;
+}
+
 export function getTotalDomainLevel(state: GameState): number {
   return state.domains.reduce((sum, domain) => sum + domain.level, 0);
 }
 
 export function getHighestDomainLevel(state: GameState): number {
   return state.domains.reduce((max, domain) => Math.max(max, domain.level), 0);
+}
+
+export function getDominantDomainLevel(state: GameState): number {
+  return getHighestDomainLevel(state);
 }
 
 export function getMatchingDomainPairs(state: GameState): number {
@@ -112,6 +150,23 @@ export function getDomainSynergy(state: GameState): number {
 
 export function getVeilBonus(veil: number): number {
   return 1 + (100 - veil) * VEIL_BONUS_SCALE;
+}
+
+export function getVeilRegenPerSecond(state: GameState): number {
+  const baseSeconds = state.echoBonuses.veilRegen ? VEIL_REGEN_ECHO_SECONDS : VEIL_REGEN_BASE_SECONDS;
+  const baseRegen = 1 / baseSeconds;
+  const shrineRegen = state.doctrine.shrinesBuilt > 0 ? state.doctrine.shrinesBuilt / VEIL_REGEN_PER_SHRINE_SECONDS : 0;
+  return baseRegen + shrineRegen;
+}
+
+export function getVeilErosionPerSecond(state: GameState): number {
+  if (state.era < 3) return 0;
+  const belief = Math.max(1, state.stats.totalBeliefEarned);
+  return VEIL_EROSION_LOG_SCALE * Math.log10(belief);
+}
+
+export function getVeilCollapseThreshold(state: GameState): number {
+  return state.echoBonuses.collapseThreshold ? VEIL_COLLAPSE_THRESHOLD_ECHO : VEIL_COLLAPSE_THRESHOLD_BASE;
 }
 
 export function getCultOutput(state: GameState): number {
@@ -223,6 +278,51 @@ export function getActRewardBelief(
   return beliefPerSecond * durationSeconds * beliefMultiplier * ACT_RETURN_FACTOR;
 }
 
+export function getCivilizationStability(state: GameState): number {
+  return Math.max(0, Math.min(1, state.cataclysm.civilizationHealth / CIV_HEALTH_MAX));
+}
+
+export function getCivilizationRegenPerSecond(state: GameState): number {
+  const base = CIV_REGEN_PER_MINUTE / 60;
+  const shrine = (CIV_REGEN_PER_SHRINE_PER_MINUTE * state.doctrine.shrinesBuilt) / 60;
+  return base + shrine;
+}
+
+export function getCivilizationRebuildSeconds(state: GameState): number {
+  const multiplier = state.echoBonuses.civRebuild ? CIV_REBUILD_ECHO_MULTIPLIER : 1;
+  return Math.ceil(CIV_REBUILD_BASE_SECONDS * multiplier);
+}
+
+export function getMiracleInfluenceCost(tier: MiracleTier): number {
+  return MIRACLE_INFLUENCE_COST[tier];
+}
+
+export function getMiracleBaseGain(tier: MiracleTier): number {
+  return MIRACLE_BASE_GAIN[tier];
+}
+
+export function getMiracleVeilCost(state: GameState, tier: MiracleTier): number {
+  if (tier === 1 && state.echoBonuses.miracleVeilDiscount) {
+    return MIRACLE_VEIL_COST_TIER_ONE_ECHO;
+  }
+  return MIRACLE_VEIL_COST[tier];
+}
+
+export function getMiracleCivDamage(tier: MiracleTier): number {
+  return MIRACLE_CIV_DAMAGE[tier];
+}
+
+export function getMiracleDomainBonus(state: GameState): number {
+  return getDominantDomainLevel(state) * MIRACLE_DOMAIN_BONUS_SCALE;
+}
+
+export function getMiracleBeliefGain(state: GameState, tier: MiracleTier): number {
+  const base = getMiracleBaseGain(tier);
+  const civStability = getCivilizationStability(state);
+  const domainBonus = getMiracleDomainBonus(state);
+  return base * civStability * (1 + domainBonus);
+}
+
 export function getRivalSpawnIntervalMs(state: GameState): number {
   return RIVAL_SPAWN_BASE_MS + (state.echoBonuses.rivalDelay ? RIVAL_SPAWN_ECHO_DELAY_MS : 0);
 }
@@ -282,3 +382,25 @@ export function getEraTwoGateStatus(state: GameState): EraTwoGateStatus {
   };
 }
 
+export function getUnravelingGateStatus(state: GameState): UnravelingGateStatus {
+  const beliefTarget = UNRAVELING_BELIEF_GATE;
+  const veilTarget = UNRAVELING_VEIL_GATE;
+  const miraclesTarget = UNRAVELING_MIRACLES_GATE;
+  const runTimeTargetSeconds = UNRAVELING_RUNTIME_GATE_SECONDS;
+  const beliefReady = state.stats.totalBeliefEarned >= beliefTarget;
+  const veilReady = state.resources.veil <= veilTarget;
+  const miraclesReady = state.cataclysm.miraclesThisRun >= miraclesTarget;
+  const runTimeReady = state.simulation.totalElapsedMs / 1000 >= runTimeTargetSeconds;
+
+  return {
+    beliefTarget,
+    beliefReady,
+    veilTarget,
+    veilReady,
+    miraclesTarget,
+    miraclesReady,
+    runTimeTargetSeconds,
+    runTimeReady,
+    ready: beliefReady && veilReady && miraclesReady && runTimeReady
+  };
+}

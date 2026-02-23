@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 4;
+export const GAME_STATE_SCHEMA_VERSION = 5;
 export const WORLD_TICK_MS = 250;
 
 export const PROPHET_OUTPUT_BASE = 2;
@@ -86,6 +86,59 @@ export const ERA_ONE_DOMAIN_LEVEL_GATE = 3;
 export const ERA_TWO_BELIEF_GATE_BASE = 250000;
 export const ERA_TWO_GATE_ECHO_MULTIPLIER = 0.75;
 export const ERA_TWO_CULT_GATE = 3;
+export const UNRAVELING_BELIEF_GATE = 5000000;
+export const UNRAVELING_VEIL_GATE = 20;
+export const UNRAVELING_MIRACLES_GATE = 2;
+export const UNRAVELING_RUNTIME_GATE_SECONDS = 240 * 60;
+
+export const VEIL_MIN = 0;
+export const VEIL_MAX = 100;
+export const VEIL_REGEN_BASE_SECONDS = 120;
+export const VEIL_REGEN_ECHO_SECONDS = 80;
+export const VEIL_REGEN_PER_SHRINE_SECONDS = 90;
+export const VEIL_EROSION_LOG_SCALE = 0.001;
+export const VEIL_COLLAPSE_THRESHOLD_BASE = 15;
+export const VEIL_COLLAPSE_THRESHOLD_ECHO = 8;
+export const VEIL_COLLAPSE_FOLLOWER_RETENTION = 0.4;
+export const VEIL_COLLAPSE_PROPHET_LOSS = 2;
+export const VEIL_COLLAPSE_IMMUNITY_SECONDS = 30;
+
+export type MiracleTier = 1 | 2 | 3 | 4;
+export const MIRACLE_TIERS: MiracleTier[] = [1, 2, 3, 4];
+export const MIRACLE_INFLUENCE_COST: Record<MiracleTier, number> = {
+  1: 500,
+  2: 1600,
+  3: 4100,
+  4: 10000
+};
+export const MIRACLE_BASE_GAIN: Record<MiracleTier, number> = {
+  1: 8000,
+  2: 30000,
+  3: 90000,
+  4: 300000
+};
+export const MIRACLE_VEIL_COST: Record<MiracleTier, number> = {
+  1: 8,
+  2: 15,
+  3: 25,
+  4: 40
+};
+export const MIRACLE_VEIL_COST_TIER_ONE_ECHO = 5;
+export const MIRACLE_CIV_DAMAGE: Record<MiracleTier, number> = {
+  1: 4,
+  2: 8,
+  3: 14,
+  4: 24
+};
+export const MIRACLE_DOMAIN_BONUS_SCALE = 0.1;
+
+export const CIV_HEALTH_MAX = 100;
+export const CIV_HEALTH_MIN = 0;
+export const CIV_REGEN_PER_MINUTE = 0.5;
+export const CIV_REGEN_PER_SHRINE_PER_MINUTE = 0.2;
+export const CIV_COLLAPSE_FOLLOWER_RETENTION = 0.15;
+export const CIV_REBUILD_BASE_SECONDS = 180;
+export const CIV_REBUILD_ECHO_MULTIPLIER = 0.6;
 
 export type MortalTrait = "skeptical" | "zealous" | "cautious";
 export type DomainId = "fire" | "death" | "harvest" | "storm" | "memory" | "void";
@@ -135,6 +188,11 @@ export interface EchoBonuses {
   actDiscount: boolean;
   rivalDelay: boolean;
   rivalWeaken: boolean;
+  veilRegen: boolean;
+  miracleVeilDiscount: boolean;
+  collapseThreshold: boolean;
+  collapseImmunity: boolean;
+  civRebuild: boolean;
 }
 
 export interface ActivityState {
@@ -168,11 +226,24 @@ export interface RivalState {
 export interface DoctrineState {
   activeActs: ActiveAct[];
   actsCompleted: number;
+  shrinesBuilt: number;
   rivals: RivalState[];
   lastRivalSpawnAt: number;
   survivedRivalEvent: boolean;
   nextActId: number;
   nextRivalId: number;
+}
+
+export interface CataclysmState {
+  miraclesThisRun: number;
+  civilizationHealth: number;
+  civilizationCollapsed: boolean;
+  civilizationRebuildEndsAt: number;
+  civilizationRebuilds: number;
+  peakFollowers: number;
+  wasBelowVeilCollapseThreshold: boolean;
+  totalVeilCollapses: number;
+  veilCollapseImmunityUntil: number;
 }
 
 export interface RunMeta {
@@ -197,6 +268,7 @@ export interface GameState {
   activity: ActivityState;
   stats: RunStats;
   doctrine: DoctrineState;
+  cataclysm: CataclysmState;
   echoBonuses: EchoBonuses;
   era: 1 | 2 | 3;
   mortals: Mortal[];
@@ -263,11 +335,23 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     doctrine: {
       activeActs: [],
       actsCompleted: 0,
+      shrinesBuilt: 0,
       rivals: [],
       lastRivalSpawnAt: nowMs,
       survivedRivalEvent: false,
       nextActId: 1,
       nextRivalId: 1
+    },
+    cataclysm: {
+      miraclesThisRun: 0,
+      civilizationHealth: CIV_HEALTH_MAX,
+      civilizationCollapsed: false,
+      civilizationRebuildEndsAt: 0,
+      civilizationRebuilds: 0,
+      peakFollowers: 0,
+      wasBelowVeilCollapseThreshold: false,
+      totalVeilCollapses: 0,
+      veilCollapseImmunityUntil: 0
     },
     echoBonuses: {
       startInf: false,
@@ -279,7 +363,12 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       actFloor: false,
       actDiscount: false,
       rivalDelay: false,
-      rivalWeaken: false
+      rivalWeaken: false,
+      veilRegen: false,
+      miracleVeilDiscount: false,
+      collapseThreshold: false,
+      collapseImmunity: false,
+      civRebuild: false
     },
     era: 1,
     mortals: [

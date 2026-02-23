@@ -4,6 +4,7 @@ import {
   canAdvanceEraOneToTwo,
   canAdvanceEraTwoToThree,
   canAnointProphet,
+  canCastMiracle,
   canFormCult,
   canStartAct,
   canSuppressRival,
@@ -13,6 +14,7 @@ import {
   getRecruitPreview,
   performAdvanceEraOneToTwo,
   performAdvanceEraTwoToThree,
+  performCastMiracle,
   performCultFormation,
   performDomainInvestment,
   performProphetAnoint,
@@ -34,13 +36,23 @@ import {
   getFollowersForNextProphet,
   getHighestDomainLevel,
   getInfluenceCap,
+  getMiracleBeliefGain,
+  getMiracleCivDamage,
+  getMiracleInfluenceCost,
+  getMiracleVeilCost,
   getRivalSpawnIntervalMs,
   getTotalRivalStrength,
   getTotalDomainLevel,
+  getUnravelingGateStatus,
+  getVeilBonus,
+  getVeilCollapseThreshold,
+  getVeilErosionPerSecond,
+  getVeilRegenPerSecond,
   getWhisperCost
 } from "./core/engine/formulas";
 import { advanceWorld } from "./core/engine/worldTick";
 import {
+  MIRACLE_TIERS,
   RIVAL_DRAIN_RATE,
   RIVAL_SUPPRESS_INFLUENCE_COST,
   RECRUIT_INFLUENCE_COST,
@@ -48,9 +60,11 @@ import {
   WORLD_TICK_MS,
   type ActType,
   type DomainId,
-  type GameState
+  type GameState,
+  type MiracleTier
 } from "./core/state/gameState";
 import { loadGameState, saveGameState } from "./core/state/persistence";
+import { CataclysmPanel } from "./ui/panels/CataclysmPanel";
 import { DoctrinePanel } from "./ui/panels/DoctrinePanel";
 import { DomainPanel } from "./ui/panels/DomainPanel";
 import { EraGatePanel } from "./ui/panels/EraGatePanel";
@@ -109,6 +123,7 @@ export default function App() {
   const nextCultBeliefCost = getCultFormationCost(gameState);
   const eraOneGate = getEraOneGateStatus(gameState);
   const eraTwoGate = getEraTwoGateStatus(gameState);
+  const unravelingGate = getUnravelingGateStatus(gameState);
 
   const canUseWhisper = canWhisper(gameState, nowMs);
   const canUseRecruit = canRecruit(gameState);
@@ -150,6 +165,22 @@ export default function App() {
       : 0;
   const canUseSuppressRival = canSuppressRival(gameState);
 
+  const veilBonus = getVeilBonus(gameState.resources.veil);
+  const veilRegenPerSecond = getVeilRegenPerSecond(gameState);
+  const veilErosionPerSecond = getVeilErosionPerSecond(gameState);
+  const veilCollapseThreshold = getVeilCollapseThreshold(gameState);
+  const civilizationRebuildSeconds = gameState.cataclysm.civilizationCollapsed
+    ? Math.max(0, Math.ceil((gameState.cataclysm.civilizationRebuildEndsAt - nowMs) / 1000))
+    : 0;
+  const miracleOptions = MIRACLE_TIERS.map((tier) => ({
+    tier,
+    influenceCost: getMiracleInfluenceCost(tier),
+    beliefGain: getMiracleBeliefGain(gameState, tier),
+    veilCost: getMiracleVeilCost(gameState, tier),
+    civDamage: getMiracleCivDamage(tier),
+    canCast: canCastMiracle(gameState, tier)
+  }));
+
   const elapsedSeconds = Math.floor(gameState.simulation.totalElapsedMs / 1000);
   const secondsSinceLastEvent = Math.max(0, (nowMs - gameState.activity.lastEventAt) / 1000);
   const whisperCycleElapsed = Math.max(0, nowMs - gameState.activity.whisperWindowStartedAt);
@@ -186,6 +217,10 @@ export default function App() {
     setGameState((prev) => performSuppressRival(prev, Date.now()));
   };
 
+  const onCastMiracle = (tier: MiracleTier) => {
+    setGameState((prev) => performCastMiracle(prev, tier, Date.now()));
+  };
+
   const onAdvanceEraOne = () => {
     setGameState((prev) => performAdvanceEraOneToTwo(prev, Date.now()));
   };
@@ -210,8 +245,8 @@ export default function App() {
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
           <h1 className="text-2xl font-semibold text-veil md:text-4xl">Someone is listening.</h1>
           <p className="max-w-3xl text-sm text-veil/70">
-            M4 loop active: cult doctrine, timed acts, rival pressure, and Era II progression into
-            miracle-tier play.
+            M5 loop active: miracles, civilization strain, and Veil collapse pressure now govern
+            the late run.
           </p>
         </header>
 
@@ -259,6 +294,7 @@ export default function App() {
 
         <div className="grid gap-4 md:grid-cols-[320px_1fr]">
           <WhisperPanel
+            era={gameState.era}
             influence={gameState.resources.influence}
             whisperCost={whisperCost}
             recruitCost={RECRUIT_INFLUENCE_COST}
@@ -292,6 +328,15 @@ export default function App() {
           cultsTarget={eraTwoGate.cultsTarget}
           rivalEventReady={eraTwoGate.rivalEventReady}
           eraTwoReady={canAdvanceEraTwo}
+          unravelingBeliefProgress={gameState.stats.totalBeliefEarned}
+          unravelingBeliefTarget={unravelingGate.beliefTarget}
+          unravelingVeilProgress={gameState.resources.veil}
+          unravelingVeilTarget={unravelingGate.veilTarget}
+          unravelingMiraclesProgress={gameState.cataclysm.miraclesThisRun}
+          unravelingMiraclesTarget={unravelingGate.miraclesTarget}
+          unravelingRunTimeProgressSeconds={gameState.simulation.totalElapsedMs / 1000}
+          unravelingRunTimeTargetSeconds={unravelingGate.runTimeTargetSeconds}
+          unravelingReady={unravelingGate.ready}
           onAdvanceEraOne={onAdvanceEraOne}
           onAdvanceEraTwo={onAdvanceEraTwo}
         />
@@ -327,6 +372,23 @@ export default function App() {
           canSuppressRival={canUseSuppressRival}
           suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
           onSuppressRival={onSuppressRival}
+        />
+
+        <CataclysmPanel
+          era={gameState.era}
+          influence={gameState.resources.influence}
+          veil={gameState.resources.veil}
+          veilBonus={veilBonus}
+          veilRegenPerSecond={veilRegenPerSecond}
+          veilErosionPerSecond={veilErosionPerSecond}
+          veilCollapseThreshold={veilCollapseThreshold}
+          shrinesBuilt={gameState.doctrine.shrinesBuilt}
+          civilizationHealth={gameState.cataclysm.civilizationHealth}
+          civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
+          civilizationRebuildInSeconds={civilizationRebuildSeconds}
+          miraclesThisRun={gameState.cataclysm.miraclesThisRun}
+          miracleOptions={miracleOptions}
+          onCastMiracle={onCastMiracle}
         />
 
         <DomainPanel

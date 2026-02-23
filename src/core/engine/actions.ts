@@ -1,4 +1,5 @@
 import {
+  CIV_COLLAPSE_FOLLOWER_RETENTION,
   RIVAL_SUPPRESS_INFLUENCE_COST,
   CADENCE_ACTION_BELIEF_BONUS,
   CADENCE_ACTION_FOLLOWER_BONUS,
@@ -8,23 +9,30 @@ import {
   RECRUIT_INFLUENCE_COST,
   RECRUIT_PROPHET_FOLLOWER_BONUS,
   RECRUIT_RANDOM_FOLLOWER_MAX,
+  VEIL_MIN,
   WHISPER_BELIEF_GAIN,
   WHISPER_FOLLOWER_GAIN,
   type ActType,
   type ActivityState,
   type DomainId,
-  type GameState
+  type GameState,
+  type MiracleTier
 } from "../state/gameState";
 import {
   getActBaseMultiplier,
   getActCost,
   getActDurationSeconds,
+  getCivilizationRebuildSeconds,
   getCultFormationCost,
   getDomainInvestCost,
   getDomainXpNeeded,
   getEraOneGateStatus,
   getEraTwoGateStatus,
   getFollowersForNextProphet,
+  getMiracleBeliefGain,
+  getMiracleCivDamage,
+  getMiracleInfluenceCost,
+  getMiracleVeilCost,
   getRecruitFollowerGainBase,
   getTotalDomainLevel,
   getWhisperCost,
@@ -40,6 +48,9 @@ type OmenKind =
   | "cult"
   | "act"
   | "suppress"
+  | "miracle"
+  | "civCollapse"
+  | "veilCollapse"
   | "eraOneToTwo"
   | "eraTwoToThree";
 
@@ -112,6 +123,18 @@ function resolveActivityAfterAction(activity: ActivityState, nowMs: number): Act
     lastEventAt: nowMs,
     cadencePromptActive: false,
     lastCadencePromptAt: activity.cadencePromptActive ? nowMs : activity.lastCadencePromptAt
+  };
+}
+
+function withPeakFollowers(state: GameState, followers: number): GameState {
+  const peakFollowers = Math.max(state.cataclysm.peakFollowers, followers);
+  if (peakFollowers === state.cataclysm.peakFollowers) return state;
+  return {
+    ...state,
+    cataclysm: {
+      ...state.cataclysm,
+      peakFollowers
+    }
   };
 }
 
@@ -248,6 +271,30 @@ function createOmen(
     "Rites became miracles in waiting, and even kings spoke softly at dusk."
   ] as const;
 
+  const miracleStarts = [
+    "A sky of iron opened and the faithful fell to their knees.",
+    "The river ran backward for a breath and every witness remembered your mark.",
+    "A storm arrived without clouds and spoke in your cadence.",
+    "Fields blazed with unnatural light, then yielded in silence.",
+    "The old temples shuddered as your will crossed the veil."
+  ] as const;
+
+  const civCollapseStarts = [
+    "The cities broke under the strain of your intervention.",
+    "Civil order gave way to hunger and ash in a single week.",
+    "Markets emptied, bells failed, and the roads went dark.",
+    "The chronicles call this season The Breaking.",
+    "No decree held; the civilization collapsed into scattered camps."
+  ] as const;
+
+  const veilCollapseStarts = [
+    "The Veil split and mortal minds recoiled from your nearness.",
+    "Too much of you touched the world at once, and it cracked.",
+    "Prophets went silent as the Veil tore around them.",
+    "Reality trembled; your name nearly bled through in full.",
+    "The boundary failed for a heartbeat, and faith paid the cost."
+  ] as const;
+
   if (kind === "whisper") {
     const a = pickOne(rngSeed, whisperStarts);
     const b = pickOne(a.rngState, whisperMiddles);
@@ -305,6 +352,30 @@ function createOmen(
     return {
       rngState: a.rngState,
       text: `${a.value} Followers kept their places and did not scatter.`
+    };
+  }
+
+  if (kind === "miracle") {
+    const a = pickOne(rngSeed, miracleStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} ${detail ?? "The mortal world was altered."}`
+    };
+  }
+
+  if (kind === "civCollapse") {
+    const a = pickOne(rngSeed, civCollapseStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value}`
+    };
+  }
+
+  if (kind === "veilCollapse") {
+    const a = pickOne(rngSeed, veilCollapseStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value}`
     };
   }
 
@@ -395,7 +466,7 @@ export function performWhisper(state: GameState, nowMs: number): GameState {
     }
   };
 
-  return appendOmen(withWhisper, nowMs, "whisper");
+  return appendOmen(withPeakFollowers(withWhisper, withWhisper.resources.followers), nowMs, "whisper");
 }
 
 export function canRecruit(state: GameState): boolean {
@@ -432,7 +503,7 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
     }
   };
 
-  return appendOmen(withRecruit, nowMs, "recruit");
+  return appendOmen(withPeakFollowers(withRecruit, withRecruit.resources.followers), nowMs, "recruit");
 }
 
 export function canInvestDomain(state: GameState, domainId: DomainId): boolean {
@@ -634,6 +705,67 @@ export function performSuppressRival(state: GameState, nowMs: number): GameState
   };
 
   return appendOmen(withSuppressedRival, nowMs, "suppress");
+}
+
+export function canCastMiracle(state: GameState, tier: MiracleTier): boolean {
+  if (state.era < 3) return false;
+  if (tier < 1 || tier > 4) return false;
+  if (state.cataclysm.civilizationCollapsed) return false;
+  return state.resources.influence >= getMiracleInfluenceCost(tier);
+}
+
+export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: number): GameState {
+  if (!canCastMiracle(state, tier)) return state;
+
+  const influenceCost = getMiracleInfluenceCost(tier);
+  const beliefGain = getMiracleBeliefGain(state, tier);
+  const veilCost = getMiracleVeilCost(state, tier);
+  const civDamage = getMiracleCivDamage(tier);
+  const nextCivHealth = Math.max(0, state.cataclysm.civilizationHealth - civDamage);
+  const peakBefore = Math.max(state.cataclysm.peakFollowers, state.resources.followers);
+  const civilizationCollapsed = nextCivHealth <= 0;
+  const rebuildSeconds = civilizationCollapsed ? getCivilizationRebuildSeconds(state) : 0;
+  const followersAfterCiv = civilizationCollapsed
+    ? Math.floor(peakBefore * CIV_COLLAPSE_FOLLOWER_RETENTION)
+    : state.resources.followers;
+
+  const withMiracle = {
+    ...state,
+    resources: {
+      ...state.resources,
+      belief: state.resources.belief + beliefGain,
+      influence: state.resources.influence - influenceCost,
+      veil: Math.max(VEIL_MIN, state.resources.veil - veilCost),
+      followers: followersAfterCiv
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    stats: {
+      ...state.stats,
+      totalBeliefEarned: state.stats.totalBeliefEarned + beliefGain
+    },
+    cataclysm: {
+      ...state.cataclysm,
+      miraclesThisRun: state.cataclysm.miraclesThisRun + 1,
+      civilizationHealth: nextCivHealth,
+      civilizationCollapsed,
+      civilizationRebuildEndsAt: civilizationCollapsed
+        ? nowMs + rebuildSeconds * 1000
+        : state.cataclysm.civilizationRebuildEndsAt,
+      civilizationRebuilds: civilizationCollapsed
+        ? state.cataclysm.civilizationRebuilds + 1
+        : state.cataclysm.civilizationRebuilds,
+      peakFollowers: peakBefore
+    },
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  const miracleDetail = `Tier ${tier} miracle returned ${Math.floor(beliefGain)} belief.`;
+  const withMiracleOmen = appendOmen(withMiracle, nowMs, "miracle", miracleDetail);
+  if (!civilizationCollapsed) return withMiracleOmen;
+  return appendOmen(withMiracleOmen, nowMs, "civCollapse");
 }
 
 export function canAdvanceEraOneToTwo(state: GameState): boolean {

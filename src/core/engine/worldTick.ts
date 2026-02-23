@@ -1,5 +1,11 @@
 import {
   CADENCE_PROMPT_INTERVAL_MS,
+  CIV_HEALTH_MAX,
+  VEIL_COLLAPSE_FOLLOWER_RETENTION,
+  VEIL_COLLAPSE_IMMUNITY_SECONDS,
+  VEIL_COLLAPSE_PROPHET_LOSS,
+  VEIL_MAX,
+  VEIL_MIN,
   RIVAL_DRAIN_RATE,
   RIVAL_EVENT_DURATION_MS,
   RIVAL_MAX_ACTIVE,
@@ -10,6 +16,7 @@ import {
 import {
   getActRewardBelief,
   getBeliefPerSecond,
+  getCivilizationRegenPerSecond,
   getCultOutput,
   getInfluenceCap,
   getInfluenceRegenPerSecond,
@@ -17,6 +24,9 @@ import {
   getRivalSpawnIntervalMs,
   getRivalStrength,
   getTotalRivalStrength,
+  getVeilCollapseThreshold,
+  getVeilErosionPerSecond,
+  getVeilRegenPerSecond,
   normalizeWhisperCycle
 } from "./formulas";
 
@@ -44,6 +54,21 @@ function cleanupRivals(rivals: RivalState[], nowMs: number): {
   return {
     active,
     removedCount: rivals.length - active.length
+  };
+}
+
+function appendSystemOmen(state: GameState, nowMs: number, text: string): GameState {
+  return {
+    ...state,
+    omenLog: [
+      {
+        id: `evt-${state.nextEventId}`,
+        at: nowMs,
+        text
+      },
+      ...state.omenLog
+    ].slice(0, 140),
+    nextEventId: state.nextEventId + 1
   };
 }
 
@@ -111,6 +136,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     return sum + getActRewardBelief(preTickState, beliefPerSecond, act.durationSeconds, act.baseMultiplier);
   }, 0);
   const actFollowerGain = completedActs.length * Math.max(1, preTickState.cults);
+  const shrineGain = completedActs.filter((act) => act.type === "shrine").length;
 
   const cleanedRivals = cleanupRivals(preTickState.doctrine.rivals, nowMs);
   let rivals = cleanedRivals.active;
@@ -149,14 +175,59 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
 
   const followersAfterActs = preTickState.resources.followers + actFollowerGain;
   const followersAfterRivals = Math.max(0, followersAfterActs - followerDrain);
+  const peakFollowers = Math.max(preTickState.cataclysm.peakFollowers, followersAfterRivals);
 
-  return {
+  const veilRegen = getVeilRegenPerSecond(preTickState);
+  const veilErosion = getVeilErosionPerSecond(preTickState);
+  const rawVeil = preTickState.resources.veil + (veilRegen - veilErosion) * simulatedSeconds;
+  const veilAfterTick = Math.max(VEIL_MIN, Math.min(VEIL_MAX, rawVeil));
+  const collapseThreshold = getVeilCollapseThreshold(preTickState);
+  const belowThreshold = veilAfterTick <= collapseThreshold;
+  const collapseImmunityActive = nowMs < preTickState.cataclysm.veilCollapseImmunityUntil;
+  const shouldVeilCollapse =
+    preTickState.era >= 3 &&
+    belowThreshold &&
+    !preTickState.cataclysm.wasBelowVeilCollapseThreshold &&
+    !collapseImmunityActive;
+
+  const followersAfterVeilCollapse = shouldVeilCollapse
+    ? Math.floor(followersAfterRivals * VEIL_COLLAPSE_FOLLOWER_RETENTION)
+    : followersAfterRivals;
+  const prophetsAfterVeilCollapse = shouldVeilCollapse
+    ? Math.max(0, preTickState.prophets - VEIL_COLLAPSE_PROPHET_LOSS)
+    : preTickState.prophets;
+  const veilCollapseImmunityUntil = shouldVeilCollapse && preTickState.echoBonuses.collapseImmunity
+    ? nowMs + VEIL_COLLAPSE_IMMUNITY_SECONDS * 1000
+    : preTickState.cataclysm.veilCollapseImmunityUntil;
+
+  let civilizationHealth = preTickState.cataclysm.civilizationHealth;
+  let civilizationCollapsed = preTickState.cataclysm.civilizationCollapsed;
+  let civilizationRebuildEndsAt = preTickState.cataclysm.civilizationRebuildEndsAt;
+  let civilizationRecovered = false;
+
+  if (civilizationCollapsed) {
+    if (nowMs >= civilizationRebuildEndsAt) {
+      civilizationCollapsed = false;
+      civilizationHealth = CIV_HEALTH_MAX;
+      civilizationRebuildEndsAt = 0;
+      civilizationRecovered = true;
+    } else {
+      civilizationHealth = 0;
+    }
+  } else {
+    const civilizationRegen = getCivilizationRegenPerSecond(preTickState) * simulatedSeconds;
+    civilizationHealth = Math.min(CIV_HEALTH_MAX, civilizationHealth + civilizationRegen);
+  }
+
+  let nextState: GameState = {
     ...preTickState,
+    prophets: prophetsAfterVeilCollapse,
     resources: {
       ...preTickState.resources,
       belief: preTickState.resources.belief + baseBeliefGain + actBeliefGain,
       influence: Math.min(influenceCap, preTickState.resources.influence + influenceGain),
-      followers: followersAfterRivals
+      followers: followersAfterVeilCollapse,
+      veil: veilAfterTick
     },
     activity: updatedActivity,
     stats: {
@@ -167,11 +238,22 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
       ...preTickState.doctrine,
       activeActs: remainingActs,
       actsCompleted: preTickState.doctrine.actsCompleted + completedActs.length,
+      shrinesBuilt: preTickState.doctrine.shrinesBuilt + shrineGain,
       rivals,
       lastRivalSpawnAt,
       survivedRivalEvent:
         preTickState.doctrine.survivedRivalEvent || cleanedRivals.removedCount > 0,
       nextRivalId
+    },
+    cataclysm: {
+      ...preTickState.cataclysm,
+      civilizationHealth,
+      civilizationCollapsed,
+      civilizationRebuildEndsAt,
+      peakFollowers: Math.max(peakFollowers, followersAfterVeilCollapse),
+      wasBelowVeilCollapseThreshold: belowThreshold,
+      totalVeilCollapses: preTickState.cataclysm.totalVeilCollapses + (shouldVeilCollapse ? 1 : 0),
+      veilCollapseImmunityUntil
     },
     simulation: {
       ...preTickState.simulation,
@@ -185,5 +267,30 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
       updatedAt: nowMs
     }
   };
-}
 
+  if (canSpawnRival) {
+    nextState = appendSystemOmen(
+      nextState,
+      nowMs,
+      "A rival doctrine surfaced in the margins and began draining the faithful."
+    );
+  }
+
+  if (shouldVeilCollapse) {
+    nextState = appendSystemOmen(
+      nextState,
+      nowMs,
+      "The Veil tore under pressure. Followers scattered and prophets were lost."
+    );
+  }
+
+  if (civilizationRecovered) {
+    nextState = appendSystemOmen(
+      nextState,
+      nowMs,
+      "After years of ruin, a new civilization rose from the ash."
+    );
+  }
+
+  return nextState;
+}

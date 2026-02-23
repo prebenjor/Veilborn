@@ -19,6 +19,15 @@ interface EraGatePanelProps {
   cultsTarget: number;
   rivalEventReady: boolean;
   eraTwoReady: boolean;
+  unravelingBeliefProgress: number;
+  unravelingBeliefTarget: number;
+  unravelingVeilProgress: number;
+  unravelingVeilTarget: number;
+  unravelingMiraclesProgress: number;
+  unravelingMiraclesTarget: number;
+  unravelingRunTimeProgressSeconds: number;
+  unravelingRunTimeTargetSeconds: number;
+  unravelingReady: boolean;
   onAdvanceEraOne: () => void;
   onAdvanceEraTwo: () => void;
 }
@@ -53,15 +62,49 @@ export function EraGatePanel({
   cultsTarget,
   rivalEventReady,
   eraTwoReady,
+  unravelingBeliefProgress,
+  unravelingBeliefTarget,
+  unravelingVeilProgress,
+  unravelingVeilTarget,
+  unravelingMiraclesProgress,
+  unravelingMiraclesTarget,
+  unravelingRunTimeProgressSeconds,
+  unravelingRunTimeTargetSeconds,
+  unravelingReady,
   onAdvanceEraOne,
   onAdvanceEraTwo
 }: EraGatePanelProps) {
   if (era === 3) {
     return (
-      <section className="rounded-2xl border border-omen/40 bg-omen/10 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-sm uppercase tracking-[0.25em] text-omen">Era III</h2>
-        <p className="mt-2 text-sm text-veil/80">
-          Doctrine now bends reality itself. Miracles and Veil pressure come next.
+      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
+        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Unraveling Gate</h2>
+        <p className="mt-2 text-sm text-veil/70">Meet all conditions to prepare ascension.</p>
+        <div className="mt-3 grid gap-2">
+          <GateLine
+            label="Total Belief Earned"
+            value={`${formatNumber(unravelingBeliefProgress)} / ${formatNumber(unravelingBeliefTarget)}`}
+            ready={unravelingBeliefProgress >= unravelingBeliefTarget}
+          />
+          <GateLine
+            label="Veil at or below"
+            value={`${formatNumber(unravelingVeilProgress)} / ${formatNumber(unravelingVeilTarget)}`}
+            ready={unravelingVeilProgress <= unravelingVeilTarget}
+          />
+          <GateLine
+            label="Miracles This Run"
+            value={`${formatNumber(unravelingMiraclesProgress)} / ${formatNumber(unravelingMiraclesTarget)}`}
+            ready={unravelingMiraclesProgress >= unravelingMiraclesTarget}
+          />
+          <GateLine
+            label="Run Time (seconds)"
+            value={`${formatNumber(unravelingRunTimeProgressSeconds)} / ${formatNumber(unravelingRunTimeTargetSeconds)}`}
+            ready={unravelingRunTimeProgressSeconds >= unravelingRunTimeTargetSeconds}
+          />
+        </div>
+        <p className="mt-2 text-xs text-veil/65">
+          {unravelingReady
+            ? "Gate conditions met. Ascension flow arrives in M7."
+            : "Pressure the world through miracles and Veil risk to unlock the gate."}
         </p>
       </section>
     );

@@ -97,7 +97,7 @@
     {
       "id": "M5",
       "title": "Veil, Miracles, and Civilization Pressure (Era III)",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M4"],
       "deliverables": [
         "Veil bonus/regen/erosion/collapse",
