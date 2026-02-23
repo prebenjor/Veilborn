@@ -53,6 +53,7 @@ import {
   INFLUENCE_BASE_REGEN_PER_SECOND,
   INFLUENCE_CAP_PER_PROPHET,
   INFLUENCE_REGEN_PER_PROPHET_PER_SECOND,
+  INFLUENCE_REGEN_PER_SHRINE_PER_SECOND,
   INFLUENCE_START_BONUS,
   PROPHET_DOMAIN_OUTPUT_SCALE,
   PROPHET_OUTPUT_BASE,
@@ -461,7 +462,10 @@ export function getInfluenceCap(state: GameState): number {
 }
 
 export function getInfluenceRegenPerSecond(state: GameState): number {
-  return INFLUENCE_BASE_REGEN_PER_SECOND + state.prophets * INFLUENCE_REGEN_PER_PROPHET_PER_SECOND;
+  const baseRegen =
+    INFLUENCE_BASE_REGEN_PER_SECOND + state.prophets * INFLUENCE_REGEN_PER_PROPHET_PER_SECOND;
+  const shrineRegen = state.doctrine.shrinesBuilt * INFLUENCE_REGEN_PER_SHRINE_PER_SECOND;
+  return baseRegen + shrineRegen;
 }
 
 export function normalizeWhisperCycle(activity: ActivityState, nowMs: number): NormalizedWhisperCycle {
