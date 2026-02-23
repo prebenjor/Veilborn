@@ -29,6 +29,7 @@ import {
   performDomainInvestment,
   performFormPantheonAlliance,
   performImportGhostSignatures,
+  performDomainInvestments,
   performPurchaseEchoTreeRank,
   performProphetAnoint,
   performRecruit,
@@ -529,8 +530,12 @@ export default function App() {
     setGameState((prev) => performRecruit(prev, Date.now()));
   };
 
-  const onInvestDomain = (domainId: DomainId) => {
-    setGameState((prev) => performDomainInvestment(prev, domainId, Date.now()));
+  const onInvestDomain = (domainId: DomainId, investments: number) => {
+    if (investments <= 1) {
+      setGameState((prev) => performDomainInvestment(prev, domainId, Date.now()));
+      return;
+    }
+    setGameState((prev) => performDomainInvestments(prev, domainId, investments, Date.now()));
   };
 
   const onAnointProphet = () => {

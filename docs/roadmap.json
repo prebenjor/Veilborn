@@ -373,7 +373,7 @@
     {
       "id": "PF-01",
       "title": "Bulk Domain Investing Controls",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Add invest options per domain: +1, +10%, +25%, +50%, Max (Belief-bounded)",

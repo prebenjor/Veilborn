@@ -161,6 +161,13 @@ export interface UnravelingGateStatus {
   ready: boolean;
 }
 
+export interface DomainInvestmentSimulation {
+  investments: number;
+  totalCost: number;
+  resultingDomain: DomainProgress;
+  levelsGained: number;
+}
+
 function getFinalChoiceBeliefModifier(state: GameState): number {
   if (state.prestige.remembrance.finalChoice === "remember") return 1.08;
   if (state.prestige.remembrance.finalChoice === "forget") return 0.94;
@@ -580,6 +587,63 @@ export function getDomainInvestCost(domain: DomainProgress): number {
 
 export function getDomainXpNeeded(domain: DomainProgress): number {
   return Math.ceil(DOMAIN_XP_BASE * Math.pow(DOMAIN_XP_SCALAR, domain.level));
+}
+
+export function simulateDomainInvestments(
+  domain: DomainProgress,
+  beliefBudget: number,
+  maxInvestments = Number.POSITIVE_INFINITY
+): DomainInvestmentSimulation {
+  if (beliefBudget <= 0 || maxInvestments <= 0) {
+    return {
+      investments: 0,
+      totalCost: 0,
+      resultingDomain: { ...domain },
+      levelsGained: 0
+    };
+  }
+
+  let remainingBelief = beliefBudget;
+  let investments = 0;
+  let totalCost = 0;
+  let level = domain.level;
+  let xp = domain.xp;
+
+  while (investments < maxInvestments) {
+    const currentDomain: DomainProgress = {
+      id: domain.id,
+      level,
+      xp
+    };
+    const cost = getDomainInvestCost(currentDomain);
+    if (cost > remainingBelief) break;
+
+    remainingBelief -= cost;
+    totalCost += cost;
+    investments += 1;
+
+    const xpNeeded = getDomainXpNeeded(currentDomain);
+    let nextXp = xp + 1;
+    let nextLevel = level;
+    if (nextXp >= xpNeeded) {
+      nextXp -= xpNeeded;
+      nextLevel += 1;
+    }
+
+    level = nextLevel;
+    xp = nextXp;
+  }
+
+  return {
+    investments,
+    totalCost,
+    resultingDomain: {
+      id: domain.id,
+      level,
+      xp
+    },
+    levelsGained: level - domain.level
+  };
 }
 
 export function getActCost(state: GameState, type: ActType): number {

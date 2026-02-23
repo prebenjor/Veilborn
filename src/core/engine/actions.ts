@@ -80,6 +80,7 @@ import {
   getLineageInheritanceWeights,
   getMatchingDomainPairs,
   getDomainSynergy,
+  simulateDomainInvestments,
   isPantheonUnlocked,
   getMiracleBeliefGain,
   getMiracleCivDamage,
@@ -1279,6 +1280,80 @@ export function performDomainInvestment(state: GameState, domainId: DomainId, no
   }
 
   return withRolledRng;
+}
+
+export function performDomainInvestments(
+  state: GameState,
+  domainId: DomainId,
+  requestedInvestments: number,
+  nowMs: number
+): GameState {
+  const domainIndex = state.domains.findIndex((item) => item.id === domainId);
+  if (domainIndex < 0) return state;
+
+  const normalizedTarget = Number.isFinite(requestedInvestments)
+    ? Math.max(0, Math.floor(requestedInvestments))
+    : Number.POSITIVE_INFINITY;
+  if (normalizedTarget <= 0) return state;
+  if (normalizedTarget === 1) return performDomainInvestment(state, domainId, nowMs);
+
+  const domain = state.domains[domainIndex];
+  const simulation = simulateDomainInvestments(domain, state.resources.belief, normalizedTarget);
+  if (simulation.investments <= 0) return state;
+
+  const nextDomains = [...state.domains];
+  nextDomains[domainIndex] = simulation.resultingDomain;
+
+  const nextMatchingPairs = getMatchingDomainPairs({
+    ...state,
+    domains: nextDomains
+  });
+  const previousSynergy = getDomainSynergy(state);
+  const nextSynergy = getDomainSynergy({
+    ...state,
+    domains: nextDomains,
+    matchingDomainPairs: nextMatchingPairs
+  });
+
+  const withInvestment = {
+    ...state,
+    domains: nextDomains,
+    matchingDomainPairs: nextMatchingPairs,
+    resources: {
+      ...state.resources,
+      belief: state.resources.belief - simulation.totalCost
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  if (nextMatchingPairs !== state.matchingDomainPairs) {
+    return appendOmen(
+      withInvestment,
+      nowMs,
+      "domainLevel",
+      `Synergy shifted from x${previousSynergy.toFixed(2)} to x${nextSynergy.toFixed(2)}.`
+    );
+  }
+
+  if (simulation.levelsGained > 0) {
+    return appendOmen(
+      withInvestment,
+      nowMs,
+      "domainLevel",
+      `${DOMAIN_LABELS[domainId]} deepened by ${simulation.levelsGained} tier(s) across ${simulation.investments} investments.`
+    );
+  }
+
+  return appendOmen(
+    withInvestment,
+    nowMs,
+    "domain",
+    `${simulation.investments} investments settled into ${DOMAIN_LABELS[domainId]}.`
+  );
 }
 
 export function canAnointProphet(state: GameState): boolean {
