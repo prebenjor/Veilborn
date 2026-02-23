@@ -363,27 +363,40 @@ Tone.js audio engine implemented with:
 Era I:
 - no tabbed shell
 - minimal surface
+- event log header: `Murmurs`
+- bottom status: one quiet atmospheric line
 
 Era II+:
 - tabbed shell (`active`, `growth`, `meta`)
 - sticky tab dock
 
+Era II:
+- event log header: `Whispers`
+- gate label: `Threshold`
+- bottom status: one directive line
+
 Era III:
 - cataclysm in active flow
 - unraveling gate strip always visible
+- event log header: `Omens`
+- gate label: `Unraveling Gate`
+- bottom status line removed
 
 Disclosure policy:
 - future-era systems hidden until unlock
 - cult controls reveal near affordability threshold (`90%`)
+- stats drawer is always visible (all eras, all tabs) and only shows unlocked-system metrics.
 
 ### Stats, Telemetry, and Exports
 
 Stats drawer:
+- always accessible in every era and tab
 - run timers and cadence info
 - follower flow lines
 - influence source breakdown
 - run history
 - audio controls
+- content scales by era without spoiling future systems
 
 Telemetry:
 - local structured events:

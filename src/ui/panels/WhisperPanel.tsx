@@ -28,9 +28,7 @@ export function WhisperPanel({
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
       <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Whispers</h2>
       {era <= 1 ? (
-        <p className="mt-3 text-sm text-veil/70">
-          Spend influence to keep mortal attention active and faith from fading.
-        </p>
+        <p className="mt-3 text-sm text-veil/70">Words spread. Silence lets faith fade.</p>
       ) : null}
       {cadencePromptActive ? (
         <p className="mt-2 rounded-lg border border-ember/40 bg-ember/10 px-2 py-1 text-xs text-ember">
@@ -55,7 +53,7 @@ export function WhisperPanel({
           Recruit ({formatResource(recruitCost)} Influence)
         </button>
       </div>
-      <p className="mt-2 text-xs text-veil/65">Yields {recruitPreview} followers</p>
+      <p className="mt-2 text-xs text-veil/65">Yields {recruitPreview}</p>
     </section>
   );
 }

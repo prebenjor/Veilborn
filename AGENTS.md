@@ -18,6 +18,8 @@ Active manifesto mode is Revision B (uncapped Belief + offline progression).
 - Keep event text in-universe by default.
 - Treat UI legibility as progression, not static presentation.
 - Keep each play session capable of a meaningful 20-40 minute milestone.
+- Keep UI vocabulary progression consistent by era: Era I `Murmurs`, Era II `Whispers`, Era III `Omens`.
+- Keep the Stats drawer/page accessible in every era and tab; never era-lock access to it.
 
 If a request conflicts with the manifesto, flag it and ask whether to revise the manifesto or make an intentional exception.
 
@@ -30,6 +32,7 @@ After implementing gameplay/system changes:
 - Update `docs/GAME_REFERENCE.md` for formulas, constants, and behavior changes.
 - Update `docs/roadmap.json` milestone/PF status if scope changes.
 - If design intent changed, update `MANIFESTO.md` in the same change.
+- If UI progression/vocabulary rules change, update `docs/UI_RESTRUCTURE.md` in the same change.
 
 Hard rule:
 - Never finish a gameplay or systems task without verifying and updating `docs/GAME_REFERENCE.md` in that same change set.

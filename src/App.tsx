@@ -568,7 +568,17 @@ export default function App() {
   const omenPreviewCount = era === 1 ? 3 : 2;
   const visibleOmens = gameState.omenLog.slice(0, omenPreviewCount);
   const showPersistentOmenSurface = era >= 2;
-  const showStatsDrawer = uiReveal.showStatsDrawer && era >= 2;
+  const showStatsDrawer = true;
+  const statusLine =
+    era >= 3
+      ? null
+      : era === 2
+        ? canUseWhisper || canUseRecruit
+          ? "Spend Influence before it caps."
+          : "Influence is recovering. Prepare the next intervention."
+        : gameState.activity.cadencePromptActive
+          ? "Silence gathers around your name."
+          : "Someone is listening in the dark.";
   const veilStability = getVeilStabilityView(gameState.resources.veil, veilCollapseThreshold);
   const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
   const surfaceOmenPreview = gameState.omenLog.slice(0, surfaceOmenPreviewCount);
@@ -1064,7 +1074,7 @@ export default function App() {
       {progressPanel}
       {eraGatePanel}
       <section className="veil-omen-compact rounded-2xl border border-white/10 bg-black/20 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-xs uppercase tracking-[0.25em] text-veil/70">Murmurs</h2>
+        <h2 className="text-xs uppercase tracking-[0.25em] text-veil/70">{uiReveal.omenTitle}</h2>
         <ul className="mt-2 space-y-2 text-sm text-veil/75">
           {visibleOmens.map((entry) => (
             <li key={entry.id}>{entry.text}</li>
@@ -1247,14 +1257,7 @@ export default function App() {
         ) : (
           <>{metaTabContent}</>
         )}
-        <p className="text-xs text-veil/60">
-          {gameState.activity.cadencePromptActive
-            ? "Silence is building. Taking an action now grants a cadence bonus."
-            : "Act every 30-60 seconds to keep momentum and avoid faith drift."}
-          {!canUseWhisper && !canUseRecruit
-            ? " Influence is recovering; choose your next intervention when it peaks."
-            : " Whisper and recruit both satisfy cadence pressure."}
-        </p>
+        {statusLine ? <p className="text-xs text-veil/60">{statusLine}</p> : null}
         {showStatsDrawer ? (
           <StatsDrawer
             era={gameState.era}

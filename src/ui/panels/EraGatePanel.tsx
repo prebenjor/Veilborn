@@ -171,7 +171,6 @@ export function EraGatePanel({
   const {
     title,
     thresholdLabel,
-    subtitle,
     conditions,
     ready,
     crossAction,
@@ -180,19 +179,9 @@ export function EraGatePanel({
   } = useMemo(() => {
     if (era >= 3) {
       const conditionViews: GateConditionView[] = [
-        buildGteCondition(
-          "belief",
-          "Total Belief Earned",
-          unravelingBeliefProgress,
-          unravelingBeliefTarget
-        ),
+        buildGteCondition("belief", "Total Belief Earned", unravelingBeliefProgress, unravelingBeliefTarget),
         buildLteCondition("veil", "Veil at or below", unravelingVeilProgress, unravelingVeilTarget, 100),
-        buildGteCondition(
-          "miracles",
-          "Miracles This Run",
-          unravelingMiraclesProgress,
-          unravelingMiraclesTarget
-        ),
+        buildGteCondition("miracles", "Miracles This Run", unravelingMiraclesProgress, unravelingMiraclesTarget),
         {
           id: "runtime",
           label: "Run Time",
@@ -208,8 +197,7 @@ export function EraGatePanel({
       ];
       return {
         title: "Unraveling Gate",
-        thresholdLabel: "UNRAVELING THRESHOLD",
-        subtitle: "Meet all conditions to prepare ascension.",
+        thresholdLabel: "UNRAVELING GATE",
         conditions: conditionViews,
         ready: unravelingReady,
         crossAction: null as (() => void) | null,
@@ -227,9 +215,8 @@ export function EraGatePanel({
         buildBooleanCondition("rival", "Rival Event Survived", rivalEventReady)
       ];
       return {
-        title: "Era II Gate",
-        thresholdLabel: "ERA II THRESHOLD",
-        subtitle: "Meet all conditions to open Era III.",
+        title: "Threshold",
+        thresholdLabel: "THRESHOLD",
         conditions: conditionViews,
         ready: eraTwoReady,
         crossAction: onAdvanceEraTwo,
@@ -244,9 +231,8 @@ export function EraGatePanel({
       buildGteCondition("domain", "Highest Domain", domainProgress, domainTarget)
     ];
     return {
-      title: "Era I Gate",
+      title: "Threshold",
       thresholdLabel: "THRESHOLD",
-      subtitle: "Meet all conditions to open Era II.",
       conditions: conditionViews,
       ready: eraOneReady,
       crossAction: onAdvanceEraOne,
@@ -301,10 +287,7 @@ export function EraGatePanel({
   return (
     <section className={containerClass}>
       {presentation === "panel" ? (
-        <>
-          <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">{title}</h2>
-          <p className="mt-2 text-sm text-veil/70">{subtitle}</p>
-        </>
+        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">{title}</h2>
       ) : (
         <p className="text-xs uppercase tracking-[0.22em] text-veil/70">{title}</p>
       )}
@@ -318,7 +301,7 @@ export function EraGatePanel({
           {ready ? "Ready to cross" : thresholdLabel}
         </span>
         <span className="text-xs text-veil/80">
-          {formatResource(metCount)} / {formatResource(totalCount)} {expanded ? "▾" : "▸"}
+          {formatResource(metCount)} / {formatResource(totalCount)} {expanded ? "v" : ">"}
         </span>
       </button>
 
@@ -336,7 +319,7 @@ export function EraGatePanel({
               <div className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-veil/75">{condition.label}</span>
                 <span className={condition.ready ? "text-omen" : "text-veil/70"}>
-                  {condition.ready ? `✓ ${condition.progressText}` : condition.progressText}
+                  {condition.ready ? `Met ${condition.progressText}` : condition.progressText}
                 </span>
               </div>
               <div className="mt-1 h-1.5 overflow-hidden rounded-full border border-white/10 bg-black/40">

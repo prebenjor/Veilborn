@@ -464,6 +464,11 @@ Rules:
 - Early HUD minimalism: Era I top-level HUD should stay sparse. Metrics like Veil Thickness and Domain totals appear only after they are mechanically relevant and explained once.
 - First-contact explanation: when a new meter appears, attach one concise in-world explanation so players know what changed and why it matters.
 - Density budget: prioritize single-screen decision-making. Move long-form details to compact drawers, tabs, or a dedicated stats page.
+- Vocabulary progression is era-locked: Era I uses `Murmurs`, Era II uses `Whispers`, Era III uses `Omens`.
+- Gate naming progression is era-locked: Era I and Era II use `Threshold`, Era III uses `Unraveling Gate`.
+- Bottom status line progression is era-locked: Era I one quiet atmospheric line, Era II one directive line, Era III hidden.
+- Stats page is exempt from era-lock visibility and must remain accessible in every era and tab.
+- Stats content still follows progressive disclosure: only show metrics for systems the player has already unlocked or experienced.
 
 ## Design Rules (Do Not Break)
 

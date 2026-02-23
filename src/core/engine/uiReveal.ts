@@ -46,6 +46,7 @@ export function getUiRevealState(state: GameState): UiRevealState {
   const showCultsHud = canRevealDoctrine(state.era);
   const showVeilHud = canRevealVeilHud(state.era);
   const showDomainSumHud = canRevealDomainAggregate(state.era);
+  const omenTitle = state.era === 1 ? "Murmurs" : state.era === 2 ? "Whispers" : "Omens";
 
   return {
     legibility,
@@ -64,7 +65,7 @@ export function getUiRevealState(state: GameState): UiRevealState {
     showPantheonPanel: canRevealPantheon(state.era, state.pantheon.unlocked),
     showStatsDrawer: legibility >= 0.28 || canRevealDoctrine(state.era),
     omenVisibleCount: legibility < 0.2 ? 2 : legibility < 0.45 ? 4 : 6,
-    omenTitle: legibility < 0.3 ? "Murmurs" : "Omens"
+    omenTitle
   };
 }
 

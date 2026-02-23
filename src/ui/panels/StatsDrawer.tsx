@@ -108,6 +108,7 @@ export function StatsDrawer({
         <dt>Whisper Reset In</dt>
         <dd>{formatDurationCompact(whisperResetInSeconds)}</dd>
       </dl>
+
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
         <p className="uppercase tracking-[0.16em] text-veil/80">Belief</p>
         <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
@@ -125,58 +126,57 @@ export function StatsDrawer({
           ) : null}
         </dl>
       </div>
-      {era >= 2 ? (
-        <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
-          <p className="uppercase tracking-[0.16em] text-veil/80">Followers</p>
-          <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
-            <dt>Current</dt>
-            <dd>{formatResource(currentFollowers)}</dd>
-            {era >= 3 ? (
-              <>
-                <dt>Arriving passively</dt>
-                <dd>{formatResource(passiveFollowerRate, 1)} /s</dd>
-              </>
-            ) : null}
-            {rivalFollowerDrainPerSecond > 0 ? (
-              <>
-                <dt>Rival drain</dt>
-                <dd>-{formatResource(rivalFollowerDrainPerSecond, 1)} /s</dd>
-              </>
-            ) : null}
-          </dl>
-        </div>
-      ) : null}
-      {era >= 2 ? (
-        <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
-          <p className="uppercase tracking-[0.16em] text-veil/80">Influence</p>
-          <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
-            <dt>Regen per second</dt>
-            <dd>{formatResource(influenceBreakdown.totalPerSecond, 1)} /s</dd>
-            <dt>Base (prophets)</dt>
-            <dd>{formatResource(influenceBreakdown.basePerSecond, 1)} /s</dd>
-            <dt>Shrines ({formatResource(influenceBreakdown.shrineCount)})</dt>
-            <dd>{formatResource(influenceBreakdown.shrinePerSecond, 1)} /s</dd>
-            <dt>Shrines built</dt>
-            <dd>{formatResource(shrinesBuilt)}</dd>
-            <dt>Cults (active)</dt>
-            <dd>{formatResource(influenceBreakdown.cultPerSecond, 1)} /s</dd>
-            {influenceBreakdown.echoPerSecond > 0 ? (
-              <>
-                <dt>Resonant Word</dt>
-                <dd>{formatResource(influenceBreakdown.echoPerSecond, 1)} /s</dd>
-              </>
-            ) : null}
-            <dt>Cap</dt>
-            <dd>{formatResource(influenceBreakdown.cap)}</dd>
-            <dt>Fill time (from 0)</dt>
-            <dd>
-              {influenceBreakdown.fillTimeSeconds === null
-                ? "-"
-                : `~${formatDurationCompact(influenceBreakdown.fillTimeSeconds)}`}
-            </dd>
-          </dl>
-        </div>
-      ) : null}
+
+      <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+        <p className="uppercase tracking-[0.16em] text-veil/80">Followers</p>
+        <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
+          <dt>Current</dt>
+          <dd>{formatResource(currentFollowers)}</dd>
+          {era >= 3 ? (
+            <>
+              <dt>Arriving passively</dt>
+              <dd>{formatResource(passiveFollowerRate, 1)} /s</dd>
+            </>
+          ) : null}
+          {rivalFollowerDrainPerSecond > 0 ? (
+            <>
+              <dt>Rival drain</dt>
+              <dd>-{formatResource(rivalFollowerDrainPerSecond, 1)} /s</dd>
+            </>
+          ) : null}
+        </dl>
+      </div>
+
+      <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+        <p className="uppercase tracking-[0.16em] text-veil/80">Influence</p>
+        <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
+          <dt>Regen per second</dt>
+          <dd>{formatResource(influenceBreakdown.totalPerSecond, 1)} /s</dd>
+          <dt>Base (prophets)</dt>
+          <dd>{formatResource(influenceBreakdown.basePerSecond, 1)} /s</dd>
+          <dt>Shrines ({formatResource(influenceBreakdown.shrineCount)})</dt>
+          <dd>{formatResource(influenceBreakdown.shrinePerSecond, 1)} /s</dd>
+          <dt>Shrines built</dt>
+          <dd>{formatResource(shrinesBuilt)}</dd>
+          <dt>Cults (active)</dt>
+          <dd>{formatResource(influenceBreakdown.cultPerSecond, 1)} /s</dd>
+          {influenceBreakdown.echoPerSecond > 0 ? (
+            <>
+              <dt>Resonant Word</dt>
+              <dd>{formatResource(influenceBreakdown.echoPerSecond, 1)} /s</dd>
+            </>
+          ) : null}
+          <dt>Cap</dt>
+          <dd>{formatResource(influenceBreakdown.cap)}</dd>
+          <dt>Fill time (from 0)</dt>
+          <dd>
+            {influenceBreakdown.fillTimeSeconds === null
+              ? "-"
+              : `~${formatDurationCompact(influenceBreakdown.fillTimeSeconds)}`}
+          </dd>
+        </dl>
+      </div>
+
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
         <p className="uppercase tracking-[0.16em] text-veil/80">Run History</p>
         {recentRuns.length > 0 ? (
@@ -190,16 +190,16 @@ export function StatsDrawer({
               return (
                 <li key={run.id} className="rounded border border-white/10 bg-black/20 px-2 py-1">
                   <p>
-                    Run {formatResource(run.runNumber)} · {formatDurationCompact(run.runSeconds)} · +
+                    Run {formatResource(run.runNumber)} | {formatDurationCompact(run.runSeconds)} | +
                     {formatResource(run.echoesGained)}E
                   </p>
                   <p className="text-[10px] text-veil/65">
-                    Peak {formatResource(run.peakBeliefPerSecond, 2)}/s · Belief{" "}
+                    Peak {formatResource(run.peakBeliefPerSecond, 2)}/s | Belief{" "}
                     {formatResource(run.totalBeliefEarned)}
                   </p>
                   <p className="text-[10px] text-veil/65">
                     Collapses V:{formatResource(run.veilCollapseCount)} C:
-                    {formatResource(run.civilizationCollapseCount)} · Miracles {formatResource(miracleTotal)}
+                    {formatResource(run.civilizationCollapseCount)} | Miracles {formatResource(miracleTotal)}
                   </p>
                 </li>
               );
@@ -226,6 +226,7 @@ export function StatsDrawer({
         </div>
         {telemetryStatus ? <p className="mt-1 text-[10px] text-veil/65">{telemetryStatus}</p> : null}
       </div>
+
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
         <p className="uppercase tracking-[0.16em] text-veil/80">Audio</p>
         <p className="mt-1">
