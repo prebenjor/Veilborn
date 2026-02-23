@@ -1,4 +1,6 @@
 import type { MiracleTier } from "../../core/state/gameState";
+import { formatResource } from "../../core/ui/numberFormat";
+import { formatDurationCompact } from "../../core/ui/timeFormat";
 
 interface MiracleOption {
   tier: MiracleTier;
@@ -26,10 +28,6 @@ interface CataclysmPanelProps {
   onCastMiracle: (tier: MiracleTier) => void;
 }
 
-function formatNumber(value: number, maximumFractionDigits = 1): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits }).format(value);
-}
-
 export function CataclysmPanel({
   era,
   influence,
@@ -55,28 +53,28 @@ export function CataclysmPanel({
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Pressure</p>
           <p className="mt-1 text-sm text-white">
-            Veil {formatNumber(veil)} (collapse at {formatNumber(veilCollapseThreshold)})
+            Veil {formatResource(veil)} (collapse at {formatResource(veilCollapseThreshold)})
           </p>
-          <p className="mt-1 text-xs text-veil/65">Belief bonus x{formatNumber(veilBonus, 2)}</p>
+          <p className="mt-1 text-xs text-veil/65">Belief bonus x{formatResource(veilBonus, 2)}</p>
           <p className="mt-1 text-xs text-veil/65">
-            Regen {formatNumber(veilRegenPerSecond, 3)}/s, erosion {formatNumber(veilErosionPerSecond, 3)}
+            Regen {formatResource(veilRegenPerSecond, 3)}/s, erosion {formatResource(veilErosionPerSecond, 3)}
             /s
           </p>
-          <p className="mt-1 text-xs text-veil/65">Shrines built: {formatNumber(shrinesBuilt)}</p>
+          <p className="mt-1 text-xs text-veil/65">Shrines built: {formatResource(shrinesBuilt)}</p>
         </article>
 
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Civilization</p>
-          <p className="mt-1 text-sm text-white">Health {formatNumber(civilizationHealth)} / 100</p>
+          <p className="mt-1 text-sm text-white">Health {formatResource(civilizationHealth)} / 100</p>
           {civilizationCollapsed ? (
             <p className="mt-1 text-xs text-ember">
-              Civilization collapsed. Rebuild in ~{formatNumber(civilizationRebuildInSeconds)}s.
+              Civilization collapsed. Rebuild in ~{formatDurationCompact(civilizationRebuildInSeconds)}.
             </p>
           ) : (
             <p className="mt-1 text-xs text-veil/65">Stable enough to sustain miracle returns.</p>
           )}
-          <p className="mt-1 text-xs text-veil/65">Miracles this run: {formatNumber(miraclesThisRun)}</p>
-          <p className="mt-1 text-xs text-veil/65">Influence available: {formatNumber(influence)}</p>
+          <p className="mt-1 text-xs text-veil/65">Miracles this run: {formatResource(miraclesThisRun)}</p>
+          <p className="mt-1 text-xs text-veil/65">Influence available: {formatResource(influence)}</p>
         </article>
       </div>
 
@@ -85,11 +83,11 @@ export function CataclysmPanel({
           <article key={miracle.tier} className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Miracle T{miracle.tier}</p>
             <p className="mt-1 text-xs text-veil/65">
-              Cost {formatNumber(miracle.influenceCost)} Influence
+              Cost {formatResource(miracle.influenceCost)} Influence
             </p>
-            <p className="mt-1 text-xs text-veil/65">Return {formatNumber(miracle.beliefGain)} Belief</p>
+            <p className="mt-1 text-xs text-veil/65">Return {formatResource(miracle.beliefGain)} Belief</p>
             <p className="mt-1 text-xs text-veil/65">
-              Veil -{formatNumber(miracle.veilCost)}, Civ -{formatNumber(miracle.civDamage)}
+              Veil -{formatResource(miracle.veilCost)}, Civ -{formatResource(miracle.civDamage)}
             </p>
             <button
               type="button"

@@ -124,6 +124,12 @@ export interface PantheonAllianceFactors {
   totalModifier: number;
 }
 
+export interface GhostInfluenceTotals {
+  domainSynergyDelta: number;
+  rivalSpawnDelta: number;
+  faithDecayDelta: number;
+}
+
 export interface EraOneGateStatus {
   beliefTarget: number;
   beliefReady: boolean;
@@ -317,13 +323,17 @@ export function getDomainMultiplier(totalDomainLevel: number): number {
 
 export function getFaithDecay(state: GameState, nowMs: number): number {
   const minutesSinceLastEvent = Math.max(0, (nowMs - state.activity.lastEventAt) / 60000);
-  const baseDecay = Math.pow(FAITH_DECAY_BASE, minutesSinceLastEvent);
+  const ghostInfluence = getGhostInfluenceTotals(state);
+  const adjustedMinutes = minutesSinceLastEvent * (1 + ghostInfluence.faithDecayDelta);
+  const baseDecay = Math.pow(FAITH_DECAY_BASE, adjustedMinutes);
   const floor = state.echoBonuses.faithFloor ? FAITH_DECAY_ECHO_FLOOR : FAITH_DECAY_FLOOR;
   return Math.max(floor, baseDecay);
 }
 
 export function getDomainSynergy(state: GameState): number {
-  return 1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs;
+  const baseSynergy = 1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs;
+  const ghostInfluence = getGhostInfluenceTotals(state);
+  return Math.max(0.5, baseSynergy * (1 + ghostInfluence.domainSynergyDelta));
 }
 
 export function getVeilBonus(veil: number): number {
@@ -577,7 +587,9 @@ export function getMiracleBeliefGain(state: GameState, tier: MiracleTier): numbe
 }
 
 export function getRivalSpawnIntervalMs(state: GameState): number {
-  return RIVAL_SPAWN_BASE_MS + (state.echoBonuses.rivalDelay ? RIVAL_SPAWN_ECHO_DELAY_MS : 0);
+  const baseInterval = RIVAL_SPAWN_BASE_MS + (state.echoBonuses.rivalDelay ? RIVAL_SPAWN_ECHO_DELAY_MS : 0);
+  const ghostInfluence = getGhostInfluenceTotals(state);
+  return Math.ceil(Math.max(45 * 1000, baseInterval * (1 + ghostInfluence.rivalSpawnDelta)));
 }
 
 export function getRivalStrength(state: GameState, beliefPerSecond: number): number {
@@ -587,6 +599,36 @@ export function getRivalStrength(state: GameState, beliefPerSecond: number): num
 
 export function getTotalRivalStrength(state: GameState): number {
   return state.doctrine.rivals.reduce((sum, rival) => sum + rival.strength, 0);
+}
+
+export function getGhostInfluenceTotals(state: GameState): GhostInfluenceTotals {
+  if (state.ghost.activeInfluences.length <= 0) {
+    return {
+      domainSynergyDelta: 0,
+      rivalSpawnDelta: 0,
+      faithDecayDelta: 0
+    };
+  }
+
+  const totals = state.ghost.activeInfluences.reduce(
+    (accumulator, influence) => {
+      accumulator.domainSynergyDelta += influence.domainSynergyDelta;
+      accumulator.rivalSpawnDelta += influence.rivalSpawnDelta;
+      accumulator.faithDecayDelta += influence.faithDecayDelta;
+      return accumulator;
+    },
+    {
+      domainSynergyDelta: 0,
+      rivalSpawnDelta: 0,
+      faithDecayDelta: 0
+    }
+  );
+
+  return {
+    domainSynergyDelta: Math.max(-0.25, Math.min(0.25, totals.domainSynergyDelta)),
+    rivalSpawnDelta: Math.max(-0.3, Math.min(0.3, totals.rivalSpawnDelta)),
+    faithDecayDelta: Math.max(-0.2, Math.min(0.2, totals.faithDecayDelta))
+  };
 }
 
 export function getEraOneBeliefGateTarget(state: GameState): number {

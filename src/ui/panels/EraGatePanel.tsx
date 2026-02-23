@@ -1,4 +1,5 @@
 import { formatDurationCompact } from "../../core/ui/timeFormat";
+import { formatResource } from "../../core/ui/numberFormat";
 
 interface GateLineProps {
   label: string;
@@ -32,10 +33,6 @@ interface EraGatePanelProps {
   unravelingReady: boolean;
   onAdvanceEraOne: () => void;
   onAdvanceEraTwo: () => void;
-}
-
-function formatNumber(value: number): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
 }
 
 function GateLine({ label, value, ready }: GateLineProps) {
@@ -84,17 +81,17 @@ export function EraGatePanel({
         <div className="mt-3 grid gap-2">
           <GateLine
             label="Total Belief Earned"
-            value={`${formatNumber(unravelingBeliefProgress)} / ${formatNumber(unravelingBeliefTarget)}`}
+            value={`${formatResource(unravelingBeliefProgress)} / ${formatResource(unravelingBeliefTarget)}`}
             ready={unravelingBeliefProgress >= unravelingBeliefTarget}
           />
           <GateLine
             label="Veil at or below"
-            value={`${formatNumber(unravelingVeilProgress)} / ${formatNumber(unravelingVeilTarget)}`}
+            value={`${formatResource(unravelingVeilProgress)} / ${formatResource(unravelingVeilTarget)}`}
             ready={unravelingVeilProgress <= unravelingVeilTarget}
           />
           <GateLine
             label="Miracles This Run"
-            value={`${formatNumber(unravelingMiraclesProgress)} / ${formatNumber(unravelingMiraclesTarget)}`}
+            value={`${formatResource(unravelingMiraclesProgress)} / ${formatResource(unravelingMiraclesTarget)}`}
             ready={unravelingMiraclesProgress >= unravelingMiraclesTarget}
           />
           <GateLine
@@ -120,12 +117,12 @@ export function EraGatePanel({
         <div className="mt-3 grid gap-2">
           <GateLine
             label="Total Belief Earned"
-            value={`${formatNumber(eraTwoBeliefProgress)} / ${formatNumber(eraTwoBeliefTarget)}`}
+            value={`${formatResource(eraTwoBeliefProgress)} / ${formatResource(eraTwoBeliefTarget)}`}
             ready={eraTwoBeliefProgress >= eraTwoBeliefTarget}
           />
           <GateLine
             label="Cults Formed"
-            value={`${formatNumber(cultsProgress)} / ${formatNumber(cultsTarget)}`}
+            value={`${formatResource(cultsProgress)} / ${formatResource(cultsTarget)}`}
             ready={cultsProgress >= cultsTarget}
           />
           <GateLine
@@ -153,17 +150,17 @@ export function EraGatePanel({
       <div className="mt-3 grid gap-2">
         <GateLine
           label="Total Belief Earned"
-          value={`${formatNumber(eraOneBeliefProgress)} / ${formatNumber(eraOneBeliefTarget)}`}
+          value={`${formatResource(eraOneBeliefProgress)} / ${formatResource(eraOneBeliefTarget)}`}
           ready={eraOneBeliefProgress >= eraOneBeliefTarget}
         />
         <GateLine
           label="Prophets"
-          value={`${formatNumber(prophetsProgress)} / ${formatNumber(prophetsTarget)}`}
+          value={`${formatResource(prophetsProgress)} / ${formatResource(prophetsTarget)}`}
           ready={prophetsProgress >= prophetsTarget}
         />
         <GateLine
           label="Highest Domain"
-          value={`${formatNumber(domainProgress)} / ${formatNumber(domainTarget)}`}
+          value={`${formatResource(domainProgress)} / ${formatResource(domainTarget)}`}
           ready={domainProgress >= domainTarget}
         />
       </div>

@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 9;
+export const GAME_STATE_SCHEMA_VERSION = 10;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -178,6 +178,7 @@ export const PANTHEON_DOMAIN_POISON_OUTPUT_MULTIPLIER = 0.65;
 
 export type MortalTrait = "skeptical" | "zealous" | "cautious";
 export type DomainId = "fire" | "death" | "harvest" | "storm" | "memory" | "void";
+export const DOMAIN_IDS: DomainId[] = ["fire", "death", "harvest", "storm", "memory", "void"];
 export type HistoryMarkerKind =
   | "origin"
   | "prophet_lineage"
@@ -306,6 +307,41 @@ export interface PantheonState {
   nextAllyId: number;
 }
 
+export type GhostSignatureSource = "local" | "imported";
+
+export interface GhostRunSignature {
+  id: string;
+  label: string;
+  source: GhostSignatureSource;
+  createdAt: number;
+  dominantDomain: DomainId;
+  domainLevels: Record<DomainId, number>;
+  miracles: number;
+  betrayals: number;
+  veilCollapses: number;
+  totalBelief: number;
+}
+
+export interface GhostInfluence {
+  id: string;
+  signatureId: string;
+  source: GhostSignatureSource;
+  title: string;
+  description: string;
+  dominantDomain: DomainId;
+  domainSynergyDelta: number;
+  rivalSpawnDelta: number;
+  faithDecayDelta: number;
+}
+
+export interface GhostState {
+  localSignatures: GhostRunSignature[];
+  importedSignatures: GhostRunSignature[];
+  activeInfluences: GhostInfluence[];
+  lastRunIdInitialized: string | null;
+  nextSignatureId: number;
+}
+
 export interface ActivityState {
   lastEventAt: number;
   whisperWindowStartedAt: number;
@@ -383,6 +419,7 @@ export interface GameState {
   prestige: PrestigeState;
   lineage: LineageState;
   pantheon: PantheonState;
+  ghost: GhostState;
   echoBonuses: EchoBonuses;
   era: 1 | 2 | 3;
   mortals: Mortal[];
@@ -483,6 +520,16 @@ export function createDefaultPantheonState(): PantheonState {
   };
 }
 
+export function createDefaultGhostState(): GhostState {
+  return {
+    localSignatures: [],
+    importedSignatures: [],
+    activeInfluences: [],
+    lastRunIdInitialized: null,
+    nextSignatureId: 1
+  };
+}
+
 export function createDefaultLineageState(nowMs: number, runId: string): LineageState {
   return {
     generation: 1,
@@ -560,6 +607,7 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     prestige: createDefaultPrestigeState(),
     lineage: createDefaultLineageState(nowMs, runId),
     pantheon: createDefaultPantheonState(),
+    ghost: createDefaultGhostState(),
     echoBonuses: createDefaultEchoBonuses(),
     era: 1,
     mortals: [

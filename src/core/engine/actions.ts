@@ -43,6 +43,14 @@ import {
   type MiracleTier
 } from "../state/gameState";
 import {
+  appendLocalGhostSignature,
+  createGhostRunSignature,
+  createGhostSignatureBundle,
+  initializeGhostForRun,
+  mergeImportedGhostSignatures,
+  parseGhostSignatureBundle
+} from "../ghost/ghostEchoes";
+import {
   getActBaseMultiplier,
   getBeliefPerSecond,
   getAscensionEchoGain,
@@ -60,6 +68,8 @@ import {
   getLineageConversionFactors,
   getLineageConversionModifier,
   getLineageInheritanceWeights,
+  getMatchingDomainPairs,
+  getDomainSynergy,
   isPantheonUnlocked,
   getMiracleBeliefGain,
   getMiracleCivDamage,
@@ -88,6 +98,7 @@ type OmenKind =
   | "pantheonArrival"
   | "pantheonAlliance"
   | "pantheonBetrayal"
+  | "ghostEcho"
   | "echoTree"
   | "ascension"
   | "eraOneToTwo"
@@ -107,6 +118,12 @@ interface LineageDelta {
   trustDebt: number;
   skepticism: number;
   betrayalScars: number;
+}
+
+export interface ImportGhostSignaturesResult {
+  state: GameState;
+  importedCount: number;
+  error: string | null;
 }
 
 const DESCENDANT_NAME_PREFIXES = [
@@ -176,6 +193,7 @@ const MAJOR_OMEN_KINDS: OmenKind[] = [
   "pantheonArrival",
   "pantheonAlliance",
   "pantheonBetrayal",
+  "ghostEcho",
   "echoTree",
   "ascension",
   "eraOneToTwo",
@@ -524,6 +542,91 @@ export function ensurePantheonInitialized(state: GameState, nowMs: number): Game
   );
 }
 
+export function ensureGhostInitialized(state: GameState, nowMs: number): GameState {
+  const initializedGhost = initializeGhostForRun(state.ghost, state.meta.runId, state.rngState);
+  if (initializedGhost === state.ghost) return state;
+
+  const withGhost = {
+    ...state,
+    ghost: initializedGhost,
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  if (initializedGhost.activeInfluences.length <= 0) {
+    return withGhost;
+  }
+
+  const lead = initializedGhost.activeInfluences[0];
+  return appendOmen(
+    withGhost,
+    nowMs,
+    "ghostEcho",
+    `${lead.title} now presses against this run's doctrine.`
+  );
+}
+
+export function exportGhostSignatures(state: GameState): string {
+  return createGhostSignatureBundle(state.ghost);
+}
+
+export function performImportGhostSignatures(
+  state: GameState,
+  rawText: string,
+  nowMs: number
+): ImportGhostSignaturesResult {
+  const parsed = parseGhostSignatureBundle(rawText);
+  if (parsed.length <= 0) {
+    return {
+      state,
+      importedCount: 0,
+      error: "No valid signatures found in file."
+    };
+  }
+
+  const merged = mergeImportedGhostSignatures(state.ghost, parsed);
+  if (merged.importedCount <= 0) {
+    return {
+      state,
+      importedCount: 0,
+      error: "All provided signatures were already known."
+    };
+  }
+
+  const refreshedGhost = initializeGhostForRun(
+    {
+      ...merged.ghost,
+      lastRunIdInitialized: null
+    },
+    state.meta.runId,
+    state.rngState
+  );
+
+  const withImport = {
+    ...state,
+    ghost: refreshedGhost,
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  const withOmen = appendOmen(
+    withImport,
+    nowMs,
+    "ghostEcho",
+    `${merged.importedCount} foreign signatures now bleed into this world.`
+  );
+
+  return {
+    state: withOmen,
+    importedCount: merged.importedCount,
+    error: null
+  };
+}
+
 function resolveActivityAfterAction(activity: ActivityState, nowMs: number): ActivityState {
   return {
     ...activity,
@@ -739,6 +842,13 @@ function createOmen(
     "Their name curdled in the hymns the moment you turned."
   ] as const;
 
+  const ghostEchoStarts = [
+    "A foreign memory crossed your Veil and settled in the margins.",
+    "A doctrine not born in this world surfaced in your omens.",
+    "Another god's forgotten cadence stained your current age.",
+    "An imported echo altered the rhythm of belief."
+  ] as const;
+
   if (kind === "whisper") {
     const a = pickOne(rngSeed, whisperStarts);
     const b = pickOne(a.rngState, whisperMiddles);
@@ -859,6 +969,14 @@ function createOmen(
 
   if (kind === "pantheonBetrayal") {
     const a = pickOne(rngSeed, pantheonBetrayalStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} ${detail ?? ""}`.trim()
+    };
+  }
+
+  if (kind === "ghostEcho") {
+    const a = pickOne(rngSeed, ghostEchoStarts);
     return {
       rngState: a.rngState,
       text: `${a.value} ${detail ?? ""}`.trim()
@@ -1088,10 +1206,21 @@ export function performDomainInvestment(state: GameState, domainId: DomainId, no
     level: nextLevel,
     xp: nextXp
   };
+  const nextMatchingPairs = getMatchingDomainPairs({
+    ...state,
+    domains: nextDomains
+  });
+  const previousSynergy = getDomainSynergy(state);
+  const nextSynergy = getDomainSynergy({
+    ...state,
+    domains: nextDomains,
+    matchingDomainPairs: nextMatchingPairs
+  });
 
   const withInvestment = {
     ...state,
     domains: nextDomains,
+    matchingDomainPairs: nextMatchingPairs,
     resources: {
       ...state.resources,
       belief: state.resources.belief - cost
@@ -1102,6 +1231,15 @@ export function performDomainInvestment(state: GameState, domainId: DomainId, no
       updatedAt: nowMs
     }
   };
+
+  if (nextMatchingPairs !== state.matchingDomainPairs) {
+    return appendOmen(
+      withInvestment,
+      nowMs,
+      "domainLevel",
+      `Synergy shifted from x${previousSynergy.toFixed(2)} to x${nextSynergy.toFixed(2)}.`
+    );
+  }
 
   if (leveledUp) {
     return appendOmen(withInvestment, nowMs, "domainLevel", DOMAIN_LABELS[domainId]);
@@ -1155,6 +1293,7 @@ export function performCultFormation(state: GameState, nowMs: number): GameState
   if (state.era < 2) return state;
   const cost = getCultFormationCost(state);
   if (state.resources.belief < cost) return state;
+  const synergy = getDomainSynergy(state);
 
   const withCult = {
     ...state,
@@ -1170,7 +1309,7 @@ export function performCultFormation(state: GameState, nowMs: number): GameState
     }
   };
 
-  return appendOmen(withCult, nowMs, "cult");
+  return appendOmen(withCult, nowMs, "cult", `Current domain synergy rests at x${synergy.toFixed(2)}.`);
 }
 
 export function getActSlotCap(state: GameState): number {
@@ -1550,6 +1689,8 @@ export function performAscension(state: GameState, nowMs: number): GameState {
   if (!canAscend(state)) return state;
 
   const gainedEchoes = getAscensionEchoGain(state.stats.totalBeliefEarned);
+  const capturedSignature = createGhostRunSignature(state, nowMs);
+  const ghostWithCapturedRun = appendLocalGhostSignature(state.ghost, capturedSignature);
   const poisonAdvanced = withPoisonWindowsAdvanced(state);
   const poisonApplied = withPendingPoisonApplied(poisonAdvanced);
   const pantheonUnlocksOnNextRun =
@@ -1582,6 +1723,11 @@ export function performAscension(state: GameState, nowMs: number): GameState {
   const nextEchoBonuses = getEchoBonusesFromTreeRanks(nextPrestige.treeRanks);
 
   const resetState = createInitialGameState(nowMs);
+  const initializedGhost = initializeGhostForRun(
+    ghostWithCapturedRun,
+    resetState.meta.runId,
+    resetState.rngState
+  );
   let ascendedState: GameState = {
     ...resetState,
     prestige: nextPrestige,
@@ -1590,6 +1736,7 @@ export function performAscension(state: GameState, nowMs: number): GameState {
       ...resetState.pantheon,
       unlocked: pantheonUnlocksOnNextRun
     },
+    ghost: initializedGhost,
     echoBonuses: nextEchoBonuses
   };
 
@@ -1617,7 +1764,18 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     "You carried remembrance through the fracture into a younger world."
   );
 
-  return ensurePantheonInitialized(withAscensionOmen, nowMs);
+  const withPantheon = ensurePantheonInitialized(withAscensionOmen, nowMs);
+  if (initializedGhost.activeInfluences.length <= 0) {
+    return withPantheon;
+  }
+
+  const lead = initializedGhost.activeInfluences[0];
+  return appendOmen(
+    withPantheon,
+    nowMs,
+    "ghostEcho",
+    `${lead.title} followed you through the fracture.`
+  );
 }
 
 export function canAdvanceEraOneToTwo(state: GameState): boolean {
@@ -1663,10 +1821,21 @@ export function performAdvanceEraTwoToThree(state: GameState, nowMs: number): Ga
 }
 
 export function getRecruitPreview(state: GameState): string {
+  const formatPreviewValue = (value: number): string => {
+    if (value >= 10000) {
+      return Intl.NumberFormat("en-US", {
+        notation: "compact",
+        compactDisplay: "short",
+        maximumFractionDigits: 2
+      }).format(value);
+    }
+    return Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
+  };
+
   const floor = RECRUIT_BASE_FOLLOWERS + state.prophets * RECRUIT_PROPHET_FOLLOWER_BONUS;
   const domainBonus = Math.floor(getTotalDomainLevel(state) / RECRUIT_DOMAIN_FOLLOWER_DIVISOR);
   const lineageModifier = getLineageConversionModifier(state);
   const low = Math.max(1, Math.floor((floor + domainBonus) * lineageModifier));
   const high = Math.max(low, Math.floor((floor + domainBonus + RECRUIT_RANDOM_FOLLOWER_MAX) * lineageModifier));
-  return `${low}-${high} followers`;
+  return `${formatPreviewValue(low)}-${formatPreviewValue(high)} followers`;
 }

@@ -1,13 +1,10 @@
 import type { OfflineProgressSummary } from "../../core/state/persistence";
+import { formatResource, formatSignedResource } from "../../core/ui/numberFormat";
 import { formatDurationCompact } from "../../core/ui/timeFormat";
 
 interface OfflineSummaryPanelProps {
   summary: OfflineProgressSummary;
   onDismiss: () => void;
-}
-
-function formatNumber(value: number, maxFractionDigits = 1): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: maxFractionDigits }).format(value);
 }
 
 export function OfflineSummaryPanel({ summary, onDismiss }: OfflineSummaryPanelProps) {
@@ -41,15 +38,15 @@ export function OfflineSummaryPanel({ summary, onDismiss }: OfflineSummaryPanelP
 
       <dl className="mt-3 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-xs text-veil/75">
         <dt>Belief gathered</dt>
-        <dd>{`+${formatNumber(summary.beliefGained)}`}</dd>
+        <dd>{formatSignedResource(summary.beliefGained)}</dd>
         <dt>Veil change</dt>
-        <dd>{summary.veilDelta >= 0 ? `+${formatNumber(summary.veilDelta, 2)}` : formatNumber(summary.veilDelta, 2)}</dd>
+        <dd>{formatSignedResource(summary.veilDelta, 2)}</dd>
         <dt>Followers change</dt>
-        <dd>{summary.followersDelta >= 0 ? `+${formatNumber(summary.followersDelta)}` : formatNumber(summary.followersDelta)}</dd>
+        <dd>{formatSignedResource(summary.followersDelta)}</dd>
         <dt>Influence on return</dt>
-        <dd>{formatNumber(summary.influenceAfter)}</dd>
+        <dd>{formatResource(summary.influenceAfter)}</dd>
         <dt>Faith decay now</dt>
-        <dd>{`x${formatNumber(summary.faithDecayMultiplier, 2)}`}</dd>
+        <dd>{`x${formatResource(summary.faithDecayMultiplier, 2)}`}</dd>
       </dl>
     </section>
   );

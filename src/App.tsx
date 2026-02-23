@@ -13,6 +13,8 @@ import {
   canStartAct,
   canSuppressRival,
   ensurePantheonInitialized,
+  ensureGhostInitialized,
+  exportGhostSignatures,
   getActSlotCap,
   canWhisper,
   canRecruit,
@@ -25,6 +27,7 @@ import {
   performCultFormation,
   performDomainInvestment,
   performFormPantheonAlliance,
+  performImportGhostSignatures,
   performPurchaseEchoTreeRank,
   performProphetAnoint,
   performRecruit,
@@ -33,12 +36,15 @@ import {
   performWhisper
 } from "./core/engine/actions";
 import {
+  getActBaseMultiplier,
   getActCost,
+  getActRewardBelief,
   getAscensionEchoGain,
   getActDurationSeconds,
   getBeliefPerSecond,
   getCultFormationCost,
   getCultOutput,
+  getDomainSynergy,
   getDomainInvestCost,
   getDomainXpNeeded,
   getEraOneGateStatus,
@@ -47,6 +53,7 @@ import {
   getFollowersForNextProphet,
   getHighestDomainLevel,
   getInfluenceCap,
+  getGhostInfluenceTotals,
   getDomainPoisonRunsRemaining,
   getLineageConversionFactors,
   getLineageTraitDistribution,
@@ -102,10 +109,7 @@ import { PantheonPanel } from "./ui/panels/PantheonPanel";
 import { ProgressPanel } from "./ui/panels/ProgressPanel";
 import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
-
-function formatNumber(value: number): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
-}
+import { formatRate, formatResource } from "./core/ui/numberFormat";
 
 const ECHO_TREE_META: Array<{
   id: EchoTreeId;
@@ -153,6 +157,7 @@ export default function App() {
   const [offlineSummary, setOfflineSummary] = useState<OfflineProgressSummary | null>(
     initialLoad.offlineSummary
   );
+  const [ghostImportStatus, setGhostImportStatus] = useState<string | null>(null);
   const gameStateRef = useRef(gameState);
   const nowMs = gameState.meta.updatedAt;
 
@@ -189,6 +194,10 @@ export default function App() {
     setGameState((prev) => ensurePantheonInitialized(prev, Date.now()));
   }, [gameState.prestige.completedRuns]);
 
+  useEffect(() => {
+    setGameState((prev) => ensureGhostInitialized(prev, Date.now()));
+  }, [gameState.meta.runId, gameState.ghost.localSignatures.length, gameState.ghost.importedSignatures.length]);
+
   const veilOpacity = useMemo(() => {
     const normalized = Math.max(0.15, Math.min(1, gameState.resources.veil / 100));
     return normalized;
@@ -222,6 +231,7 @@ export default function App() {
     canAlliance: canFormPantheonAlliance(gameState, ally.id),
     canBetray: canBetrayPantheonAlly(gameState, ally.id)
   }));
+  const ghostInfluenceTotals = getGhostInfluenceTotals(gameState);
 
   const canUseWhisper = canWhisper(gameState, nowMs);
   const canUseRecruit = canRecruit(gameState);
@@ -232,6 +242,7 @@ export default function App() {
   const canUseAscend = canAscend(gameState);
   const eraLabel = gameState.era === 1 ? "I" : gameState.era === 2 ? "II" : "III";
   const totalDomainLevel = getTotalDomainLevel(gameState);
+  const domainSynergy = getDomainSynergy(gameState);
 
   const { controls: audioControls, enableAudio, disableAudio, toggleMute, useSilentFallback } =
     useVeilAudio({
@@ -286,6 +297,26 @@ export default function App() {
     shrine: getActDurationSeconds("shrine"),
     ritual: getActDurationSeconds("ritual"),
     proclaim: getActDurationSeconds("proclaim")
+  };
+  const actProjectedBelief: Record<ActType, number> = {
+    shrine: getActRewardBelief(
+      gameState,
+      beliefPerSecond,
+      actDurations.shrine,
+      getActBaseMultiplier("shrine")
+    ),
+    ritual: getActRewardBelief(
+      gameState,
+      beliefPerSecond,
+      actDurations.ritual,
+      getActBaseMultiplier("ritual")
+    ),
+    proclaim: getActRewardBelief(
+      gameState,
+      beliefPerSecond,
+      actDurations.proclaim,
+      getActBaseMultiplier("proclaim")
+    )
   };
   const canStartActs: Record<ActType, boolean> = {
     shrine: canStartAct(gameState, "shrine"),
@@ -369,6 +400,41 @@ export default function App() {
     setGameState((prev) => performPurchaseEchoTreeRank(prev, treeId, Date.now()));
   };
 
+  const onExportGhostSignatures = () => {
+    const payload = exportGhostSignatures(gameStateRef.current);
+    const stamp = new Date().toISOString().replace(/[:]/g, "-");
+    const fileName = `veilborn-signatures-${stamp}.json`;
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setGhostImportStatus(`Exported signatures to ${fileName}.`);
+  };
+
+  const onImportGhostSignatures = async (file: File) => {
+    const rawText = await file.text();
+    const nowMs = Date.now();
+    let importedCount = 0;
+    let error: string | null = null;
+
+    setGameState((prev) => {
+      const result = performImportGhostSignatures(prev, rawText, nowMs);
+      importedCount = result.importedCount;
+      error = result.error;
+      return result.state;
+    });
+
+    if (error) {
+      setGhostImportStatus(error);
+      return;
+    }
+
+    setGhostImportStatus(`Imported ${formatResource(importedCount)} signatures from ${file.name}.`);
+  };
+
   const onAscend = () => {
     setGameState((prev) => performAscension(prev, Date.now()));
   };
@@ -431,22 +497,22 @@ export default function App() {
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
               {veilMaskText("Belief", uiReveal.legibility)}
             </p>
-            <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.belief)}</p>
-            <p className="mt-1 text-xs text-veil/65">{formatNumber(beliefPerSecond)} / sec</p>
+            <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.belief)}</p>
+            <p className="mt-1 text-xs text-veil/65">{formatRate(beliefPerSecond)} / sec</p>
           </article>
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
               {veilMaskText("Influence", uiReveal.legibility)}
             </p>
             <p className="mt-2 text-xl text-white">
-              {formatNumber(gameState.resources.influence)} / {formatNumber(influenceCap)}
+              {formatResource(gameState.resources.influence)} / {formatResource(influenceCap)}
             </p>
-            <p className="mt-1 text-xs text-veil/65">Whisper: {formatNumber(whisperCost)}</p>
+            <p className="mt-1 text-xs text-veil/65">Whisper: {formatResource(whisperCost)}</p>
           </article>
           {uiReveal.showVeilHud ? (
             <article className="rounded-xl border border-white/10 bg-black/20 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Thickness</p>
-              <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.veil)}</p>
+              <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.veil)}</p>
               <p className="mt-1 text-xs text-veil/65">Thinner Veil boosts belief, but collapse risk rises.</p>
             </article>
           ) : null}
@@ -459,24 +525,24 @@ export default function App() {
           >
             <article className="rounded-xl border border-white/10 bg-black/20 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
-              <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.followers)}</p>
+              <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.followers)}</p>
             </article>
             {uiReveal.showProphetsHud ? (
               <article className="rounded-xl border border-white/10 bg-black/20 p-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
-                <p className="mt-2 text-xl text-white">{formatNumber(gameState.prophets)}</p>
+                <p className="mt-2 text-xl text-white">{formatResource(gameState.prophets)}</p>
               </article>
             ) : null}
             {uiReveal.showCultsHud ? (
               <article className="rounded-xl border border-white/10 bg-black/20 p-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
-                <p className="mt-2 text-xl text-white">{formatNumber(gameState.cults)}</p>
+                <p className="mt-2 text-xl text-white">{formatResource(gameState.cults)}</p>
               </article>
             ) : null}
             {uiReveal.showDomainSumHud ? (
               <article className="rounded-xl border border-white/10 bg-black/20 p-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Domain Level Sum</p>
-                <p className="mt-2 text-xl text-white">{formatNumber(totalDomainLevel)}</p>
+                <p className="mt-2 text-xl text-white">{formatResource(totalDomainLevel)}</p>
                 <p className="mt-1 text-xs text-veil/65">
                   Domain mastery amplifies prophet output and cult resonance.
                 </p>
@@ -547,8 +613,15 @@ export default function App() {
             ascensionEchoGain={ascensionEchoGain}
             canAscend={canUseAscend}
             treeViews={echoTreeViews}
+            ghostLocalCount={gameState.ghost.localSignatures.length}
+            ghostImportedCount={gameState.ghost.importedSignatures.length}
+            ghostImportStatus={ghostImportStatus}
+            ghostInfluenceTotals={ghostInfluenceTotals}
+            ghostInfluences={gameState.ghost.activeInfluences}
             onPurchaseTree={onPurchaseEchoTreeRank}
             onAscend={onAscend}
+            onExportGhostSignatures={onExportGhostSignatures}
+            onImportGhostSignatures={onImportGhostSignatures}
           />
         ) : null}
 
@@ -594,10 +667,16 @@ export default function App() {
             era={gameState.era}
             cults={gameState.cults}
             influence={gameState.resources.influence}
+            cultOutput={cultOutput}
+            domainSynergy={domainSynergy}
+            matchingDomainPairs={gameState.matchingDomainPairs}
             actSlotCap={actSlotCap}
             activeActs={activeActs}
             actCosts={actCosts}
             actDurations={actDurations}
+            actProjectedBelief={actProjectedBelief}
+            actResonantBonus={gameState.matchingDomainPairs * 0.2}
+            actFloorMultiplier={gameState.echoBonuses.actFloor ? 1.5 : 1.0}
             canStartAct={canStartActs}
             onStartAct={onStartAct}
             rivalsCount={gameState.doctrine.rivals.length}
@@ -633,6 +712,8 @@ export default function App() {
           <DomainPanel
             belief={gameState.resources.belief}
             domains={gameState.domains}
+            matchingDomainPairs={gameState.matchingDomainPairs}
+            domainSynergy={domainSynergy}
             getInvestCost={getDomainInvestCost}
             getXpNeeded={getDomainXpNeeded}
             onInvest={onInvestDomain}

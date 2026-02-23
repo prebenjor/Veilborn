@@ -1,3 +1,5 @@
+import { formatResource } from "../../core/ui/numberFormat";
+
 interface PantheonAllyView {
   id: string;
   name: string;
@@ -18,10 +20,6 @@ interface PantheonPanelProps {
   betrayedHookUnlocked: boolean;
   onFormAlliance: (allyId: string) => void;
   onBetray: (allyId: string) => void;
-}
-
-function formatNumber(value: number): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
 }
 
 function formatDisposition(disposition: PantheonAllyView["disposition"]): string {
@@ -51,11 +49,11 @@ export function PantheonPanel({
         immediate belief and poisons domains in future runs.
       </p>
       <p className="mt-1 text-xs text-veil/65">
-        Alliance modifier x{formatNumber(allianceTotalModifier)} (share x
-        {formatNumber(allianceSharePenalty)} and domain x{formatNumber(allianceDomainBonus)})
+        Alliance modifier x{formatResource(allianceTotalModifier, 2)} (share x
+        {formatResource(allianceSharePenalty, 2)} and domain x{formatResource(allianceDomainBonus, 2)})
       </p>
       <p className="mt-1 text-xs text-veil/65">
-        Betrayals lifetime: {formatNumber(betrayalsLifetime)} | Name-letter betrayal hook:{" "}
+        Betrayals lifetime: {formatResource(betrayalsLifetime)} | Name-letter betrayal hook:{" "}
         {betrayedHookUnlocked ? "recorded" : "not recorded"}
       </p>
 
@@ -66,7 +64,7 @@ export function PantheonPanel({
             <p className="mt-1 text-sm text-white">{ally.name}</p>
             <p className="mt-1 text-xs text-veil/65">Disposition: {formatDisposition(ally.disposition)}</p>
             <p className="mt-1 text-xs text-veil/65">
-              Poison window: {formatNumber(ally.poisonRunsRemaining)} run(s) remaining
+              Poison window: {formatResource(ally.poisonRunsRemaining)} run(s) remaining
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
@@ -92,4 +90,3 @@ export function PantheonPanel({
     </section>
   );
 }
-

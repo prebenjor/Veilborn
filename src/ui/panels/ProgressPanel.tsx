@@ -1,4 +1,5 @@
 import { shouldRevealCultControls } from "../../core/engine/revealPolicy";
+import { formatRate, formatResource } from "../../core/ui/numberFormat";
 
 interface ProgressPanelProps {
   belief: number;
@@ -23,10 +24,6 @@ interface ProgressPanelProps {
   canFormCult: boolean;
   onAnointProphet: () => void;
   onFormCult: () => void;
-}
-
-function formatNumber(value: number): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
 }
 
 export function ProgressPanel({
@@ -58,9 +55,9 @@ export function ProgressPanel({
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
           <p className="mt-1 text-sm text-white">
-            {formatNumber(prophets)} active - next requires {formatNumber(nextProphetFollowers)} followers
+            {formatResource(prophets)} active - next requires {formatResource(nextProphetFollowers)} followers
           </p>
-          <p className="mt-1 text-xs text-veil/70">Current followers: {formatNumber(followers)}</p>
+          <p className="mt-1 text-xs text-veil/70">Current followers: {formatResource(followers)}</p>
           <button
             type="button"
             disabled={!canAnointProphet}
@@ -75,7 +72,7 @@ export function ProgressPanel({
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-1 text-sm text-white">
-              {formatNumber(cults)} formed - next costs {formatNumber(nextCultBeliefCost)} belief
+              {formatResource(cults)} formed - next costs {formatResource(nextCultBeliefCost)} belief
             </p>
             <button
               type="button"
@@ -99,17 +96,17 @@ export function ProgressPanel({
       <article className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
         <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Lineage Memory</p>
         <p className="mt-1 text-sm text-white">
-          Generation {formatNumber(lineageGeneration)} - conversion x
-          {formatNumber(lineageConversionModifier)}
+          Generation {formatResource(lineageGeneration)} - conversion x
+          {formatRate(lineageConversionModifier)}
         </p>
         <p className="mt-1 text-xs text-veil/65">
-          Trust debt {formatNumber(lineageTrustDebt)} | Skepticism {formatNumber(lineageSkepticism)} |
-          Betrayal scars {formatNumber(lineageBetrayalScars)}
+          Trust debt {formatResource(lineageTrustDebt)} | Skepticism {formatResource(lineageSkepticism)} |
+          Betrayal scars {formatResource(lineageBetrayalScars)}
         </p>
         <p className="mt-1 text-xs text-veil/65">
-          Traits: skeptical {formatNumber(lineageTraits.skeptical * 100)}% | cautious{" "}
-          {formatNumber(lineageTraits.cautious * 100)}% | zealous{" "}
-          {formatNumber(lineageTraits.zealous * 100)}%
+          Traits: skeptical {formatResource(lineageTraits.skeptical * 100)}% | cautious{" "}
+          {formatResource(lineageTraits.cautious * 100)}% | zealous{" "}
+          {formatResource(lineageTraits.zealous * 100)}%
         </p>
         <p className="mt-1 text-xs text-veil/60">
           {lineageRecentMarker

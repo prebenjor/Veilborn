@@ -1,3 +1,5 @@
+import { formatResource } from "../../core/ui/numberFormat";
+
 interface WhisperPanelProps {
   era: number;
   influence: number;
@@ -42,7 +44,7 @@ export function WhisperPanel({
           onClick={onWhisper}
           className="rounded-xl border border-ember/60 px-3 py-2 text-sm text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
         >
-          Whisper ({whisperCost} Influence)
+          Whisper ({formatResource(whisperCost)} Influence)
         </button>
         <button
           type="button"
@@ -50,7 +52,7 @@ export function WhisperPanel({
           onClick={onRecruit}
           className="rounded-xl border border-omen/60 px-3 py-2 text-sm text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
         >
-          Recruit ({recruitCost} Influence)
+          Recruit ({formatResource(recruitCost)} Influence)
         </button>
       </div>
       <p className="mt-2 text-xs text-veil/65">Recruit yield: {recruitPreview}</p>

@@ -34,7 +34,10 @@ import {
   type PantheonLegacyState,
   type PantheonState,
   type PrestigeState,
-  type RivalState
+  type RivalState,
+  type GhostState,
+  type GhostRunSignature,
+  type GhostInfluence
 } from "./gameState";
 import {
   getBeliefPerSecond,
@@ -354,6 +357,98 @@ function sanitizePantheon(value: unknown, fallback: PantheonState): PantheonStat
   };
 }
 
+function sanitizeGhostDomainLevels(
+  value: unknown,
+  fallback: Record<DomainId, number>
+): Record<DomainId, number> {
+  const normalized: Record<DomainId, number> = {
+    fire: fallback.fire,
+    death: fallback.death,
+    harvest: fallback.harvest,
+    storm: fallback.storm,
+    memory: fallback.memory,
+    void: fallback.void
+  };
+  if (!isRecord(value)) return normalized;
+
+  for (const domainId of Object.keys(normalized) as DomainId[]) {
+    normalized[domainId] = Math.max(0, Math.floor(readNumber(value[domainId], normalized[domainId])));
+  }
+
+  return normalized;
+}
+
+function sanitizeGhostSignatures(value: unknown, fallback: GhostRunSignature[]): GhostRunSignature[] {
+  if (!Array.isArray(value)) return fallback;
+
+  const sanitized = value
+    .map((entry, index) => {
+      if (!isRecord(entry)) return null;
+      const dominantDomain = readDomainId(entry.dominantDomain);
+      if (!dominantDomain) return null;
+      const source = entry.source === "imported" ? "imported" : "local";
+      return {
+        id: readString(entry.id, `ghost-signature-${index + 1}`),
+        label: readString(entry.label, "Unnamed Echo Signature"),
+        source,
+        createdAt: Math.max(0, readNumber(entry.createdAt, Date.now())),
+        dominantDomain,
+        domainLevels: sanitizeGhostDomainLevels(entry.domainLevels, {
+          fire: 0,
+          death: 0,
+          harvest: 0,
+          storm: 0,
+          memory: 0,
+          void: 0
+        }),
+        miracles: Math.max(0, Math.floor(readNumber(entry.miracles, 0))),
+        betrayals: Math.max(0, Math.floor(readNumber(entry.betrayals, 0))),
+        veilCollapses: Math.max(0, Math.floor(readNumber(entry.veilCollapses, 0))),
+        totalBelief: Math.max(0, readNumber(entry.totalBelief, 0))
+      } satisfies GhostRunSignature;
+    })
+    .filter((entry): entry is GhostRunSignature => Boolean(entry));
+
+  return sanitized.slice(0, 60);
+}
+
+function sanitizeGhostInfluences(value: unknown, fallback: GhostInfluence[]): GhostInfluence[] {
+  if (!Array.isArray(value)) return fallback;
+
+  const sanitized = value
+    .map((entry, index) => {
+      if (!isRecord(entry)) return null;
+      const dominantDomain = readDomainId(entry.dominantDomain);
+      if (!dominantDomain) return null;
+      const source = entry.source === "imported" ? "imported" : "local";
+      return {
+        id: readString(entry.id, `ghost-influence-${index + 1}`),
+        signatureId: readString(entry.signatureId, "unknown-signature"),
+        source,
+        title: readString(entry.title, "Unnamed Influence"),
+        description: readString(entry.description, "An old echo lingers."),
+        dominantDomain,
+        domainSynergyDelta: readNumber(entry.domainSynergyDelta, 0),
+        rivalSpawnDelta: readNumber(entry.rivalSpawnDelta, 0),
+        faithDecayDelta: readNumber(entry.faithDecayDelta, 0)
+      } satisfies GhostInfluence;
+    })
+    .filter((entry): entry is GhostInfluence => Boolean(entry));
+
+  return sanitized.slice(0, 8);
+}
+
+function sanitizeGhostState(value: unknown, fallback: GhostState): GhostState {
+  if (!isRecord(value)) return fallback;
+  return {
+    localSignatures: sanitizeGhostSignatures(value.localSignatures, fallback.localSignatures),
+    importedSignatures: sanitizeGhostSignatures(value.importedSignatures, fallback.importedSignatures),
+    activeInfluences: sanitizeGhostInfluences(value.activeInfluences, fallback.activeInfluences),
+    lastRunIdInitialized: readNullableString(value.lastRunIdInitialized, fallback.lastRunIdInitialized),
+    nextSignatureId: Math.max(1, Math.floor(readNumber(value.nextSignatureId, fallback.nextSignatureId)))
+  };
+}
+
 function sanitizeDoctrine(value: unknown, fallback: DoctrineState): DoctrineState {
   if (!isRecord(value)) return fallback;
   return {
@@ -511,11 +606,13 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const rawCataclysm = isRecord(rawState.cataclysm) ? rawState.cataclysm : {};
   const rawLineage = isRecord(rawState.lineage) ? rawState.lineage : {};
   const rawPantheon = isRecord(rawState.pantheon) ? rawState.pantheon : {};
+  const rawGhost = isRecord(rawState.ghost) ? rawState.ghost : {};
   const normalizedEchoBonuses = sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses);
   const normalizedPrestige = sanitizePrestige(rawState.prestige, fallback.prestige, normalizedEchoBonuses);
   const syncedEchoBonuses = getEchoBonusesFromTreeRanks(normalizedPrestige.treeRanks);
   const normalizedLineage = sanitizeLineage(rawLineage, fallback.lineage);
   const normalizedPantheon = sanitizePantheon(rawPantheon, fallback.pantheon);
+  const normalizedGhost = sanitizeGhostState(rawGhost, fallback.ghost);
   const pantheonUnlocked =
     normalizedPantheon.unlocked || normalizedPrestige.completedRuns >= PANTHEON_UNLOCK_COMPLETED_RUNS;
 
@@ -557,6 +654,7 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
       ...normalizedPantheon,
       unlocked: pantheonUnlocked
     },
+    ghost: normalizedGhost,
     echoBonuses: syncedEchoBonuses,
     era: readNumber(rawState.era, fallback.era) >= 3 ? 3 : readNumber(rawState.era, fallback.era) >= 2 ? 2 : 1,
     mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
@@ -589,7 +687,8 @@ const MIGRATORS: Record<number, Migrator> = {
   6: sanitizeState,
   7: sanitizeState,
   8: sanitizeState,
-  9: sanitizeState
+  9: sanitizeState,
+  10: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

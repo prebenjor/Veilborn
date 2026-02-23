@@ -1,4 +1,5 @@
 import { formatDurationCompact } from "../../core/ui/timeFormat";
+import { formatResource } from "../../core/ui/numberFormat";
 
 interface StatsDrawerProps {
   runSeconds: number;
@@ -17,10 +18,6 @@ interface StatsDrawerProps {
   onDisableAudio: () => void;
   onToggleAudioMute: () => void;
   onUseAudioFallback: () => void;
-}
-
-function formatNumber(value: number): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
 }
 
 export function StatsDrawer({
@@ -54,13 +51,13 @@ export function StatsDrawer({
         <dt>Run Time</dt>
         <dd>{formatDurationCompact(runSeconds)}</dd>
         <dt>Engine Ticks</dt>
-        <dd>{formatNumber(totalTicks)}</dd>
+        <dd>{formatResource(totalTicks)}</dd>
         <dt>Total Belief</dt>
-        <dd>{formatNumber(totalBeliefEarned)}</dd>
+        <dd>{formatResource(totalBeliefEarned)}</dd>
         <dt>Since Last Event</dt>
         <dd>{formatDurationCompact(secondsSinceLastEvent)}</dd>
         <dt>Whispers This Cycle</dt>
-        <dd>{formatNumber(whispersInWindow)}</dd>
+        <dd>{formatResource(whispersInWindow)}</dd>
         <dt>Whisper Reset In</dt>
         <dd>{formatDurationCompact(whisperResetInSeconds)}</dd>
       </dl>

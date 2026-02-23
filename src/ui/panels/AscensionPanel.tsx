@@ -1,7 +1,11 @@
+import { useRef } from "react";
 import {
   ECHO_TREE_MAX_RANK,
+  DOMAIN_LABELS,
+  type DomainId,
   type EchoTreeId
 } from "../../core/state/gameState";
+import { formatResource } from "../../core/ui/numberFormat";
 
 interface EchoTreeView {
   id: EchoTreeId;
@@ -20,12 +24,25 @@ interface AscensionPanelProps {
   ascensionEchoGain: number;
   canAscend: boolean;
   treeViews: EchoTreeView[];
+  ghostLocalCount: number;
+  ghostImportedCount: number;
+  ghostImportStatus: string | null;
+  ghostInfluenceTotals: {
+    domainSynergyDelta: number;
+    rivalSpawnDelta: number;
+    faithDecayDelta: number;
+  };
+  ghostInfluences: Array<{
+    id: string;
+    title: string;
+    description: string;
+    source: "local" | "imported";
+    dominantDomain: DomainId;
+  }>;
   onPurchaseTree: (treeId: EchoTreeId) => void;
   onAscend: () => void;
-}
-
-function formatNumber(value: number, maxFractionDigits = 1): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: maxFractionDigits }).format(value);
+  onExportGhostSignatures: () => void;
+  onImportGhostSignatures: (file: File) => void;
 }
 
 export function AscensionPanel({
@@ -36,9 +53,22 @@ export function AscensionPanel({
   ascensionEchoGain,
   canAscend,
   treeViews,
+  ghostLocalCount,
+  ghostImportedCount,
+  ghostImportStatus,
+  ghostInfluenceTotals,
+  ghostInfluences,
   onPurchaseTree,
-  onAscend
+  onAscend,
+  onExportGhostSignatures,
+  onImportGhostSignatures
 }: AscensionPanelProps) {
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const ghostSynergyPercent = Math.round(ghostInfluenceTotals.domainSynergyDelta * 100);
+  const ghostRivalPercent = Math.round(Math.abs(ghostInfluenceTotals.rivalSpawnDelta) * 100);
+  const ghostFaithPercent = Math.round(Math.abs(ghostInfluenceTotals.faithDecayDelta) * 100);
+
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
       <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Echo Trees</h2>
@@ -48,15 +78,15 @@ export function AscensionPanel({
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         <article className="rounded-xl border border-white/10 bg-black/20 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Echoes</p>
-          <p className="mt-1 text-sm text-white">{formatNumber(echoes)}</p>
+          <p className="mt-1 text-sm text-white">{formatResource(echoes)}</p>
         </article>
         <article className="rounded-xl border border-white/10 bg-black/20 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Lifetime Echoes</p>
-          <p className="mt-1 text-sm text-white">{formatNumber(lifetimeEchoes)}</p>
+          <p className="mt-1 text-sm text-white">{formatResource(lifetimeEchoes)}</p>
         </article>
         <article className="rounded-xl border border-white/10 bg-black/20 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Completed Runs</p>
-          <p className="mt-1 text-sm text-white">{formatNumber(completedRuns)}</p>
+          <p className="mt-1 text-sm text-white">{formatResource(completedRuns)}</p>
         </article>
       </div>
 
@@ -71,7 +101,7 @@ export function AscensionPanel({
               <p className="mt-1 text-xs text-veil/65">
                 {tree.nextCost === null
                   ? "Maxed"
-                  : `Next rank costs ${formatNumber(tree.nextCost)} echoes`}
+                  : `Next rank costs ${formatResource(tree.nextCost)} echoes`}
               </p>
               {tree.unlockedBonuses.length > 0 ? (
                 <p className="mt-1 text-xs text-veil/60">
@@ -100,7 +130,7 @@ export function AscensionPanel({
       <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
         <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Ascension</p>
         <p className="mt-1 text-sm text-white">
-          Current run would yield {formatNumber(ascensionEchoGain)} echoes.
+          Current run would yield {formatResource(ascensionEchoGain)} echoes.
         </p>
         <p className="mt-1 text-xs text-veil/65">
           {era < 3
@@ -115,6 +145,77 @@ export function AscensionPanel({
         >
           Ascend
         </button>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Ghost Echoes</p>
+        <p className="mt-1 text-sm text-white">
+          {formatResource(ghostLocalCount)} local signatures | {formatResource(ghostImportedCount)} imported
+        </p>
+        <p className="mt-1 text-xs text-veil/65">
+          Active interference:
+          {ghostSynergyPercent !== 0
+            ? ` synergy ${ghostSynergyPercent > 0 ? "+" : ""}${ghostSynergyPercent}%`
+            : " synergy neutral"}
+          {" | "}
+          {ghostInfluenceTotals.rivalSpawnDelta === 0
+            ? "rivals neutral"
+            : `rivals ${ghostInfluenceTotals.rivalSpawnDelta < 0 ? "faster" : "slower"} (${ghostRivalPercent}%)`}
+          {" | "}
+          {ghostInfluenceTotals.faithDecayDelta === 0
+            ? "faith decay neutral"
+            : `faith ${ghostInfluenceTotals.faithDecayDelta > 0 ? "harsher" : "gentler"} (${ghostFaithPercent}%)`}
+        </p>
+
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onExportGhostSignatures}
+            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
+          >
+            Export Signatures
+          </button>
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
+          >
+            Import Signatures
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onImportGhostSignatures(file);
+              event.currentTarget.value = "";
+            }}
+          />
+        </div>
+
+        {ghostImportStatus ? (
+          <p className="mt-2 text-xs text-veil/70">{ghostImportStatus}</p>
+        ) : null}
+
+        {ghostInfluences.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {ghostInfluences.map((influence) => (
+              <article key={influence.id} className="rounded-lg border border-white/10 bg-black/20 p-2">
+                <p className="text-xs text-white">
+                  {influence.title} ({influence.source === "imported" ? "Imported" : "Local"},{" "}
+                  {DOMAIN_LABELS[influence.dominantDomain]})
+                </p>
+                <p className="mt-1 text-[11px] text-veil/65">{influence.description}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-veil/60">
+            No ghost anomalies are active. This run is untouched by outside signatures.
+          </p>
+        )}
       </div>
     </section>
   );

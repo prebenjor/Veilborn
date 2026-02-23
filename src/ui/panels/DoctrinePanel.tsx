@@ -1,4 +1,6 @@
 import type { ActType } from "../../core/state/gameState";
+import { formatResource } from "../../core/ui/numberFormat";
+import { formatDurationCompact } from "../../core/ui/timeFormat";
 
 interface ActiveActView {
   id: string;
@@ -10,10 +12,16 @@ interface DoctrinePanelProps {
   era: number;
   cults: number;
   influence: number;
+  cultOutput: number;
+  domainSynergy: number;
+  matchingDomainPairs: number;
   actSlotCap: number;
   activeActs: ActiveActView[];
   actCosts: Record<ActType, number>;
   actDurations: Record<ActType, number>;
+  actProjectedBelief: Record<ActType, number>;
+  actResonantBonus: number;
+  actFloorMultiplier: number;
   canStartAct: Record<ActType, boolean>;
   onStartAct: (type: ActType) => void;
   rivalsCount: number;
@@ -23,10 +31,6 @@ interface DoctrinePanelProps {
   canSuppressRival: boolean;
   suppressCost: number;
   onSuppressRival: () => void;
-}
-
-function formatNumber(value: number): string {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
 }
 
 const ACT_CONFIG: Array<{ type: ActType; label: string; hint: string }> = [
@@ -39,10 +43,16 @@ export function DoctrinePanel({
   era,
   cults,
   influence,
+  cultOutput,
+  domainSynergy,
+  matchingDomainPairs,
   actSlotCap,
   activeActs,
   actCosts,
   actDurations,
+  actProjectedBelief,
+  actResonantBonus,
+  actFloorMultiplier,
   canStartAct,
   onStartAct,
   rivalsCount,
@@ -56,6 +66,10 @@ export function DoctrinePanel({
   if (era < 2) return null;
 
   const slotsUsed = activeActs.length;
+  const sortedActs = [...ACT_CONFIG].sort(
+    (left, right) => actProjectedBelief[right.type] - actProjectedBelief[left.type]
+  );
+  const strongestProjected = Math.max(...sortedActs.map((act) => actProjectedBelief[act.type]), 1);
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -65,19 +79,41 @@ export function DoctrinePanel({
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Acts</p>
           <p className="mt-1 text-sm text-white">
-            {slotsUsed}/{actSlotCap} active slots from {formatNumber(cults)} cults
+            {formatResource(slotsUsed)}/{formatResource(actSlotCap)} active slots from {formatResource(cults)} cults
           </p>
           <p className="mt-1 text-xs text-veil/65">
-            Influence {formatNumber(influence)} available
+            Influence {formatResource(influence)} available
+          </p>
+          <p className="mt-1 text-xs text-veil/65">
+            Cult output {formatResource(cultOutput)}/s at synergy x{formatResource(domainSynergy, 2)} (
+            {formatResource(matchingDomainPairs)} pair(s))
+          </p>
+          <p className="mt-1 text-xs text-veil/65">
+            Act floor x{formatResource(actFloorMultiplier, 2)}
+            {actFloorMultiplier > 1 ? " (Echo uplift active)" : " (base floor)"}.
           </p>
 
           <div className="mt-2 space-y-2">
-            {ACT_CONFIG.map((act) => (
-              <div key={act.type} className="rounded-lg border border-white/10 bg-black/20 p-2">
+            {sortedActs.map((act) => {
+              const projectedBelief = actProjectedBelief[act.type];
+              const deEmphasized = projectedBelief < strongestProjected * 0.55;
+              return (
+              <div
+                key={act.type}
+                className={
+                  deEmphasized
+                    ? "rounded-lg border border-white/10 bg-black/20 p-2 opacity-70"
+                    : "rounded-lg border border-white/10 bg-black/20 p-2"
+                }
+              >
                 <p className="text-xs text-veil/80">{act.label}</p>
                 <p className="text-[11px] text-veil/60">{act.hint}</p>
                 <p className="mt-1 text-[11px] text-veil/60">
-                  {formatNumber(actCosts[act.type])} Influence, {formatNumber(actDurations[act.type])}s
+                  {formatResource(actCosts[act.type])} Influence, {formatDurationCompact(actDurations[act.type])}
+                </p>
+                <p className="mt-1 text-[11px] text-veil/60">
+                  Projected return {formatResource(projectedBelief)} Belief
+                  {actResonantBonus > 0 ? ` | resonant bonus +${formatResource(actResonantBonus, 2)}` : ""}
                 </p>
                 <button
                   type="button"
@@ -88,20 +124,20 @@ export function DoctrinePanel({
                   Start
                 </button>
               </div>
-            ))}
+            )})}
           </div>
         </article>
 
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Rivals</p>
           <p className="mt-1 text-sm text-white">
-            {formatNumber(rivalsCount)} active, strength {formatNumber(rivalStrength)}
+            {formatResource(rivalsCount)} active, strength {formatResource(rivalStrength)}
           </p>
           <p className="mt-1 text-xs text-veil/65">
-            Follower drain: {formatNumber(rivalDrainPerSecond)}/s
+            Follower drain: {formatResource(rivalDrainPerSecond)}/s
           </p>
           <p className="mt-1 text-xs text-veil/65">
-            Next spawn in ~{formatNumber(nextRivalInSeconds)}s
+            Next spawn in ~{formatDurationCompact(nextRivalInSeconds)}
           </p>
           <button
             type="button"
@@ -109,7 +145,7 @@ export function DoctrinePanel({
             onClick={onSuppressRival}
             className="mt-2 rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
           >
-            Suppress Rival ({formatNumber(suppressCost)} Influence)
+            Suppress Rival ({formatResource(suppressCost)} Influence)
           </button>
 
           <div className="mt-2 space-y-1">
@@ -119,7 +155,7 @@ export function DoctrinePanel({
               activeActs.map((act) => (
                 <p key={act.id} className="text-xs text-veil/70">
                   {ACT_CONFIG.find((entry) => entry.type === act.type)?.label ?? "Act"} ends in{" "}
-                  {formatNumber(act.remainingSeconds)}s
+                  {formatDurationCompact(act.remainingSeconds)}
                 </p>
               ))
             )}

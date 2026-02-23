@@ -227,7 +227,7 @@
     {
       "id": "M12",
       "title": "Ghost Echoes and Async Signatures",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [
         "M9"
       ],
@@ -463,7 +463,7 @@
     {
       "id": "PF-09",
       "title": "Number Legibility and Large Value Formatting",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Implement consistent suffix notation: K, M, B, T for displayed values throughout all panels",
@@ -541,7 +541,7 @@
     {
       "id": "PF-15",
       "title": "Act System Result Clarity",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Show projected belief_gained before committing to an act, using current B/s and act_duration",
@@ -567,7 +567,7 @@
     {
       "id": "PF-17",
       "title": "Domain Synergy Feedback",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Show active domain_synergy bonus visibly when cult output is being calculated",
