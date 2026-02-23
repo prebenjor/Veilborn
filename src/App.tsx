@@ -489,7 +489,7 @@ export default function App() {
   const omenPreviewCount = era === 1 ? 3 : 2;
   const visibleOmens = gameState.omenLog.slice(0, omenPreviewCount);
   const showPersistentOmenSurface = era >= 2;
-  const showStatsDrawer = uiReveal.showStatsDrawer && era >= 2 && safeActiveTab === "meta";
+  const showStatsDrawer = uiReveal.showStatsDrawer && era >= 2;
   const veilZone = getVeilZone(gameState.resources.veil);
   const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
   const surfaceOmenPreview = gameState.omenLog.slice(0, surfaceOmenPreviewCount);
