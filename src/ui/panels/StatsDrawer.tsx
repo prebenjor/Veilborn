@@ -19,6 +19,18 @@ interface StatsDrawerProps {
     cap: number;
     fillTimeSeconds: number | null;
   };
+  runHistory: Array<{
+    id: string;
+    runNumber: number;
+    runSeconds: number;
+    totalBeliefEarned: number;
+    echoesGained: number;
+    peakBeliefPerSecond: number;
+    veilCollapseCount: number;
+    civilizationCollapseCount: number;
+    miracleCountByTier: Record<1 | 2 | 3 | 4, number>;
+  }>;
+  telemetryStatus: string | null;
   audioControls: {
     supported: boolean;
     mode: "idle" | "running" | "fallback" | "error";
@@ -29,6 +41,8 @@ interface StatsDrawerProps {
   onDisableAudio: () => void;
   onToggleAudioMute: () => void;
   onUseAudioFallback: () => void;
+  onExportTelemetry: () => void;
+  onDumpTelemetryToConsole: () => void;
 }
 
 export function StatsDrawer({
@@ -40,11 +54,15 @@ export function StatsDrawer({
   whispersInWindow,
   whisperResetInSeconds,
   influenceBreakdown,
+  runHistory,
+  telemetryStatus,
   audioControls,
   onEnableAudio,
   onDisableAudio,
   onToggleAudioMute,
-  onUseAudioFallback
+  onUseAudioFallback,
+  onExportTelemetry,
+  onDumpTelemetryToConsole
 }: StatsDrawerProps) {
   const audioStatusLabel =
     audioControls.mode === "running"
@@ -54,6 +72,7 @@ export function StatsDrawer({
         : audioControls.mode === "error"
           ? "Error"
           : "Idle";
+  const recentRuns = [...runHistory].reverse().slice(0, 5);
 
   return (
     <details className="group fixed bottom-3 right-3 z-20 w-52 rounded-xl border border-white/20 bg-black/55 p-2 text-xs text-veil/80 backdrop-blur-sm md:w-64">
@@ -103,6 +122,52 @@ export function StatsDrawer({
           </dl>
         </div>
       ) : null}
+      <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+        <p className="uppercase tracking-[0.16em] text-veil/80">Run History</p>
+        {recentRuns.length > 0 ? (
+          <ul className="mt-1 space-y-1">
+            {recentRuns.map((run) => {
+              const miracleTotal =
+                run.miracleCountByTier[1] +
+                run.miracleCountByTier[2] +
+                run.miracleCountByTier[3] +
+                run.miracleCountByTier[4];
+              return (
+                <li key={run.id} className="rounded border border-white/10 bg-black/20 px-2 py-1">
+                  <p>
+                    Run {formatResource(run.runNumber)} | {formatDurationCompact(run.runSeconds)} | +{formatResource(run.echoesGained)}E
+                  </p>
+                  <p className="text-[10px] text-veil/65">
+                    Peak {formatResource(run.peakBeliefPerSecond, 2)}/s | Belief {formatResource(run.totalBeliefEarned)}
+                  </p>
+                  <p className="text-[10px] text-veil/65">
+                    Collapses V:{formatResource(run.veilCollapseCount)} C:{formatResource(run.civilizationCollapseCount)} | Miracles {formatResource(miracleTotal)}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-1 text-[10px] text-veil/65">No ascended runs recorded yet.</p>
+        )}
+        <div className="mt-2 flex flex-wrap gap-1">
+          <button
+            type="button"
+            onClick={onExportTelemetry}
+            className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+          >
+            Export JSON
+          </button>
+          <button
+            type="button"
+            onClick={onDumpTelemetryToConsole}
+            className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+          >
+            Dump Console
+          </button>
+        </div>
+        {telemetryStatus ? <p className="mt-1 text-[10px] text-veil/65">{telemetryStatus}</p> : null}
+      </div>
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
         <p className="uppercase tracking-[0.16em] text-veil/80">Audio</p>
         <p className="mt-1">

@@ -301,7 +301,7 @@
     {
       "id": "M16",
       "title": "Instrumentation and Playtesting Telemetry",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [
         "M5"
       ],

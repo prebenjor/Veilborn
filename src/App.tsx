@@ -122,6 +122,15 @@ import {
   type OfflineProgressSummary,
   type SnapshotMeta
 } from "./core/state/persistence";
+import {
+  appendTelemetryEvent,
+  appendTelemetryRunSummary,
+  createTelemetryExportPayload,
+  loadTelemetryRunSummaries,
+  readTelemetryForTests,
+  updateTelemetryPeakBeliefPerSecond,
+  type TelemetryRunSummary
+} from "./core/state/telemetry";
 import { CataclysmPanel } from "./ui/panels/CataclysmPanel";
 import { AscensionPanel } from "./ui/panels/AscensionPanel";
 import { DoctrinePanel } from "./ui/panels/DoctrinePanel";
@@ -248,6 +257,10 @@ export default function App() {
     initialLoad.offlineSummary
   );
   const [ghostImportStatus, setGhostImportStatus] = useState<string | null>(null);
+  const [telemetryStatus, setTelemetryStatus] = useState<string | null>(null);
+  const [telemetryRunSummaries, setTelemetryRunSummaries] = useState<TelemetryRunSummary[]>(() =>
+    loadTelemetryRunSummaries()
+  );
   const [saveImportStatus, setSaveImportStatus] = useState<string | null>(initialLoad.recoveryNotice);
   const [saveImportWarnings, setSaveImportWarnings] = useState<string[]>([]);
   const [snapshotMeta, setSnapshotMeta] = useState<SnapshotMeta | null>(() =>
@@ -259,6 +272,10 @@ export default function App() {
   const [finalChoiceMaskVisible, setFinalChoiceMaskVisible] = useState(false);
   const gameStateRef = useRef(gameState);
   const previousEraRef = useRef<EraValue>(gameState.era);
+  const previousVeilCollapseRef = useRef<{ runId: string; count: number }>({
+    runId: gameState.meta.runId,
+    count: gameState.cataclysm.totalVeilCollapses
+  });
   const transitionTimerRef = useRef<number | null>(null);
   const finalChoiceMaskTimerRef = useRef<number | null>(null);
   const nowMs = gameState.meta.updatedAt;
@@ -543,6 +560,29 @@ export default function App() {
   const unlockedNameLetters = getUnlockedNameLetterCount(gameState.prestige.remembrance.letters);
   const canUseFinalChoice = canInvokeFinalChoice(gameState);
 
+  useEffect(() => {
+    updateTelemetryPeakBeliefPerSecond(gameState.meta.runId, beliefPerSecond);
+  }, [gameState.meta.runId, beliefPerSecond]);
+
+  useEffect(() => {
+    const previous = previousVeilCollapseRef.current;
+    if (
+      previous.runId === gameState.meta.runId &&
+      gameState.cataclysm.totalVeilCollapses > previous.count
+    ) {
+      const delta = gameState.cataclysm.totalVeilCollapses - previous.count;
+      for (let index = 0; index < delta; index += 1) {
+        appendTelemetryEvent(gameState, "veil_collapse", gameState.meta.updatedAt, {
+          collapseIndex: previous.count + index + 1
+        });
+      }
+    }
+    previousVeilCollapseRef.current = {
+      runId: gameState.meta.runId,
+      count: gameState.cataclysm.totalVeilCollapses
+    };
+  }, [gameState, gameState.cataclysm.totalVeilCollapses, gameState.meta.runId, gameState.meta.updatedAt]);
+
   const onWhisper = () => {
     setGameState((prev) => performWhisper(prev, Date.now()));
   };
@@ -572,11 +612,40 @@ export default function App() {
   };
 
   const onSuppressRival = () => {
-    setGameState((prev) => performSuppressRival(prev, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performSuppressRival(prev, actionAt);
+      if (next === prev) return prev;
+      appendTelemetryEvent(next, "rival_suppressed", actionAt, {
+        rivalsBefore: prev.doctrine.rivals.length,
+        rivalsAfter: next.doctrine.rivals.length
+      });
+      return next;
+    });
   };
 
   const onCastMiracle = (tier: MiracleTier) => {
-    setGameState((prev) => performCastMiracle(prev, tier, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performCastMiracle(prev, tier, actionAt);
+      if (next === prev) return prev;
+
+      appendTelemetryEvent(next, "miracle_use", actionAt, {
+        tier,
+        beliefGain: Math.max(0, next.resources.belief - prev.resources.belief),
+        influenceSpent: Math.max(0, prev.resources.influence - next.resources.influence),
+        veilDrop: Math.max(0, prev.resources.veil - next.resources.veil)
+      });
+
+      if (!prev.cataclysm.civilizationCollapsed && next.cataclysm.civilizationCollapsed) {
+        appendTelemetryEvent(next, "civilization_collapse", actionAt, {
+          source: "miracle",
+          tier
+        });
+      }
+
+      return next;
+    });
   };
 
   const onPurchaseEchoTreeRank = (treeId: EchoTreeId) => {
@@ -691,13 +760,41 @@ export default function App() {
     setSnapshotMeta(getRecoverySnapshotMeta());
   };
 
+  const onExportTelemetry = () => {
+    const payload = createTelemetryExportPayload();
+    const stamp = new Date().toISOString().replace(/[:]/g, "-");
+    const fileName = `veilborn-telemetry-${stamp}.json`;
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setTelemetryStatus(`Exported telemetry to ${fileName}.`);
+  };
+
+  const onDumpTelemetryToConsole = () => {
+    const snapshot = readTelemetryForTests();
+    console.info("Veilborn telemetry snapshot", snapshot);
+    setTelemetryStatus("Telemetry snapshot written to browser console.");
+  };
+
   const onAscend = () => {
+    const actionAt = Date.now();
     setGameState((prev) => {
       if (!canAscend(prev)) return prev;
+      const echoesGained = getAscensionEchoGain(prev.stats.totalBeliefEarned);
+      appendTelemetryEvent(prev, "ascension", actionAt, {
+        echoesGained,
+        completedRunsBefore: prev.prestige.completedRuns
+      });
+      appendTelemetryRunSummary(prev, actionAt, echoesGained);
       saveRecoverySnapshot(prev, "ascension");
-      return performAscension(prev, Date.now());
+      return performAscension(prev, actionAt);
     });
     setSnapshotMeta(getRecoverySnapshotMeta());
+    setTelemetryRunSummaries(loadTelemetryRunSummaries());
   };
 
   const onFormPantheonAlliance = (allyId: string) => {
@@ -709,19 +806,35 @@ export default function App() {
   };
 
   const onAdvanceEraOne = () => {
+    const actionAt = Date.now();
     setGameState((prev) => {
       if (!canAdvanceEraOneToTwo(prev)) return prev;
       saveRecoverySnapshot(prev, "era_transition");
-      return performAdvanceEraOneToTwo(prev, Date.now());
+      const next = performAdvanceEraOneToTwo(prev, actionAt);
+      if (next !== prev && next.era !== prev.era) {
+        appendTelemetryEvent(next, "era_transition", actionAt, {
+          fromEra: prev.era,
+          toEra: next.era
+        });
+      }
+      return next;
     });
     setSnapshotMeta(getRecoverySnapshotMeta());
   };
 
   const onAdvanceEraTwo = () => {
+    const actionAt = Date.now();
     setGameState((prev) => {
       if (!canAdvanceEraTwoToThree(prev)) return prev;
       saveRecoverySnapshot(prev, "era_transition");
-      return performAdvanceEraTwoToThree(prev, Date.now());
+      const next = performAdvanceEraTwoToThree(prev, actionAt);
+      if (next !== prev && next.era !== prev.era) {
+        appendTelemetryEvent(next, "era_transition", actionAt, {
+          fromEra: prev.era,
+          toEra: next.era
+        });
+      }
+      return next;
     });
     setSnapshotMeta(getRecoverySnapshotMeta());
   };
@@ -1099,11 +1212,15 @@ export default function App() {
             whispersInWindow={gameState.activity.whispersInWindow}
             whisperResetInSeconds={whisperResetInSeconds}
             influenceBreakdown={influenceRegenBreakdown}
+            runHistory={telemetryRunSummaries}
+            telemetryStatus={telemetryStatus}
             audioControls={audioControls}
             onEnableAudio={enableAudio}
             onDisableAudio={disableAudio}
             onToggleAudioMute={toggleMute}
             onUseAudioFallback={useSilentFallback}
+            onExportTelemetry={onExportTelemetry}
+            onDumpTelemetryToConsole={onDumpTelemetryToConsole}
           />
         ) : null}
       </motion.div>
