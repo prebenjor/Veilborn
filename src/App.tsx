@@ -111,6 +111,12 @@ import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
 import { formatRate, formatResource } from "./core/ui/numberFormat";
 
+const UI_TAB_KEY = "veilborn.ui.active_tab.v1";
+
+type UiTab = "active" | "growth" | "meta";
+type EraValue = 1 | 2 | 3;
+type TransitionKind = "fade" | "vignette";
+
 const ECHO_TREE_META: Array<{
   id: EchoTreeId;
   label: string;
@@ -151,6 +157,58 @@ const ECHO_TREE_META: Array<{
   }
 ];
 
+function getAvailableTabs(era: EraValue): UiTab[] {
+  if (era <= 1) return [];
+  return ["active", "growth", "meta"];
+}
+
+function loadUiTabPreference(): UiTab {
+  if (typeof window === "undefined") return "active";
+  try {
+    const raw = window.localStorage.getItem(UI_TAB_KEY);
+    if (raw === "active" || raw === "growth" || raw === "meta") {
+      return raw;
+    }
+  } catch {
+    // Ignore localStorage read failures.
+  }
+  return "active";
+}
+
+function saveUiTabPreference(tab: UiTab): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(UI_TAB_KEY, tab);
+  } catch {
+    // Ignore localStorage write failures.
+  }
+}
+
+function getSafeTab(tab: UiTab, available: UiTab[]): UiTab {
+  if (available.includes(tab)) return tab;
+  return "active";
+}
+
+function getVeilZone(veil: number): "stable" | "optimal" | "danger" {
+  if (veil < 30) return "danger";
+  if (veil <= 55) return "optimal";
+  return "stable";
+}
+
+function renderGateChip(label: string, ready: boolean): JSX.Element {
+  return (
+    <span
+      className={
+        ready
+          ? "rounded-full border border-omen/40 bg-omen/10 px-2 py-0.5 text-[11px] text-omen"
+          : "rounded-full border border-white/15 bg-black/20 px-2 py-0.5 text-[11px] text-veil/70"
+      }
+    >
+      {label}: {ready ? "Met" : "Pending"}
+    </span>
+  );
+}
+
 export default function App() {
   const [initialLoad] = useState(() => loadGameStateWithOffline());
   const [gameState, setGameState] = useState<GameState>(initialLoad.state);
@@ -158,7 +216,12 @@ export default function App() {
     initialLoad.offlineSummary
   );
   const [ghostImportStatus, setGhostImportStatus] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
+  const [transitionKind, setTransitionKind] = useState<TransitionKind | null>(null);
+  const [transitionHint, setTransitionHint] = useState<string | null>(null);
   const gameStateRef = useRef(gameState);
+  const previousEraRef = useRef<EraValue>(gameState.era);
+  const transitionTimerRef = useRef<number | null>(null);
   const nowMs = gameState.meta.updatedAt;
 
   useEffect(() => {
@@ -198,6 +261,67 @@ export default function App() {
     setGameState((prev) => ensureGhostInitialized(prev, Date.now()));
   }, [gameState.meta.runId, gameState.ghost.localSignatures.length, gameState.ghost.importedSignatures.length]);
 
+  useEffect(() => {
+    const available = getAvailableTabs(gameState.era);
+    if (available.length <= 0) return;
+    const safeTab = getSafeTab(activeTab, available);
+    if (safeTab !== activeTab) {
+      setActiveTab(safeTab);
+    }
+  }, [activeTab, gameState.era]);
+
+  useEffect(() => {
+    if (gameState.era >= 2) {
+      saveUiTabPreference(activeTab);
+    }
+  }, [activeTab, gameState.era]);
+
+  useEffect(() => {
+    if (!offlineSummary) return;
+    setActiveTab("active");
+  }, [offlineSummary]);
+
+  useEffect(() => {
+    const previousEra = previousEraRef.current;
+    if (previousEra === gameState.era) return;
+    previousEraRef.current = gameState.era;
+
+    setActiveTab("active");
+    if (transitionTimerRef.current !== null) {
+      window.clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
+
+    if (previousEra === 1 && gameState.era === 2) {
+      setTransitionKind("fade");
+      setTransitionHint(null);
+      transitionTimerRef.current = window.setTimeout(() => {
+        setTransitionKind(null);
+      }, 300);
+      return;
+    }
+
+    if (previousEra === 2 && gameState.era === 3) {
+      setTransitionKind("vignette");
+      setTransitionHint("The Veil surfaced in mortal thought. Thin it carefully, or the world tears.");
+      transitionTimerRef.current = window.setTimeout(() => {
+        setTransitionKind(null);
+      }, 900);
+      return;
+    }
+
+    setTransitionKind(null);
+    setTransitionHint(null);
+  }, [gameState.era]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current !== null) {
+        window.clearTimeout(transitionTimerRef.current);
+      }
+    };
+  }, []);
+
   const veilOpacity = useMemo(() => {
     const normalized = Math.max(0.15, Math.min(1, gameState.resources.veil / 100));
     return normalized;
@@ -217,8 +341,6 @@ export default function App() {
   const lineageTraits = getLineageTraitDistribution(gameState);
   const lineageRecentMarker = gameState.lineage.history[0]?.text ?? null;
   const uiReveal = getUiRevealState(gameState);
-  const veilBlurPx = Math.max(0, (0.35 - uiReveal.legibility) * 3.5);
-  const secondaryOpacity = 0.55 + uiReveal.legibility * 0.45;
   const pantheonUnlocked = isPantheonUnlocked(gameState);
   const pantheonAllianceFactors = getPantheonAllianceFactors(gameState);
   const betrayedHookUnlocked = hasPantheonBetrayalHook(gameState);
@@ -240,7 +362,6 @@ export default function App() {
   const canAdvanceEraOne = canAdvanceEraOneToTwo(gameState);
   const canAdvanceEraTwo = canAdvanceEraTwoToThree(gameState);
   const canUseAscend = canAscend(gameState);
-  const eraLabel = gameState.era === 1 ? "I" : gameState.era === 2 ? "II" : "III";
   const totalDomainLevel = getTotalDomainLevel(gameState);
   const domainSynergy = getDomainSynergy(gameState);
 
@@ -362,7 +483,17 @@ export default function App() {
     0,
     Math.ceil((WHISPER_WINDOW_MS - (whisperCycleElapsed % WHISPER_WINDOW_MS)) / 1000)
   );
-  const visibleOmens = gameState.omenLog.slice(0, uiReveal.omenVisibleCount);
+  const era = gameState.era;
+  const availableTabs = getAvailableTabs(era);
+  const safeActiveTab = getSafeTab(activeTab, availableTabs);
+  const omenPreviewCount = era === 1 ? 3 : 2;
+  const visibleOmens = gameState.omenLog.slice(0, omenPreviewCount);
+  const showPersistentOmenSurface = era >= 2;
+  const showStatsDrawer = uiReveal.showStatsDrawer && era >= 2 && safeActiveTab === "meta";
+  const veilZone = getVeilZone(gameState.resources.veil);
+  const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
+  const surfaceOmenPreview = gameState.omenLog.slice(0, surfaceOmenPreviewCount);
+  const surfaceOmenExpanded = gameState.omenLog.slice(surfaceOmenPreviewCount, era >= 3 ? 6 : 4);
 
   const onWhisper = () => {
     setGameState((prev) => performWhisper(prev, Date.now()));
@@ -455,271 +586,339 @@ export default function App() {
     setGameState((prev) => performAdvanceEraTwoToThree(prev, Date.now()));
   };
 
-  return (
-    <main className="relative min-h-screen overflow-hidden bg-abyss text-slate-100">
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black via-slate-950/20 to-black"
-        style={{ opacity: veilOpacity }}
+  const doctrinePanel = era >= 2 ? (
+    <DoctrinePanel
+      era={gameState.era}
+      cults={gameState.cults}
+      influence={gameState.resources.influence}
+      cultOutput={cultOutput}
+      domainSynergy={domainSynergy}
+      matchingDomainPairs={gameState.matchingDomainPairs}
+      actSlotCap={actSlotCap}
+      activeActs={activeActs}
+      actCosts={actCosts}
+      actDurations={actDurations}
+      actProjectedBelief={actProjectedBelief}
+      actResonantBonus={gameState.matchingDomainPairs * 0.2}
+      actFloorMultiplier={gameState.echoBonuses.actFloor ? 1.5 : 1.0}
+      canStartAct={canStartActs}
+      onStartAct={onStartAct}
+      rivalsCount={gameState.doctrine.rivals.length}
+      rivalStrength={rivalStrength}
+      rivalDrainPerSecond={rivalDrainPerSecond}
+      nextRivalInSeconds={nextRivalInSeconds}
+      canSuppressRival={canUseSuppressRival}
+      suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
+      onSuppressRival={onSuppressRival}
+    />
+  ) : null;
+
+  const whisperPanel = (
+    <WhisperPanel
+      era={gameState.era}
+      influence={gameState.resources.influence}
+      whisperCost={whisperCost}
+      recruitCost={RECRUIT_INFLUENCE_COST}
+      recruitPreview={recruitPreview}
+      cadencePromptActive={gameState.activity.cadencePromptActive}
+      onWhisper={onWhisper}
+      onRecruit={onRecruit}
+    />
+  );
+
+  const eraGatePanel = era <= 2 ? (
+    <EraGatePanel
+      era={gameState.era}
+      eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
+      eraOneBeliefTarget={eraOneGate.beliefTarget}
+      prophetsProgress={gameState.prophets}
+      prophetsTarget={eraOneGate.prophetsTarget}
+      domainProgress={getHighestDomainLevel(gameState)}
+      domainTarget={eraOneGate.domainTarget}
+      eraOneReady={canAdvanceEraOne}
+      eraTwoBeliefProgress={gameState.stats.totalBeliefEarned}
+      eraTwoBeliefTarget={eraTwoGate.beliefTarget}
+      cultsProgress={gameState.cults}
+      cultsTarget={eraTwoGate.cultsTarget}
+      rivalEventReady={eraTwoGate.rivalEventReady}
+      eraTwoReady={canAdvanceEraTwo}
+      unravelingBeliefProgress={gameState.stats.totalBeliefEarned}
+      unravelingBeliefTarget={unravelingGate.beliefTarget}
+      unravelingVeilProgress={gameState.resources.veil}
+      unravelingVeilTarget={unravelingGate.veilTarget}
+      unravelingMiraclesProgress={gameState.cataclysm.miraclesThisRun}
+      unravelingMiraclesTarget={unravelingGate.miraclesTarget}
+      unravelingRunTimeProgressSeconds={gameState.simulation.totalElapsedMs / 1000}
+      unravelingRunTimeTargetSeconds={unravelingGate.runTimeTargetSeconds}
+      unravelingReady={unravelingGate.ready}
+      onAdvanceEraOne={onAdvanceEraOne}
+      onAdvanceEraTwo={onAdvanceEraTwo}
+    />
+  ) : null;
+
+  const domainPanel =
+    era >= 2 ? (
+      <DomainPanel
+        belief={gameState.resources.belief}
+        domains={gameState.domains}
+        matchingDomainPairs={gameState.matchingDomainPairs}
+        domainSynergy={domainSynergy}
+        getInvestCost={getDomainInvestCost}
+        getXpNeeded={getDomainXpNeeded}
+        onInvest={onInvestDomain}
       />
+    ) : null;
+
+  const progressPanel = (
+    <ProgressPanel
+      belief={gameState.resources.belief}
+      era={gameState.era}
+      followers={gameState.resources.followers}
+      prophets={gameState.prophets}
+      cults={gameState.cults}
+      nextProphetFollowers={nextProphetFollowers}
+      nextCultBeliefCost={nextCultBeliefCost}
+      lineageGeneration={gameState.lineage.generation}
+      lineageTrustDebt={gameState.lineage.trustDebt}
+      lineageSkepticism={gameState.lineage.skepticism}
+      lineageBetrayalScars={gameState.lineage.betrayalScars}
+      lineageConversionModifier={lineageConversionFactors.totalModifier}
+      lineageRecentMarker={lineageRecentMarker}
+      lineageTraits={lineageTraits}
+      canAnointProphet={canCreateProphet}
+      canFormCult={canCreateCult}
+      onAnointProphet={onAnointProphet}
+      onFormCult={onFormCult}
+    />
+  );
+
+  const activeTabContent = (
+    <>
+      {era >= 3 ? (
+        <CataclysmPanel
+          era={gameState.era}
+          influence={gameState.resources.influence}
+          veil={gameState.resources.veil}
+          veilBonus={veilBonus}
+          veilRegenPerSecond={veilRegenPerSecond}
+          veilErosionPerSecond={veilErosionPerSecond}
+          veilCollapseThreshold={veilCollapseThreshold}
+          shrinesBuilt={gameState.doctrine.shrinesBuilt}
+          civilizationHealth={gameState.cataclysm.civilizationHealth}
+          civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
+          civilizationRebuildInSeconds={civilizationRebuildSeconds}
+          miraclesThisRun={gameState.cataclysm.miraclesThisRun}
+          miracleOptions={miracleOptions}
+          onCastMiracle={onCastMiracle}
+        />
+      ) : null}
+      {era >= 3 ? doctrinePanel : null}
+      {whisperPanel}
+      {era === 2 ? eraGatePanel : null}
+    </>
+  );
+
+  const growthTabContent = (
+    <>
+      {domainPanel}
+      {era === 2 ? doctrinePanel : null}
+      {progressPanel}
+    </>
+  );
+
+  const eraOneContent = (
+    <>
+      {whisperPanel}
+      {progressPanel}
+      {eraGatePanel}
+      <section className="veil-omen-compact rounded-2xl border border-white/10 bg-black/20 p-4 shadow-veil backdrop-blur-sm">
+        <h2 className="text-xs uppercase tracking-[0.25em] text-veil/70">Murmurs</h2>
+        <ul className="mt-2 space-y-2 text-sm text-veil/75">
+          {visibleOmens.map((entry) => (
+            <li key={entry.id}>{entry.text}</li>
+          ))}
+        </ul>
+      </section>
+    </>
+  );
+
+  const metaTabContent = (
+    <>
+      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
+        <p>
+          Cycle overview: Era {formatResource(era)} | Completed runs {formatResource(gameState.prestige.completedRuns)}.
+        </p>
+      </section>
+      {uiReveal.showAscensionPanel ? (
+        <AscensionPanel
+          era={gameState.era}
+          echoes={gameState.prestige.echoes}
+          lifetimeEchoes={gameState.prestige.lifetimeEchoes}
+          completedRuns={gameState.prestige.completedRuns}
+          ascensionEchoGain={ascensionEchoGain}
+          canAscend={canUseAscend}
+          treeViews={echoTreeViews}
+          ghostLocalCount={gameState.ghost.localSignatures.length}
+          ghostImportedCount={gameState.ghost.importedSignatures.length}
+          ghostImportStatus={ghostImportStatus}
+          ghostInfluenceTotals={ghostInfluenceTotals}
+          ghostInfluences={gameState.ghost.activeInfluences}
+          onPurchaseTree={onPurchaseEchoTreeRank}
+          onAscend={onAscend}
+          onExportGhostSignatures={onExportGhostSignatures}
+          onImportGhostSignatures={onImportGhostSignatures}
+        />
+      ) : (
+        <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
+          Echo structures remain dormant in this cycle.
+        </section>
+      )}
+      {uiReveal.showPantheonPanel ? (
+        <PantheonPanel
+          unlocked={pantheonUnlocked}
+          allies={pantheonAllies}
+          allianceTotalModifier={pantheonAllianceFactors.totalModifier}
+          allianceSharePenalty={pantheonAllianceFactors.sharePenalty}
+          allianceDomainBonus={pantheonAllianceFactors.domainBonus}
+          betrayalsLifetime={gameState.prestige.pantheon.betrayalsLifetime}
+          betrayedHookUnlocked={betrayedHookUnlocked}
+          onFormAlliance={onFormPantheonAlliance}
+          onBetray={onBetrayPantheonAlly}
+        />
+      ) : null}
+    </>
+  );
+
+  return (
+    <main
+      data-era={gameState.era}
+      className={`veil-shell relative min-h-screen overflow-hidden text-slate-100 ${
+        gameState.era >= 3 ? "md:pr-[21.5rem]" : ""
+      } ${gameState.era >= 3 ? `veil-zone-${veilZone}` : ""} ${
+        gameState.era >= 3 && gameState.resources.veil < 15 ? "veil-zone-critical" : ""
+      }`}
+    >
+      <div className="veil-backdrop pointer-events-none absolute inset-0" style={{ opacity: veilOpacity }} />
+      {transitionKind ? (
+        <div className={`veil-transition-overlay ${transitionKind === "fade" ? "veil-transition-fade" : "veil-transition-vignette"}`}>
+          {transitionHint ? <p className="veil-transition-hint">{transitionHint}</p> : null}
+        </div>
+      ) : null}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 md:px-8"
+        transition={{ duration: 0.45 }}
+        className="veil-content relative mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-24 pt-8 md:px-8"
       >
-        <header className="space-y-3">
+        <header className="veil-header space-y-2">
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
           <h1 className="text-2xl font-semibold text-veil md:text-4xl">
             {veilMaskText("Someone is listening.", uiReveal.legibility)}
           </h1>
           {uiReveal.showHeaderSubtext ? (
-            <p className="max-w-3xl text-sm text-veil/70">
-              M10 veil UI active: clarity now unfolds with power and risk.
+            <p className="text-xs uppercase tracking-[0.22em] text-veil/60">
+              {era === 1
+                ? "Only one mortal keeps listening."
+                : era === 2
+                  ? "Doctrine has found shape in the world."
+                  : "The Veil bends, and reality remembers."}
             </p>
           ) : null}
         </header>
-
         {offlineSummary ? (
           <OfflineSummaryPanel summary={offlineSummary} onDismiss={() => setOfflineSummary(null)} />
         ) : null}
-
         <section
-          className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4"
-          style={{ opacity: secondaryOpacity }}
+          className={`veil-statbar grid gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 ${
+            era === 1 ? "md:grid-cols-2" : era === 2 ? "md:grid-cols-3" : "md:grid-cols-4"
+          }`}
         >
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
-              {veilMaskText("Era", uiReveal.legibility)}
-            </p>
-            <p className="mt-2 text-xl text-white">{eraLabel}</p>
-          </article>
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
-              {veilMaskText("Belief", uiReveal.legibility)}
-            </p>
+          <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Belief</p>
             <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.belief)}</p>
             <p className="mt-1 text-xs text-veil/65">{formatRate(beliefPerSecond)} / sec</p>
           </article>
-          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
-              {veilMaskText("Influence", uiReveal.legibility)}
-            </p>
+          <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Influence</p>
             <p className="mt-2 text-xl text-white">
               {formatResource(gameState.resources.influence)} / {formatResource(influenceCap)}
             </p>
             <p className="mt-1 text-xs text-veil/65">Whisper: {formatResource(whisperCost)}</p>
           </article>
-          {uiReveal.showVeilHud ? (
-            <article className="rounded-xl border border-white/10 bg-black/20 p-3">
+          {era >= 2 ? (
+            <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
+              <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.followers)}</p>
+              <p className="mt-1 text-xs text-veil/65">Prophets: {formatResource(gameState.prophets)}</p>
+            </article>
+          ) : null}
+          {era >= 3 ? (
+            <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Thickness</p>
               <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.veil)}</p>
-              <p className="mt-1 text-xs text-veil/65">Thinner Veil boosts belief, but collapse risk rises.</p>
+              <p
+                className={`mt-1 text-xs ${
+                  veilZone === "stable"
+                    ? "text-veil/70"
+                    : veilZone === "optimal"
+                      ? "text-omen"
+                      : "text-ember"
+                }`}
+              >
+                {veilZone === "stable" ? "Stable" : veilZone === "optimal" ? "Optimal Risk" : "Danger"}
+              </p>
             </article>
           ) : null}
         </section>
-
-        {uiReveal.showFollowersHud ? (
-          <section
-            className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4"
-            style={{ opacity: secondaryOpacity, filter: `blur(${veilBlurPx}px)` }}
-          >
-            <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
-              <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.followers)}</p>
-            </article>
-            {uiReveal.showProphetsHud ? (
-              <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
-                <p className="mt-2 text-xl text-white">{formatResource(gameState.prophets)}</p>
-              </article>
-            ) : null}
-            {uiReveal.showCultsHud ? (
-              <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
-                <p className="mt-2 text-xl text-white">{formatResource(gameState.cults)}</p>
-              </article>
-            ) : null}
-            {uiReveal.showDomainSumHud ? (
-              <article className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Domain Level Sum</p>
-                <p className="mt-2 text-xl text-white">{formatResource(totalDomainLevel)}</p>
-                <p className="mt-1 text-xs text-veil/65">
-                  Domain mastery amplifies prophet output and cult resonance.
-                </p>
-              </article>
-            ) : null}
+        {era >= 3 ? (
+          <section className="veil-gate-strip rounded-xl border border-white/15 bg-black/30 p-3">
+            <p className="text-xs uppercase tracking-[0.22em] text-veil/70">Unraveling Gate</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {renderGateChip("Belief", unravelingGate.beliefReady)}
+              {renderGateChip("Veil", unravelingGate.veilReady)}
+              {renderGateChip("Miracles", unravelingGate.miraclesReady)}
+              {renderGateChip("Run Time", unravelingGate.runTimeReady)}
+              <span
+                className={
+                  unravelingGate.ready
+                    ? "rounded-full border border-ember/50 bg-ember/15 px-2 py-0.5 text-[11px] text-ember"
+                    : "rounded-full border border-white/15 bg-black/20 px-2 py-0.5 text-[11px] text-veil/70"
+                }
+              >
+                {unravelingGate.ready ? "Ascension Available" : "Still Sealed"}
+              </span>
+            </div>
           </section>
         ) : null}
-
-        <div className="grid gap-4 md:grid-cols-[320px_1fr]">
-          <WhisperPanel
-            era={gameState.era}
-            influence={gameState.resources.influence}
-            whisperCost={whisperCost}
-            recruitCost={RECRUIT_INFLUENCE_COST}
-            recruitPreview={recruitPreview}
-            cadencePromptActive={gameState.activity.cadencePromptActive}
-            onWhisper={onWhisper}
-            onRecruit={onRecruit}
-          />
-          <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-            <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">
-              {veilMaskText(uiReveal.omenTitle, uiReveal.legibility)}
-            </h2>
-            <ul className="mt-3 space-y-2 text-sm text-veil/75">
-              {visibleOmens.map((entry) => (
-                <li key={entry.id}>{entry.text}</li>
+        {era >= 2 ? (
+          <nav className="veil-tab-dock sticky top-2 z-20 rounded-xl border border-white/15 bg-black/40 p-1 backdrop-blur-sm">
+            <div className="flex flex-wrap gap-1">
+              {availableTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-lg px-3 py-1.5 text-xs uppercase tracking-[0.2em] transition ${
+                    safeActiveTab === tab
+                      ? "bg-white/14 text-white"
+                      : "text-veil/70 hover:bg-white/8 hover:text-veil"
+                  }`}
+                >
+                  {tab === "active" ? "Active" : tab === "growth" ? "Growth" : era === 2 ? "Meta (Lite)" : "Meta"}
+                </button>
               ))}
-            </ul>
-          </section>
-        </div>
-
-        {uiReveal.showEraGatePanel ? (
-          <EraGatePanel
-            era={gameState.era}
-            eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
-            eraOneBeliefTarget={eraOneGate.beliefTarget}
-            prophetsProgress={gameState.prophets}
-            prophetsTarget={eraOneGate.prophetsTarget}
-            domainProgress={getHighestDomainLevel(gameState)}
-            domainTarget={eraOneGate.domainTarget}
-            eraOneReady={canAdvanceEraOne}
-            eraTwoBeliefProgress={gameState.stats.totalBeliefEarned}
-            eraTwoBeliefTarget={eraTwoGate.beliefTarget}
-            cultsProgress={gameState.cults}
-            cultsTarget={eraTwoGate.cultsTarget}
-            rivalEventReady={eraTwoGate.rivalEventReady}
-            eraTwoReady={canAdvanceEraTwo}
-            unravelingBeliefProgress={gameState.stats.totalBeliefEarned}
-            unravelingBeliefTarget={unravelingGate.beliefTarget}
-            unravelingVeilProgress={gameState.resources.veil}
-            unravelingVeilTarget={unravelingGate.veilTarget}
-            unravelingMiraclesProgress={gameState.cataclysm.miraclesThisRun}
-            unravelingMiraclesTarget={unravelingGate.miraclesTarget}
-            unravelingRunTimeProgressSeconds={gameState.simulation.totalElapsedMs / 1000}
-            unravelingRunTimeTargetSeconds={unravelingGate.runTimeTargetSeconds}
-            unravelingReady={unravelingGate.ready}
-            onAdvanceEraOne={onAdvanceEraOne}
-            onAdvanceEraTwo={onAdvanceEraTwo}
-          />
+            </div>
+          </nav>
         ) : null}
-
-        {uiReveal.showAscensionPanel ? (
-          <AscensionPanel
-            era={gameState.era}
-            echoes={gameState.prestige.echoes}
-            lifetimeEchoes={gameState.prestige.lifetimeEchoes}
-            completedRuns={gameState.prestige.completedRuns}
-            ascensionEchoGain={ascensionEchoGain}
-            canAscend={canUseAscend}
-            treeViews={echoTreeViews}
-            ghostLocalCount={gameState.ghost.localSignatures.length}
-            ghostImportedCount={gameState.ghost.importedSignatures.length}
-            ghostImportStatus={ghostImportStatus}
-            ghostInfluenceTotals={ghostInfluenceTotals}
-            ghostInfluences={gameState.ghost.activeInfluences}
-            onPurchaseTree={onPurchaseEchoTreeRank}
-            onAscend={onAscend}
-            onExportGhostSignatures={onExportGhostSignatures}
-            onImportGhostSignatures={onImportGhostSignatures}
-          />
-        ) : null}
-
-        {uiReveal.showPantheonPanel ? (
-          <PantheonPanel
-            unlocked={pantheonUnlocked}
-            allies={pantheonAllies}
-            allianceTotalModifier={pantheonAllianceFactors.totalModifier}
-            allianceSharePenalty={pantheonAllianceFactors.sharePenalty}
-            allianceDomainBonus={pantheonAllianceFactors.domainBonus}
-            betrayalsLifetime={gameState.prestige.pantheon.betrayalsLifetime}
-            betrayedHookUnlocked={betrayedHookUnlocked}
-            onFormAlliance={onFormPantheonAlliance}
-            onBetray={onBetrayPantheonAlly}
-          />
-        ) : null}
-
-        {uiReveal.showProgressPanel ? (
-          <ProgressPanel
-            belief={gameState.resources.belief}
-            era={gameState.era}
-            followers={gameState.resources.followers}
-            prophets={gameState.prophets}
-            cults={gameState.cults}
-            nextProphetFollowers={nextProphetFollowers}
-            nextCultBeliefCost={nextCultBeliefCost}
-            lineageGeneration={gameState.lineage.generation}
-            lineageTrustDebt={gameState.lineage.trustDebt}
-            lineageSkepticism={gameState.lineage.skepticism}
-            lineageBetrayalScars={gameState.lineage.betrayalScars}
-            lineageConversionModifier={lineageConversionFactors.totalModifier}
-            lineageRecentMarker={lineageRecentMarker}
-            lineageTraits={lineageTraits}
-            canAnointProphet={canCreateProphet}
-            canFormCult={canCreateCult}
-            onAnointProphet={onAnointProphet}
-            onFormCult={onFormCult}
-          />
-        ) : null}
-
-        {uiReveal.showDoctrinePanel ? (
-          <DoctrinePanel
-            era={gameState.era}
-            cults={gameState.cults}
-            influence={gameState.resources.influence}
-            cultOutput={cultOutput}
-            domainSynergy={domainSynergy}
-            matchingDomainPairs={gameState.matchingDomainPairs}
-            actSlotCap={actSlotCap}
-            activeActs={activeActs}
-            actCosts={actCosts}
-            actDurations={actDurations}
-            actProjectedBelief={actProjectedBelief}
-            actResonantBonus={gameState.matchingDomainPairs * 0.2}
-            actFloorMultiplier={gameState.echoBonuses.actFloor ? 1.5 : 1.0}
-            canStartAct={canStartActs}
-            onStartAct={onStartAct}
-            rivalsCount={gameState.doctrine.rivals.length}
-            rivalStrength={rivalStrength}
-            rivalDrainPerSecond={rivalDrainPerSecond}
-            nextRivalInSeconds={nextRivalInSeconds}
-            canSuppressRival={canUseSuppressRival}
-            suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
-            onSuppressRival={onSuppressRival}
-          />
-        ) : null}
-
-        {uiReveal.showCataclysmPanel ? (
-          <CataclysmPanel
-            era={gameState.era}
-            influence={gameState.resources.influence}
-            veil={gameState.resources.veil}
-            veilBonus={veilBonus}
-            veilRegenPerSecond={veilRegenPerSecond}
-            veilErosionPerSecond={veilErosionPerSecond}
-            veilCollapseThreshold={veilCollapseThreshold}
-            shrinesBuilt={gameState.doctrine.shrinesBuilt}
-            civilizationHealth={gameState.cataclysm.civilizationHealth}
-            civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
-            civilizationRebuildInSeconds={civilizationRebuildSeconds}
-            miraclesThisRun={gameState.cataclysm.miraclesThisRun}
-            miracleOptions={miracleOptions}
-            onCastMiracle={onCastMiracle}
-          />
-        ) : null}
-
-        {uiReveal.showDomainPanel ? (
-          <DomainPanel
-            belief={gameState.resources.belief}
-            domains={gameState.domains}
-            matchingDomainPairs={gameState.matchingDomainPairs}
-            domainSynergy={domainSynergy}
-            getInvestCost={getDomainInvestCost}
-            getXpNeeded={getDomainXpNeeded}
-            onInvest={onInvestDomain}
-          />
-        ) : null}
-
+        {era === 1 ? (
+          <>{eraOneContent}</>
+        ) : safeActiveTab === "active" ? (
+          <>{activeTabContent}</>
+        ) : safeActiveTab === "growth" ? (
+          <>{growthTabContent}</>
+        ) : (
+          <>{metaTabContent}</>
+        )}
         <p className="text-xs text-veil/60">
           {gameState.activity.cadencePromptActive
             ? "Silence is building. Taking an action now grants a cadence bonus."
@@ -728,8 +927,7 @@ export default function App() {
             ? " Influence is recovering; choose your next intervention when it peaks."
             : " Whisper and recruit both satisfy cadence pressure."}
         </p>
-
-        {uiReveal.showStatsDrawer ? (
+        {showStatsDrawer ? (
           <StatsDrawer
             runSeconds={elapsedSeconds}
             totalTicks={gameState.simulation.totalTicks}
@@ -745,6 +943,33 @@ export default function App() {
           />
         ) : null}
       </motion.div>
+      {showPersistentOmenSurface ? (
+        <details
+          className={`group veil-omen-surface ${
+            era >= 3
+              ? "fixed bottom-3 left-3 right-3 z-30 rounded-xl border border-white/15 bg-black/55 p-2 text-xs text-veil/85 backdrop-blur-sm md:bottom-auto md:left-auto md:right-4 md:top-24 md:w-80"
+              : "fixed bottom-3 left-3 right-3 z-30 rounded-xl border border-white/15 bg-black/55 p-2 text-xs text-veil/85 backdrop-blur-sm"
+          }`}
+        >
+          <summary className="cursor-pointer list-none text-[11px] uppercase tracking-[0.2em] text-veil/90">
+            {uiReveal.omenTitle}
+          </summary>
+          <ul className="mt-2 space-y-1 text-[12px] text-veil/80">
+            {surfaceOmenPreview.map((entry) => (
+              <li key={entry.id} className="veil-omen-preview-line">
+                {entry.text}
+              </li>
+            ))}
+          </ul>
+          {surfaceOmenExpanded.length > 0 ? (
+            <ul className="mt-2 hidden space-y-1 border-t border-white/10 pt-2 text-[12px] text-veil/75 group-open:block">
+              {surfaceOmenExpanded.map((entry) => (
+                <li key={entry.id}>{entry.text}</li>
+              ))}
+            </ul>
+          ) : null}
+        </details>
+      ) : null}
     </main>
   );
 }
