@@ -30,6 +30,7 @@ export const INFLUENCE_REGEN_PER_PROPHET_PER_SECOND = 0.5;
 export const INFLUENCE_REGEN_PER_SHRINE_PER_SECOND = 0.2;
 export const INFLUENCE_REGEN_PER_CULT_FOLLOWER = 0.001;
 export const INFLUENCE_REGEN_PER_CULT_CAP = 2.0;
+export const INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND = 2.0;
 
 export const WHISPER_BASE_COST = 10;
 export const WHISPER_COST_SCALAR = 1.4;
@@ -251,6 +252,7 @@ export interface EchoBonuses {
   startInf: boolean;
   faithFloor: boolean;
   prophetThreshold: boolean;
+  resonantWord: boolean;
   cultCostBase: boolean;
   era1Gate: boolean;
   era2Gate: boolean;
@@ -523,6 +525,7 @@ export function createDefaultEchoBonuses(): EchoBonuses {
     startInf: false,
     faithFloor: false,
     prophetThreshold: false,
+    resonantWord: false,
     cultCostBase: false,
     era1Gate: false,
     era2Gate: false,

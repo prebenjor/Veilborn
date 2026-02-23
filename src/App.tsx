@@ -151,7 +151,7 @@ const ECHO_TREE_META: Array<{
     unlocks: [
       "Start Influence",
       "Prophet Threshold",
-      "Faith Floor",
+      "Faith Floor + Resonant Word",
       "Era I Gate Ease",
       "Rival Weaken"
     ]

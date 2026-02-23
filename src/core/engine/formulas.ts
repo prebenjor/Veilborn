@@ -56,6 +56,7 @@ import {
   INFLUENCE_REGEN_PER_CULT_FOLLOWER,
   INFLUENCE_REGEN_PER_PROPHET_PER_SECOND,
   INFLUENCE_REGEN_PER_SHRINE_PER_SECOND,
+  INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND,
   INFLUENCE_START_BONUS,
   PROPHET_DOMAIN_OUTPUT_SCALE,
   PROPHET_OUTPUT_BASE,
@@ -255,6 +256,7 @@ export function getEchoBonusesFromTreeRanks(treeRanks: EchoTreeRanks): EchoBonus
     startInf: false,
     faithFloor: false,
     prophetThreshold: false,
+    resonantWord: false,
     cultCostBase: false,
     era1Gate: false,
     era2Gate: false,
@@ -276,6 +278,9 @@ export function getEchoBonusesFromTreeRanks(treeRanks: EchoTreeRanks): EchoBonus
       bonuses[unlocks[i]] = true;
     }
   }
+
+  // Resonant Word unlocks at rank 3 on the whispers tree (cost: 3 echoes).
+  bonuses.resonantWord = Math.max(0, Math.min(ECHO_TREE_MAX_RANK, treeRanks.whispers)) >= 3;
 
   return bonuses;
 }
@@ -474,7 +479,8 @@ export function getInfluenceRegenPerSecond(state: GameState): number {
     INFLUENCE_REGEN_PER_CULT_CAP
   );
   const cultRegen = cultCount > 0 ? perCultRegen * cultCount : 0;
-  return baseRegen + shrineRegen + cultRegen;
+  const echoRegen = state.echoBonuses.resonantWord ? INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND : 0;
+  return baseRegen + shrineRegen + cultRegen + echoRegen;
 }
 
 export function normalizeWhisperCycle(activity: ActivityState, nowMs: number): NormalizedWhisperCycle {

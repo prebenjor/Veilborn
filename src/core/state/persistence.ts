@@ -542,6 +542,7 @@ function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses
     startInf: readBoolean(value.startInf, fallback.startInf),
     faithFloor: readBoolean(value.faithFloor, fallback.faithFloor),
     prophetThreshold: readBoolean(value.prophetThreshold, fallback.prophetThreshold),
+    resonantWord: readBoolean(value.resonantWord, fallback.resonantWord),
     cultCostBase: readBoolean(value.cultCostBase, fallback.cultCostBase),
     era1Gate: readBoolean(value.era1Gate, fallback.era1Gate),
     era2Gate: readBoolean(value.era2Gate, fallback.era2Gate),
