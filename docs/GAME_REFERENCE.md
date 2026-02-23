@@ -371,6 +371,8 @@ Era I:
 Era II+:
 - tabbed shell (`active`, `growth`, `meta`)
 - sticky tab dock
+- app shell orchestration in `src/App.tsx`; era-specific composition extracted to `src/ui/eras/*`
+- shared shell surfaces extracted to `src/ui/layout/*` (stat bar, tab dock, persistent omen surface)
 
 Era II:
 - `active` order: Whisper/Recruit -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds

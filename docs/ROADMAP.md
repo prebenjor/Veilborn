@@ -266,6 +266,7 @@ Deliverables:
 - Echo trees and other between-run systems constrained to META view.
 - Omen surface persistent across tabs (drawer/strip), not competing as a main panel.
 - Era-based theme token progression (`data-era`) for palette/texture/typography density shifts.
+- Era composition extracted into dedicated files (`src/ui/eras/*`) with shared shell surfaces in `src/ui/layout/*`.
 - Strict future-era disclosure enforcement via shared reveal helper.
 
 Definition of Done:

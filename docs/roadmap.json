@@ -299,6 +299,7 @@
         "Echo trees constrained to META view; between-run systems removed from active flow",
         "Persistent omen surface across tabs (drawer/strip)",
         "Theme token progression by era (data-era) for palette/texture/typography density shifts",
+        "Era composition extracted to src/ui/eras/* and shared shell surfaces to src/ui/layout/*",
         "Shared reveal helper enforcement for future-era disclosure"
       ],
       "validation": [

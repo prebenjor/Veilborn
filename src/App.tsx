@@ -148,7 +148,15 @@ import { ProgressPanel } from "./ui/panels/ProgressPanel";
 import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
 import { RemembrancePanel } from "./ui/panels/RemembrancePanel";
-import { formatRate, formatResource } from "./core/ui/numberFormat";
+import { EraOneLayout } from "./ui/eras/EraOneLayout";
+import { EraTwoActiveLayout } from "./ui/eras/EraTwoActiveLayout";
+import { EraTwoGrowthLayout } from "./ui/eras/EraTwoGrowthLayout";
+import { EraThreeActiveLayout } from "./ui/eras/EraThreeActiveLayout";
+import { EraThreeGrowthLayout } from "./ui/eras/EraThreeGrowthLayout";
+import { StatBar } from "./ui/layout/StatBar";
+import { TabDock } from "./ui/layout/TabDock";
+import { OmenSurface } from "./ui/layout/OmenSurface";
+import { formatResource } from "./core/ui/numberFormat";
 import { formatDurationCompact } from "./core/ui/timeFormat";
 import { getVeilStabilityView } from "./core/ui/veilPresentation";
 
@@ -272,7 +280,6 @@ export default function App() {
     getRecoverySnapshotMeta()
   );
   const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
-  const [eraOneHoveredAction, setEraOneHoveredAction] = useState<"whisper" | "recruit" | null>(null);
   const [transitionKind, setTransitionKind] = useState<TransitionKind | null>(null);
   const [transitionHint, setTransitionHint] = useState<string | null>(null);
   const [finalChoiceMaskVisible, setFinalChoiceMaskVisible] = useState(false);
@@ -1042,9 +1049,8 @@ export default function App() {
     />
   );
 
-  const eraTwoInfluenceFill = influenceCap <= 0
-    ? 0
-    : Math.max(0, Math.min(1, gameState.resources.influence / influenceCap));
+  const eraTwoInfluenceFill =
+    influenceCap <= 0 ? 0 : Math.max(0, Math.min(1, gameState.resources.influence / influenceCap));
   const eraTwoInfluenceNearCap = eraTwoInfluenceFill >= 0.8;
   const eraTwoInfluenceMeter =
     era === 2 ? (
@@ -1081,117 +1087,80 @@ export default function App() {
       )
     ) : null;
 
-  const activeTabContent = (
-    <>
-      {era >= 3 ? (
-        <CataclysmPanel
-          era={gameState.era}
-          veil={gameState.resources.veil}
-          veilBonus={veilBonus}
-          veilRegenPerSecond={veilRegenPerSecond}
-          veilErosionPerSecond={veilErosionPerSecond}
-          veilCollapseThreshold={veilCollapseThreshold}
-          civilizationHealth={gameState.cataclysm.civilizationHealth}
-          civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
-          civilizationRebuildInSeconds={civilizationRebuildSeconds}
-          miraclesThisRun={gameState.cataclysm.miraclesThisRun}
-          miracleOptions={miracleOptions}
-          onCastMiracle={onCastMiracle}
-        />
-      ) : null}
-      {era >= 3 ? doctrineRivalsPanel : null}
-      {whisperPanel}
-      {eraTwoInfluenceMeter}
-      {era === 2 ? doctrineGrowthPanel : null}
-      {era === 2 ? progressPanel : null}
-    </>
+  const eraThreeCataclysmPanel =
+    era >= 3 ? (
+      <CataclysmPanel
+        era={gameState.era}
+        veil={gameState.resources.veil}
+        veilBonus={veilBonus}
+        veilRegenPerSecond={veilRegenPerSecond}
+        veilErosionPerSecond={veilErosionPerSecond}
+        veilCollapseThreshold={veilCollapseThreshold}
+        civilizationHealth={gameState.cataclysm.civilizationHealth}
+        civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
+        civilizationRebuildInSeconds={civilizationRebuildSeconds}
+        miraclesThisRun={gameState.cataclysm.miraclesThisRun}
+        miracleOptions={miracleOptions}
+        onCastMiracle={onCastMiracle}
+      />
+    ) : null;
+
+  const eraTwoActiveContent = (
+    <EraTwoActiveLayout
+      whisperPanel={whisperPanel}
+      influenceMeter={eraTwoInfluenceMeter}
+      doctrinePanel={doctrineGrowthPanel}
+      progressPanel={progressPanel}
+    />
   );
 
-  const growthTabContent = (
-    <>
-      {domainPanel}
-      {era >= 3 ? doctrineGrowthPanel : null}
-      {era >= 3 ? progressPanel : null}
-      {eraTwoRivalsContent}
-      {era === 2 ? eraGatePanel : null}
-    </>
+  const eraTwoGrowthContent = (
+    <EraTwoGrowthLayout
+      domainPanel={domainPanel}
+      rivalsPanel={eraTwoRivalsContent}
+      thresholdPanel={eraGatePanel}
+    />
+  );
+
+  const eraThreeActiveContent = (
+    <EraThreeActiveLayout
+      cataclysmPanel={eraThreeCataclysmPanel}
+      rivalsPanel={era >= 3 ? doctrineRivalsPanel : null}
+      whisperPanel={whisperPanel}
+    />
+  );
+
+  const eraThreeGrowthContent = (
+    <EraThreeGrowthLayout
+      domainPanel={domainPanel}
+      doctrinePanel={era >= 3 ? doctrineGrowthPanel : null}
+      progressPanel={era >= 3 ? progressPanel : null}
+    />
   );
 
   const eraOneContent = (
-    <>
-      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Whispers</h2>
-        <p className="mt-3 text-sm text-veil/70">Words spread. Silence lets faith fade.</p>
-        {gameState.activity.cadencePromptActive ? (
-          <p className="mt-2 rounded-lg border border-ember/40 bg-ember/10 px-2 py-1 text-xs text-ember">
-            Silence is thickening. Act now for a cadence bonus.
-          </p>
-        ) : null}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={!canUseWhisper}
-            onClick={onWhisper}
-            onMouseEnter={() => setEraOneHoveredAction("whisper")}
-            onMouseLeave={() =>
-              setEraOneHoveredAction((previous) => (previous === "whisper" ? null : previous))
-            }
-            onFocus={() => setEraOneHoveredAction("whisper")}
-            onBlur={() => setEraOneHoveredAction((previous) => (previous === "whisper" ? null : previous))}
-            className="rounded-xl border border-ember/60 px-3 py-2 text-sm text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-          >
-            Whisper ({formatResource(whisperCost)} Influence)
-          </button>
-          <button
-            type="button"
-            disabled={!canUseRecruit}
-            onClick={onRecruit}
-            onMouseEnter={() => setEraOneHoveredAction("recruit")}
-            onMouseLeave={() =>
-              setEraOneHoveredAction((previous) => (previous === "recruit" ? null : previous))
-            }
-            onFocus={() => setEraOneHoveredAction("recruit")}
-            onBlur={() => setEraOneHoveredAction((previous) => (previous === "recruit" ? null : previous))}
-            className="rounded-xl border border-omen/60 px-3 py-2 text-sm text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-          >
-            Recruit ({formatResource(RECRUIT_INFLUENCE_COST)} Influence)
-          </button>
-        </div>
-        {eraOneHoveredAction ? (
-          <p className="mt-2 text-xs text-veil/65">
-            {eraOneHoveredAction === "whisper"
-              ? `Whisper: ${whisperPreview}`
-              : `Recruit: ${recruitPreview}`}
-          </p>
-        ) : null}
-
-        <div className="mt-4 border-t border-white/10 pt-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
-          <p className="mt-1 text-sm text-white">
-            {formatResource(gameState.prophets)} active · {formatResource(nextProphetFollowers)} followers to next
-          </p>
-          <button
-            type="button"
-            disabled={!canCreateProphet}
-            onClick={onAnointProphet}
-            className="mt-2 rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-          >
-            Anoint Prophet
-          </button>
-        </div>
-      </section>
-      {eraGatePanel}
-      <section className="veil-omen-compact rounded-2xl border border-white/10 bg-black/20 p-4 shadow-veil backdrop-blur-sm">
-        <h2 className="text-xs uppercase tracking-[0.25em] text-veil/70">{uiReveal.omenTitle}</h2>
-        <ul className="mt-2 space-y-2 text-sm text-veil/75">
-          {visibleOmens.map((entry) => (
-            <li key={entry.id}>{entry.text}</li>
-          ))}
-        </ul>
-      </section>
-    </>
+    <EraOneLayout
+      whisperCost={whisperCost}
+      recruitCost={RECRUIT_INFLUENCE_COST}
+      whisperPreview={whisperPreview}
+      recruitPreview={recruitPreview}
+      cadencePromptActive={gameState.activity.cadencePromptActive}
+      canUseWhisper={canUseWhisper}
+      canUseRecruit={canUseRecruit}
+      prophets={gameState.prophets}
+      nextProphetFollowers={nextProphetFollowers}
+      canCreateProphet={canCreateProphet}
+      omenTitle={uiReveal.omenTitle}
+      visibleOmens={visibleOmens}
+      eraGatePanel={eraGatePanel}
+      onWhisper={onWhisper}
+      onRecruit={onRecruit}
+      onAnointProphet={onAnointProphet}
+    />
   );
 
+  const activeTabContent = era === 2 ? eraTwoActiveContent : eraThreeActiveContent;
+  const growthTabContent = era === 2 ? eraTwoGrowthContent : eraThreeGrowthContent;
   const metaTabContent = (
     <>
       <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
@@ -1303,58 +1272,19 @@ export default function App() {
         {offlineSummary ? (
           <OfflineSummaryPanel summary={offlineSummary} onDismiss={() => setOfflineSummary(null)} />
         ) : null}
-        <section
-          className={`veil-statbar grid gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 ${
-            era === 1 ? "md:grid-cols-3" : era === 2 ? "md:grid-cols-3" : "md:grid-cols-4"
-          }`}
-        >
-          <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Belief</p>
-            <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.belief)}</p>
-            <p className="mt-1 text-xs text-veil/65">{formatRate(beliefPerSecond)} / sec</p>
-          </article>
-          <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Influence</p>
-            <p className="mt-2 text-xl text-white">
-              {formatResource(gameState.resources.influence)} / {formatResource(influenceCap)}
-            </p>
-          </article>
-          {era >= 1 ? (
-            <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
-              <p className="mt-2 text-xl text-white">{formatResource(gameState.resources.followers)}</p>
-            </article>
-          ) : null}
-          {era >= 3 ? (
-            <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Stability</p>
-              <p className="mt-2 text-xl text-white">
-                {formatResource(gameState.resources.veil)} <span className="text-veil/55">&middot;</span>{" "}
-                <span className={`${veilStability.cssClass} text-base`}>{veilStability.label}</span>
-              </p>
-            </article>
-          ) : null}
-        </section>
+        <StatBar
+          era={era}
+          belief={gameState.resources.belief}
+          beliefPerSecond={beliefPerSecond}
+          influence={gameState.resources.influence}
+          influenceCap={influenceCap}
+          followers={gameState.resources.followers}
+          veil={gameState.resources.veil}
+          veilStability={veilStability}
+        />
         {unravelingGateStrip}
         {era >= 2 ? (
-          <nav className="veil-tab-dock sticky top-2 z-20 rounded-xl border border-white/15 bg-black/40 p-1 backdrop-blur-sm">
-            <div className="flex flex-wrap gap-1">
-              {availableTabs.map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`rounded-lg px-3 py-1.5 text-xs uppercase tracking-[0.2em] transition ${
-                    safeActiveTab === tab
-                      ? "bg-white/14 text-white"
-                      : "text-veil/70 hover:bg-white/8 hover:text-veil"
-                  }`}
-                >
-                  {tab === "active" ? "Active" : tab === "growth" ? "Growth" : "Meta"}
-                </button>
-              ))}
-            </div>
-          </nav>
+          <TabDock availableTabs={availableTabs} activeTab={safeActiveTab} onSelectTab={setActiveTab} />
         ) : null}
         {era === 1 ? (
           <>{eraOneContent}</>
@@ -1394,31 +1324,12 @@ export default function App() {
         ) : null}
       </motion.div>
       {showPersistentOmenSurface ? (
-        <details
-          className={`group veil-omen-surface ${
-            era >= 3
-              ? "fixed bottom-3 left-3 right-3 z-30 rounded-xl border border-white/15 bg-black/55 p-2 text-xs text-veil/85 backdrop-blur-sm md:bottom-auto md:left-auto md:right-4 md:top-24 md:w-80"
-              : "fixed bottom-3 left-3 right-3 z-30 rounded-xl border border-white/15 bg-black/55 p-2 text-xs text-veil/85 backdrop-blur-sm"
-          }`}
-        >
-          <summary className="cursor-pointer list-none text-[11px] uppercase tracking-[0.2em] text-veil/90">
-            {uiReveal.omenTitle}
-          </summary>
-          <ul className="mt-2 space-y-1 text-[12px] text-veil/80">
-            {surfaceOmenPreview.map((entry) => (
-              <li key={entry.id} className="veil-omen-preview-line">
-                {entry.text}
-              </li>
-            ))}
-          </ul>
-          {surfaceOmenExpanded.length > 0 ? (
-            <ul className="mt-2 hidden space-y-1 border-t border-white/10 pt-2 text-[12px] text-veil/75 group-open:block">
-              {surfaceOmenExpanded.map((entry) => (
-                <li key={entry.id}>{entry.text}</li>
-              ))}
-            </ul>
-          ) : null}
-        </details>
+        <OmenSurface
+          era={era}
+          title={uiReveal.omenTitle}
+          previewEntries={surfaceOmenPreview}
+          expandedEntries={surfaceOmenExpanded}
+        />
       ) : null}
     </main>
   );

@@ -1,0 +1,57 @@
+import type { VeilStabilityView } from "../../core/ui/veilPresentation";
+import { formatRate, formatResource } from "../../core/ui/numberFormat";
+
+interface StatBarProps {
+  era: 1 | 2 | 3;
+  belief: number;
+  beliefPerSecond: number;
+  influence: number;
+  influenceCap: number;
+  followers: number;
+  veil: number;
+  veilStability: VeilStabilityView;
+}
+
+export function StatBar({
+  era,
+  belief,
+  beliefPerSecond,
+  influence,
+  influenceCap,
+  followers,
+  veil,
+  veilStability
+}: StatBarProps) {
+  return (
+    <section
+      className={`veil-statbar grid gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 ${
+        era === 1 ? "md:grid-cols-3" : era === 2 ? "md:grid-cols-3" : "md:grid-cols-4"
+      }`}
+    >
+      <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Belief</p>
+        <p className="mt-2 text-xl text-white">{formatResource(belief)}</p>
+        <p className="mt-1 text-xs text-veil/65">{formatRate(beliefPerSecond)} / sec</p>
+      </article>
+      <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Influence</p>
+        <p className="mt-2 text-xl text-white">
+          {formatResource(influence)} / {formatResource(influenceCap)}
+        </p>
+      </article>
+      <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
+        <p className="mt-2 text-xl text-white">{formatResource(followers)}</p>
+      </article>
+      {era >= 3 ? (
+        <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Stability</p>
+          <p className="mt-2 text-xl text-white">
+            {formatResource(veil)} <span className="text-veil/55">&middot;</span>{" "}
+            <span className={`${veilStability.cssClass} text-base`}>{veilStability.label}</span>
+          </p>
+        </article>
+      ) : null}
+    </section>
+  );
+}

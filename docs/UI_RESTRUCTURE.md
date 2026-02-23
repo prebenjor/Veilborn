@@ -60,4 +60,7 @@ Stats visibility rule:
 
 - Use `data-era` driven styling tokens for palette and density shifts.
 - Keep panel internals intact unless a separate task explicitly includes panel redesign.
+- Keep era-specific composition in `src/ui/eras/*` (Era I/II/III layout files).
+- Keep shared shell surfaces in `src/ui/layout/*` (stat bar, tab dock, omen surface).
+- Keep `App.tsx` focused on state/selector/action orchestration.
 - When changing any rule in this document, update `MANIFESTO.md` and `docs/GAME_REFERENCE.md` in the same change.

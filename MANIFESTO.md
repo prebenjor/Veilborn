@@ -476,6 +476,7 @@ Rules:
 - Bottom status line progression is era-locked: Era I one quiet atmospheric line, Era II one directive line, Era III hidden.
 - Stats page is exempt from era-lock visibility and must remain accessible in every era and tab.
 - Stats content still follows progressive disclosure: only show metrics for systems the player has already unlocked or experienced.
+- UI architecture should preserve era boundaries in code: keep era composition in dedicated layout files, with `App.tsx` as orchestration only.
 
 ## Design Rules (Do Not Break)
 

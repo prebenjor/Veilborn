@@ -92,7 +92,7 @@ export function StatsDrawer({
   const recentRuns = [...runHistory].reverse().slice(0, 5);
 
   return (
-    <details className="group fixed bottom-3 right-3 z-20 w-52 rounded-xl border border-white/20 bg-black/55 p-2 text-xs text-veil/80 backdrop-blur-sm md:w-64">
+    <details className="group fixed bottom-3 right-3 z-40 w-52 rounded-xl border border-white/20 bg-black/55 p-2 text-xs text-veil/80 backdrop-blur-sm md:w-64">
       <summary className="cursor-pointer list-none select-none font-medium tracking-[0.2em] text-veil/90">
         STATS
       </summary>

@@ -23,6 +23,7 @@ Active manifesto mode is Revision B (uncapped Belief + offline progression).
 - Preserve Era II tab contract for existing and future features:
   - `ACTIVE`: Whisper/Recruit, Influence meter, Doctrine (Acts), Doctrine Seeds.
   - `GROWTH`: Domains, then Rivals/Threshold progress surfaces.
+- Keep era layout composition split by era files (`src/ui/eras/*`) and keep shared shell surfaces in `src/ui/layout/*`; `App.tsx` should orchestrate state/actions, not own all era JSX.
 
 If a request conflicts with the manifesto, flag it and ask whether to revise the manifesto or make an intentional exception.
 
