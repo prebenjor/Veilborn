@@ -19,6 +19,9 @@ interface StatsDrawerProps {
     cap: number;
     fillTimeSeconds: number | null;
   };
+  currentFollowers: number;
+  passiveFollowerRate: number;
+  rivalFollowerDrainPerSecond: number;
   runHistory: Array<{
     id: string;
     runNumber: number;
@@ -54,6 +57,9 @@ export function StatsDrawer({
   whispersInWindow,
   whisperResetInSeconds,
   influenceBreakdown,
+  currentFollowers,
+  passiveFollowerRate,
+  rivalFollowerDrainPerSecond,
   runHistory,
   telemetryStatus,
   audioControls,
@@ -93,6 +99,27 @@ export function StatsDrawer({
         <dt>Whisper Reset In</dt>
         <dd>{formatDurationCompact(whisperResetInSeconds)}</dd>
       </dl>
+      {era >= 2 ? (
+        <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+          <p className="uppercase tracking-[0.16em] text-veil/80">Followers</p>
+          <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
+            <dt>Current</dt>
+            <dd>{formatResource(currentFollowers)}</dd>
+            {era >= 3 ? (
+              <>
+                <dt>Arriving passively</dt>
+                <dd>{formatResource(passiveFollowerRate, 1)} /s</dd>
+              </>
+            ) : null}
+            {rivalFollowerDrainPerSecond > 0 ? (
+              <>
+                <dt>Rival drain</dt>
+                <dd>-{formatResource(rivalFollowerDrainPerSecond, 1)} /s</dd>
+              </>
+            ) : null}
+          </dl>
+        </div>
+      ) : null}
       {era >= 2 ? (
         <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
           <p className="uppercase tracking-[0.16em] text-veil/80">Influence</p>

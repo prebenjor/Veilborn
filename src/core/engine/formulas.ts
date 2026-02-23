@@ -45,6 +45,12 @@ import {
   PANTHEON_ALLIANCE_SHARE_MULTIPLIER,
   PANTHEON_DOMAIN_POISON_OUTPUT_MULTIPLIER,
   PANTHEON_UNLOCK_COMPLETED_RUNS,
+  PASSIVE_FOLLOWER_RATE_PER_CULT,
+  PASSIVE_FOLLOWER_RATE_PER_PROPHET,
+  PASSIVE_FOLLOWER_RATE_PER_SHRINE,
+  PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER,
+  PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER,
+  PASSIVE_FOLLOWER_VEIL_SAFE_MULTIPLIER,
   FAITH_DECAY_BASE,
   FAITH_DECAY_ECHO_FLOOR,
   FAITH_DECAY_FLOOR,
@@ -425,6 +431,28 @@ export function getDomainSynergy(state: GameState): number {
 
 export function getVeilBonus(veil: number): number {
   return 1 + (100 - veil) * VEIL_BONUS_SCALE;
+}
+
+function getPassiveFollowerVeilZoneMultiplier(veil: number): number {
+  if (veil > 55) return PASSIVE_FOLLOWER_VEIL_SAFE_MULTIPLIER;
+  if (veil < 30) return PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER;
+  return PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER;
+}
+
+export function getPassiveFollowerRate(state: GameState, nowMs: number): number {
+  if (state.era < 3) return 0;
+  if (state.cataclysm.civilizationHealth <= 0) return 0;
+
+  const baseRate =
+    PASSIVE_FOLLOWER_RATE_PER_CULT * state.cults +
+    PASSIVE_FOLLOWER_RATE_PER_SHRINE * state.doctrine.shrinesBuilt +
+    PASSIVE_FOLLOWER_RATE_PER_PROPHET * state.prophets;
+  if (baseRate <= 0) return 0;
+
+  const faithDecay = getFaithDecay(state, nowMs);
+  const civHealthMultiplier = Math.max(0, state.cataclysm.civilizationHealth / 100);
+  const veilZoneMultiplier = getPassiveFollowerVeilZoneMultiplier(state.resources.veil);
+  return Math.max(0, baseRate * faithDecay * civHealthMultiplier * veilZoneMultiplier);
 }
 
 export function getVeilRegenPerSecond(state: GameState): number {

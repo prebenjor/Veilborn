@@ -68,6 +68,7 @@ import {
   getMiracleCivDamage,
   getMiracleInfluenceCost,
   getMiracleVeilCost,
+  getPassiveFollowerRate,
   getRivalSpawnIntervalMs,
   getTotalRivalStrength,
   getTotalDomainLevel,
@@ -389,6 +390,7 @@ export default function App() {
   const beliefPerSecond = getBeliefPerSecond(gameState, nowMs);
   const influenceCap = getInfluenceCap(gameState);
   const influenceRegenBreakdown = getInfluenceRegenBreakdown(gameState);
+  const passiveFollowerRate = getPassiveFollowerRate(gameState, nowMs);
   const whisperCost = getWhisperCost(gameState, nowMs);
   const recruitPreview = getRecruitPreview(gameState);
   const nextProphetFollowers = getFollowersForNextProphet(gameState);
@@ -1212,6 +1214,9 @@ export default function App() {
             whispersInWindow={gameState.activity.whispersInWindow}
             whisperResetInSeconds={whisperResetInSeconds}
             influenceBreakdown={influenceRegenBreakdown}
+            currentFollowers={gameState.resources.followers}
+            passiveFollowerRate={passiveFollowerRate}
+            rivalFollowerDrainPerSecond={rivalDrainPerSecond}
             runHistory={telemetryRunSummaries}
             telemetryStatus={telemetryStatus}
             audioControls={audioControls}

@@ -29,6 +29,7 @@ import {
   getInfluenceCap,
   getInfluenceRegenPerSecond,
   getMatchingDomainPairs,
+  getPassiveFollowerRate,
   getRivalSpawnIntervalMs,
   getRivalStrength,
   getTotalRivalStrength,
@@ -38,6 +39,31 @@ import {
   normalizeWhisperCycle
 } from "./formulas";
 import { syncRemembranceState } from "./remembrance";
+
+const PASSIVE_OMEN_COOLDOWN_MS = 45 * 1000;
+const PASSIVE_OMEN_NORMAL: readonly string[] = [
+  "Three more came to the shrine without being called.",
+  "A family arrived at the edge of the settlement before dawn.",
+  "Word had moved ahead of the prophets. The faithful were already waiting.",
+  "They came in pairs. No one sent for them."
+];
+const PASSIVE_OMEN_DANGER: readonly string[] = [
+  "Something is drawing them closer. They feel it in their sleep.",
+  "More arrived tonight than the cults could name.",
+  "The thin places are visible now. They walk toward them.",
+  "She said she heard the sound for three nights before she came."
+];
+const PASSIVE_OMEN_LOW_CIV: readonly string[] = [
+  "Even now, with the city faltering, they come.",
+  "The collapse brought them. Ruin and faith have always shared a road."
+];
+
+interface PassiveOmenSessionState {
+  lastAt: number;
+  lastText: string | null;
+}
+
+const passiveOmenSessionByRun = new Map<string, PassiveOmenSessionState>();
 
 function applyCadencePrompt(activity: ActivityState, nowMs: number): ActivityState {
   if (activity.cadencePromptActive) return activity;
@@ -79,6 +105,51 @@ function appendSystemOmen(state: GameState, nowMs: number, text: string): GameSt
     ].slice(0, 140),
     nextEventId: state.nextEventId + 1
   };
+}
+
+function choosePassiveOmenLine(
+  state: GameState,
+  nowMs: number,
+  passiveFollowerRate: number
+): string | null {
+  if (state.era < 3) return null;
+  if (passiveFollowerRate <= 0) return null;
+
+  const runId = state.meta.runId;
+  const session = passiveOmenSessionByRun.get(runId) ?? {
+    lastAt: 0,
+    lastText: null
+  };
+
+  if (nowMs - session.lastAt < PASSIVE_OMEN_COOLDOWN_MS) return null;
+
+  let pool = PASSIVE_OMEN_NORMAL;
+  if (state.cataclysm.civilizationHealth < 40) {
+    pool = PASSIVE_OMEN_LOW_CIV;
+  } else if (state.resources.veil < 30) {
+    pool = PASSIVE_OMEN_DANGER;
+  }
+
+  const baseIndex = Math.floor(nowMs / 1000) % pool.length;
+  let nextLine = pool[baseIndex];
+  if (pool.length > 1 && nextLine === session.lastText) {
+    nextLine = pool[(baseIndex + 1) % pool.length];
+  }
+
+  passiveOmenSessionByRun.set(runId, {
+    lastAt: nowMs,
+    lastText: nextLine
+  });
+
+  if (passiveOmenSessionByRun.size > 3) {
+    for (const key of passiveOmenSessionByRun.keys()) {
+      if (key !== runId) {
+        passiveOmenSessionByRun.delete(key);
+      }
+    }
+  }
+
+  return nextLine;
 }
 
 function clampLineageMetric(value: number, max: number): number {
@@ -173,6 +244,8 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   const baseBeliefGain = beliefPerSecond * simulatedSeconds;
   const influenceCap = getInfluenceCap(preTickState);
   const influenceGain = getInfluenceRegenPerSecond(preTickState) * simulatedSeconds;
+  const passiveFollowerRate = getPassiveFollowerRate(preTickState, nowMs);
+  const passiveFollowerGain = passiveFollowerRate * simulatedSeconds;
   const whisperCycle = normalizeWhisperCycle(preTickState.activity, nowMs);
   const updatedActivity = applyCadencePrompt(
     {
@@ -226,7 +299,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   const followerDrain =
     rivalStrength > cultOutput * 0.5 ? rivalStrength * RIVAL_DRAIN_RATE * simulatedSeconds : 0;
 
-  const followersAfterActs = preTickState.resources.followers + actFollowerGain;
+  const followersAfterActs = preTickState.resources.followers + actFollowerGain + passiveFollowerGain;
   const followersAfterRivals = Math.max(0, followersAfterActs - followerDrain);
   const peakFollowers = Math.max(preTickState.cataclysm.peakFollowers, followersAfterRivals);
 
@@ -363,6 +436,11 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
       nowMs,
       "From ash and hunger, a new city raised its first bell and dared to remember."
     );
+  }
+
+  const passiveOmenLine = choosePassiveOmenLine(nextState, nowMs, passiveFollowerRate);
+  if (passiveOmenLine) {
+    nextState = appendSystemOmen(nextState, nowMs, passiveOmenLine);
   }
 
   const remembranceSync = syncRemembranceState(nextState);

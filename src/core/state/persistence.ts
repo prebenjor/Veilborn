@@ -53,6 +53,7 @@ import {
   getEchoBonusesFromTreeRanks,
   getFaithDecay,
   getInfluenceCap,
+  getPassiveFollowerRate,
   getVeilErosionPerSecond,
   getVeilRegenPerSecond
 } from "../engine/formulas";
@@ -862,6 +863,7 @@ function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameState
   const totalRivalStrength = state.doctrine.rivals.reduce((sum, rival) => sum + rival.strength, 0);
   const rivalDrainApplies = totalRivalStrength > cultOutputAtClose * 0.5;
   let followerDrain = 0;
+  const passiveFollowerGain = getPassiveFollowerRate(state, lastSeenAt) * elapsedSeconds;
   const rivalsAfter = state.doctrine.rivals
     .map((rival) => {
       const ageAtCloseSeconds = Math.max(0, (lastSeenAt - rival.spawnedAt) / 1000);
@@ -885,7 +887,7 @@ function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameState
     .filter((rival): rival is RivalState => Boolean(rival));
 
   const followersBefore = state.resources.followers;
-  const followersAfter = Math.max(0, followersBefore - followerDrain);
+  const followersAfter = Math.max(0, followersBefore + passiveFollowerGain - followerDrain);
   const followersDelta = followersAfter - followersBefore;
   const activeActsAfter = state.doctrine.activeActs.filter((act) => act.endsAt > nowMs);
 
