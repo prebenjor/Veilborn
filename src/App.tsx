@@ -712,7 +712,7 @@ export default function App() {
           onCastMiracle={onCastMiracle}
         />
       ) : null}
-      {era >= 3 ? doctrinePanel : null}
+      {era >= 3 || (era === 2 && gameState.doctrine.rivals.length > 0) ? doctrinePanel : null}
       {whisperPanel}
       {era === 2 ? eraGatePanel : null}
     </>
