@@ -21,6 +21,10 @@ import {
   DOMAIN_SYNERGY_SCALE,
   DOMAIN_XP_BASE,
   DOMAIN_XP_SCALAR,
+  ECHO_ASCENSION_DIVISOR,
+  ECHO_TREE_MAX_RANK,
+  ECHO_TREE_ORDER,
+  ECHO_TREE_RANK_COSTS,
   ERA_ONE_BELIEF_GATE_BASE,
   ERA_ONE_DOMAIN_LEVEL_GATE,
   ERA_ONE_GATE_ECHO_MULTIPLIER,
@@ -72,6 +76,9 @@ import {
   type ActType,
   type ActivityState,
   type DomainProgress,
+  type EchoBonuses,
+  type EchoTreeId,
+  type EchoTreeRanks,
   type GameState,
   type MiracleTier
 } from "../state/gameState";
@@ -110,6 +117,88 @@ export interface UnravelingGateStatus {
   runTimeTargetSeconds: number;
   runTimeReady: boolean;
   ready: boolean;
+}
+
+const WHISPERS_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
+  "startInf",
+  "prophetThreshold",
+  "faithFloor",
+  "era1Gate",
+  "rivalWeaken"
+];
+
+const DOCTRINE_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
+  "cultCostBase",
+  "rivalDelay",
+  "actFloor",
+  "actDiscount",
+  "era2Gate"
+];
+
+const CATACLYSM_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
+  "veilRegen",
+  "miracleVeilDiscount",
+  "collapseThreshold",
+  "collapseImmunity",
+  "civRebuild"
+];
+
+const TREE_UNLOCKS: Record<EchoTreeId, Array<keyof EchoBonuses>> = {
+  whispers: WHISPERS_TREE_UNLOCKS,
+  doctrine: DOCTRINE_TREE_UNLOCKS,
+  cataclysm: CATACLYSM_TREE_UNLOCKS
+};
+
+export function getEchoBonusesFromTreeRanks(treeRanks: EchoTreeRanks): EchoBonuses {
+  const bonuses: EchoBonuses = {
+    startInf: false,
+    faithFloor: false,
+    prophetThreshold: false,
+    cultCostBase: false,
+    era1Gate: false,
+    era2Gate: false,
+    actFloor: false,
+    actDiscount: false,
+    rivalDelay: false,
+    rivalWeaken: false,
+    veilRegen: false,
+    miracleVeilDiscount: false,
+    collapseThreshold: false,
+    collapseImmunity: false,
+    civRebuild: false
+  };
+
+  for (const treeId of ECHO_TREE_ORDER) {
+    const rank = Math.max(0, Math.min(ECHO_TREE_MAX_RANK, treeRanks[treeId]));
+    const unlocks = TREE_UNLOCKS[treeId];
+    for (let i = 0; i < rank && i < unlocks.length; i += 1) {
+      bonuses[unlocks[i]] = true;
+    }
+  }
+
+  return bonuses;
+}
+
+export function getEchoTreeRank(state: GameState, treeId: EchoTreeId): number {
+  return Math.max(0, Math.min(ECHO_TREE_MAX_RANK, state.prestige.treeRanks[treeId]));
+}
+
+export function getEchoTreeNextRankCost(rank: number): number | null {
+  if (rank < 0 || rank >= ECHO_TREE_MAX_RANK) return null;
+  return ECHO_TREE_RANK_COSTS[rank];
+}
+
+export function getEchoTreeNextCost(state: GameState, treeId: EchoTreeId): number | null {
+  return getEchoTreeNextRankCost(getEchoTreeRank(state, treeId));
+}
+
+export function isEchoTreeMaxed(state: GameState, treeId: EchoTreeId): boolean {
+  return getEchoTreeRank(state, treeId) >= ECHO_TREE_MAX_RANK;
+}
+
+export function getAscensionEchoGain(totalBeliefEarned: number): number {
+  if (totalBeliefEarned <= 0) return 0;
+  return Math.floor(Math.sqrt(totalBeliefEarned / ECHO_ASCENSION_DIVISOR));
 }
 
 export function getTotalDomainLevel(state: GameState): number {

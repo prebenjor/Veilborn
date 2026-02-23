@@ -1,4 +1,5 @@
 import {
+  ECHO_TREE_MAX_RANK,
   CIV_COLLAPSE_FOLLOWER_RETENTION,
   RIVAL_SUPPRESS_INFLUENCE_COST,
   CADENCE_ACTION_BELIEF_BONUS,
@@ -12,17 +13,22 @@ import {
   VEIL_MIN,
   WHISPER_BELIEF_GAIN,
   WHISPER_FOLLOWER_GAIN,
+  createInitialGameState,
   type ActType,
   type ActivityState,
   type DomainId,
+  type EchoTreeId,
   type GameState,
   type MiracleTier
 } from "../state/gameState";
 import {
   getActBaseMultiplier,
+  getAscensionEchoGain,
   getActCost,
   getActDurationSeconds,
   getCivilizationRebuildSeconds,
+  getEchoBonusesFromTreeRanks,
+  getEchoTreeNextCost,
   getCultFormationCost,
   getDomainInvestCost,
   getDomainXpNeeded,
@@ -35,6 +41,8 @@ import {
   getMiracleVeilCost,
   getRecruitFollowerGainBase,
   getTotalDomainLevel,
+  getInfluenceCap,
+  getUnravelingGateStatus,
   getWhisperCost,
   normalizeWhisperCycle
 } from "./formulas";
@@ -51,6 +59,8 @@ type OmenKind =
   | "miracle"
   | "civCollapse"
   | "veilCollapse"
+  | "echoTree"
+  | "ascension"
   | "eraOneToTwo"
   | "eraTwoToThree";
 
@@ -295,6 +305,22 @@ function createOmen(
     "The boundary failed for a heartbeat, and faith paid the cost."
   ] as const;
 
+  const echoTreeStarts = [
+    "An old memory hardened into a permanent law of your faith.",
+    "Echoes arranged themselves into a pattern the faithful could keep.",
+    "A previous cycle whispered instructions into this one.",
+    "The architecture of belief accepted your revision.",
+    "Fragments of forgotten runs fused into doctrine."
+  ] as const;
+
+  const ascensionStarts = [
+    "The world unraveled and your name survived as an echo.",
+    "You stepped beyond the broken age and returned to darkness reborn.",
+    "Reality reset around you, but memory did not fully fade.",
+    "The cycle closed and opened again under a changed sky.",
+    "You relinquished the world and carried only distilled remembrance."
+  ] as const;
+
   if (kind === "whisper") {
     const a = pickOne(rngSeed, whisperStarts);
     const b = pickOne(a.rngState, whisperMiddles);
@@ -376,6 +402,22 @@ function createOmen(
     return {
       rngState: a.rngState,
       text: `${a.value}`
+    };
+  }
+
+  if (kind === "echoTree") {
+    const a = pickOne(rngSeed, echoTreeStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} ${detail ?? ""}`.trim()
+    };
+  }
+
+  if (kind === "ascension") {
+    const a = pickOne(rngSeed, ascensionStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value} ${detail ?? ""}`.trim()
     };
   }
 
@@ -766,6 +808,92 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
   const withMiracleOmen = appendOmen(withMiracle, nowMs, "miracle", miracleDetail);
   if (!civilizationCollapsed) return withMiracleOmen;
   return appendOmen(withMiracleOmen, nowMs, "civCollapse");
+}
+
+export function canPurchaseEchoTreeRank(state: GameState, treeId: EchoTreeId): boolean {
+  const nextCost = getEchoTreeNextCost(state, treeId);
+  if (nextCost === null) return false;
+  return state.prestige.echoes >= nextCost;
+}
+
+export function performPurchaseEchoTreeRank(
+  state: GameState,
+  treeId: EchoTreeId,
+  nowMs: number
+): GameState {
+  const nextCost = getEchoTreeNextCost(state, treeId);
+  if (nextCost === null) return state;
+  if (state.prestige.echoes < nextCost) return state;
+
+  const nextRank = Math.min(ECHO_TREE_MAX_RANK, state.prestige.treeRanks[treeId] + 1);
+  const nextTreeRanks = {
+    ...state.prestige.treeRanks,
+    [treeId]: nextRank
+  };
+  const nextEchoBonuses = getEchoBonusesFromTreeRanks(nextTreeRanks);
+
+  const withUpgrade = {
+    ...state,
+    prestige: {
+      ...state.prestige,
+      echoes: state.prestige.echoes - nextCost,
+      treeRanks: nextTreeRanks
+    },
+    echoBonuses: nextEchoBonuses,
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(
+    withUpgrade,
+    nowMs,
+    "echoTree",
+    `${treeId} tree reached rank ${nextRank}.`
+  );
+}
+
+export function canAscend(state: GameState): boolean {
+  if (state.era !== 3) return false;
+  return getUnravelingGateStatus(state).ready;
+}
+
+export function performAscension(state: GameState, nowMs: number): GameState {
+  if (!canAscend(state)) return state;
+
+  const gainedEchoes = getAscensionEchoGain(state.stats.totalBeliefEarned);
+  const nextPrestige = {
+    ...state.prestige,
+    echoes: state.prestige.echoes + gainedEchoes,
+    lifetimeEchoes: state.prestige.lifetimeEchoes + gainedEchoes,
+    completedRuns: state.prestige.completedRuns + 1
+  };
+  const nextEchoBonuses = getEchoBonusesFromTreeRanks(nextPrestige.treeRanks);
+
+  const resetState = createInitialGameState(nowMs);
+  let ascendedState: GameState = {
+    ...resetState,
+    prestige: nextPrestige,
+    echoBonuses: nextEchoBonuses
+  };
+
+  const influenceCap = getInfluenceCap(ascendedState);
+  ascendedState = {
+    ...ascendedState,
+    resources: {
+      ...ascendedState.resources,
+      influence: influenceCap
+    }
+  };
+
+  return appendOmen(
+    ascendedState,
+    nowMs,
+    "ascension",
+    `You carried ${gainedEchoes} echoes into the next cycle.`
+  );
 }
 
 export function canAdvanceEraOneToTwo(state: GameState): boolean {

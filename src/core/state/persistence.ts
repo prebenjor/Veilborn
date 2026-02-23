@@ -1,5 +1,6 @@
 import {
   CIV_HEALTH_MAX,
+  ECHO_TREE_MAX_RANK,
   GAME_STATE_SCHEMA_VERSION,
   OFFLINE_BELIEF_EFFICIENCY,
   OFFLINE_INFLUENCE_RETURN_RATIO,
@@ -15,17 +16,20 @@ import {
   type DoctrineState,
   type DomainId,
   type DomainProgress,
+  type EchoTreeId,
   type EchoBonuses,
   type GameState,
   type Mortal,
   type MortalTrait,
   type OmenEntry,
+  type PrestigeState,
   type RivalState
 } from "./gameState";
 import {
   getBeliefPerSecond,
   getCivilizationRegenPerSecond,
   getCultOutput,
+  getEchoBonusesFromTreeRanks,
   getFaithDecay,
   getInfluenceCap,
   getVeilErosionPerSecond,
@@ -93,6 +97,11 @@ function readDomainId(value: unknown): DomainId | null {
 
 function readActType(value: unknown): ActiveAct["type"] | null {
   if (value === "shrine" || value === "ritual" || value === "proclaim") return value;
+  return null;
+}
+
+function readEchoTreeId(value: unknown): EchoTreeId | null {
+  if (value === "whispers" || value === "doctrine" || value === "cataclysm") return value;
   return null;
 }
 
@@ -244,6 +253,95 @@ function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses
   };
 }
 
+function inferTreeRankFromBonuses(bonuses: EchoBonuses, keys: Array<keyof EchoBonuses>): number {
+  let rank = 0;
+  for (const key of keys) {
+    if (!bonuses[key]) break;
+    rank += 1;
+  }
+  return rank;
+}
+
+function inferTreeRanksFromEchoBonuses(bonuses: EchoBonuses): {
+  whispers: number;
+  doctrine: number;
+  cataclysm: number;
+} {
+  return {
+    whispers: inferTreeRankFromBonuses(bonuses, [
+      "startInf",
+      "prophetThreshold",
+      "faithFloor",
+      "era1Gate",
+      "rivalWeaken"
+    ]),
+    doctrine: inferTreeRankFromBonuses(bonuses, [
+      "cultCostBase",
+      "rivalDelay",
+      "actFloor",
+      "actDiscount",
+      "era2Gate"
+    ]),
+    cataclysm: inferTreeRankFromBonuses(bonuses, [
+      "veilRegen",
+      "miracleVeilDiscount",
+      "collapseThreshold",
+      "collapseImmunity",
+      "civRebuild"
+    ])
+  };
+}
+
+function sanitizePrestige(
+  value: unknown,
+  fallback: PrestigeState,
+  normalizedBonuses: EchoBonuses
+): PrestigeState {
+  if (!isRecord(value)) {
+    const inferredTreeRanks = inferTreeRanksFromEchoBonuses(normalizedBonuses);
+    return {
+      ...fallback,
+      treeRanks: inferredTreeRanks
+    };
+  }
+
+  const rawTreeRanks = isRecord(value.treeRanks) ? value.treeRanks : {};
+  const normalizedTreeRanks = {
+    whispers: fallback.treeRanks.whispers,
+    doctrine: fallback.treeRanks.doctrine,
+    cataclysm: fallback.treeRanks.cataclysm
+  };
+
+  for (const [key, entry] of Object.entries(rawTreeRanks)) {
+    const treeId = readEchoTreeId(key);
+    if (!treeId) continue;
+    normalizedTreeRanks[treeId] = Math.max(
+      0,
+      Math.min(ECHO_TREE_MAX_RANK, Math.floor(readNumber(entry, 0)))
+    );
+  }
+
+  const inferredTreeRanks = inferTreeRanksFromEchoBonuses(normalizedBonuses);
+  const hasAnyRank =
+    normalizedTreeRanks.whispers > 0 ||
+    normalizedTreeRanks.doctrine > 0 ||
+    normalizedTreeRanks.cataclysm > 0;
+
+  const treeRanks = hasAnyRank ? normalizedTreeRanks : inferredTreeRanks;
+
+  return {
+    echoes: Math.max(0, Math.floor(readNumber(value.echoes, fallback.echoes))),
+    lifetimeEchoes: Math.max(
+      0,
+      Math.floor(
+        readNumber(value.lifetimeEchoes, Math.max(fallback.lifetimeEchoes, readNumber(value.echoes, 0)))
+      )
+    ),
+    completedRuns: Math.max(0, Math.floor(readNumber(value.completedRuns, fallback.completedRuns))),
+    treeRanks
+  };
+}
+
 function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const fallback = createInitialGameState(nowMs);
   if (!isRecord(rawState)) return fallback;
@@ -255,6 +353,9 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const rawStats = isRecord(rawState.stats) ? rawState.stats : {};
   const rawDoctrine = isRecord(rawState.doctrine) ? rawState.doctrine : {};
   const rawCataclysm = isRecord(rawState.cataclysm) ? rawState.cataclysm : {};
+  const normalizedEchoBonuses = sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses);
+  const normalizedPrestige = sanitizePrestige(rawState.prestige, fallback.prestige, normalizedEchoBonuses);
+  const syncedEchoBonuses = getEchoBonusesFromTreeRanks(normalizedPrestige.treeRanks);
 
   return {
     meta: {
@@ -288,7 +389,8 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
     },
     doctrine: sanitizeDoctrine(rawDoctrine, fallback.doctrine),
     cataclysm: sanitizeCataclysm(rawCataclysm, fallback.cataclysm),
-    echoBonuses: sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses),
+    prestige: normalizedPrestige,
+    echoBonuses: syncedEchoBonuses,
     era: readNumber(rawState.era, fallback.era) >= 3 ? 3 : readNumber(rawState.era, fallback.era) >= 2 ? 2 : 1,
     mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
     domains: sanitizeDomains(rawState.domains, fallback.domains),
@@ -317,7 +419,8 @@ const MIGRATORS: Record<number, Migrator> = {
   3: sanitizeState,
   4: sanitizeState,
   5: sanitizeState,
-  6: sanitizeState
+  6: sanitizeState,
+  7: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

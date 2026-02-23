@@ -103,7 +103,7 @@ export function EraGatePanel({
         </div>
         <p className="mt-2 text-xs text-veil/65">
           {unravelingReady
-            ? "Gate conditions met. Ascension flow arrives in M7."
+            ? "Gate conditions met. Ascend from the Echo Trees panel."
             : "Pressure the world through miracles and Veil risk to unlock the gate."}
         </p>
       </section>

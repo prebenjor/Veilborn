@@ -131,7 +131,7 @@
     {
       "id": "M7",
       "title": "Ascension and Echo Trees",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M6"],
       "deliverables": [
         "Ascension reset pipeline",

@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  canAscend,
   canAdvanceEraOneToTwo,
   canAdvanceEraTwoToThree,
   canAnointProphet,
   canCastMiracle,
   canFormCult,
+  canPurchaseEchoTreeRank,
   canStartAct,
   canSuppressRival,
   getActSlotCap,
@@ -14,9 +16,11 @@ import {
   getRecruitPreview,
   performAdvanceEraOneToTwo,
   performAdvanceEraTwoToThree,
+  performAscension,
   performCastMiracle,
   performCultFormation,
   performDomainInvestment,
+  performPurchaseEchoTreeRank,
   performProphetAnoint,
   performRecruit,
   performStartAct,
@@ -25,6 +29,7 @@ import {
 } from "./core/engine/actions";
 import {
   getActCost,
+  getAscensionEchoGain,
   getActDurationSeconds,
   getBeliefPerSecond,
   getCultFormationCost,
@@ -33,6 +38,7 @@ import {
   getDomainXpNeeded,
   getEraOneGateStatus,
   getEraTwoGateStatus,
+  getEchoTreeNextCost,
   getFollowersForNextProphet,
   getHighestDomainLevel,
   getInfluenceCap,
@@ -60,6 +66,7 @@ import {
   WORLD_TICK_MS,
   type ActType,
   type DomainId,
+  type EchoTreeId,
   type GameState,
   type MiracleTier
 } from "./core/state/gameState";
@@ -69,6 +76,7 @@ import {
   type OfflineProgressSummary
 } from "./core/state/persistence";
 import { CataclysmPanel } from "./ui/panels/CataclysmPanel";
+import { AscensionPanel } from "./ui/panels/AscensionPanel";
 import { DoctrinePanel } from "./ui/panels/DoctrinePanel";
 import { DomainPanel } from "./ui/panels/DomainPanel";
 import { EraGatePanel } from "./ui/panels/EraGatePanel";
@@ -80,6 +88,46 @@ import { WhisperPanel } from "./ui/panels/WhisperPanel";
 function formatNumber(value: number): string {
   return Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
 }
+
+const ECHO_TREE_META: Array<{
+  id: EchoTreeId;
+  label: string;
+  unlocks: string[];
+}> = [
+  {
+    id: "whispers",
+    label: "Whisper Roots",
+    unlocks: [
+      "Start Influence",
+      "Prophet Threshold",
+      "Faith Floor",
+      "Era I Gate Ease",
+      "Rival Weaken"
+    ]
+  },
+  {
+    id: "doctrine",
+    label: "Doctrine Roots",
+    unlocks: [
+      "Cult Cost Base",
+      "Rival Delay",
+      "Act Floor",
+      "Act Discount",
+      "Era II Gate Ease"
+    ]
+  },
+  {
+    id: "cataclysm",
+    label: "Cataclysm Roots",
+    unlocks: [
+      "Veil Regen",
+      "Miracle Veil Discount",
+      "Collapse Threshold",
+      "Collapse Immunity",
+      "Civilization Rebuild"
+    ]
+  }
+];
 
 export default function App() {
   const [initialLoad] = useState(() => loadGameStateWithOffline());
@@ -133,6 +181,7 @@ export default function App() {
   const eraOneGate = getEraOneGateStatus(gameState);
   const eraTwoGate = getEraTwoGateStatus(gameState);
   const unravelingGate = getUnravelingGateStatus(gameState);
+  const ascensionEchoGain = getAscensionEchoGain(gameState.stats.totalBeliefEarned);
 
   const canUseWhisper = canWhisper(gameState, nowMs);
   const canUseRecruit = canRecruit(gameState);
@@ -140,7 +189,21 @@ export default function App() {
   const canCreateCult = canFormCult(gameState);
   const canAdvanceEraOne = canAdvanceEraOneToTwo(gameState);
   const canAdvanceEraTwo = canAdvanceEraTwoToThree(gameState);
+  const canUseAscend = canAscend(gameState);
   const eraLabel = gameState.era === 1 ? "I" : gameState.era === 2 ? "II" : "III";
+
+  const echoTreeViews = ECHO_TREE_META.map((tree) => {
+    const rank = gameState.prestige.treeRanks[tree.id];
+    const nextCost = getEchoTreeNextCost(gameState, tree.id);
+    return {
+      id: tree.id,
+      label: tree.label,
+      rank,
+      nextCost,
+      canPurchase: canPurchaseEchoTreeRank(gameState, tree.id),
+      unlockedBonuses: tree.unlocks.slice(0, rank)
+    };
+  });
 
   const actSlotCap = getActSlotCap(gameState);
   const actCosts: Record<ActType, number> = {
@@ -230,6 +293,14 @@ export default function App() {
     setGameState((prev) => performCastMiracle(prev, tier, Date.now()));
   };
 
+  const onPurchaseEchoTreeRank = (treeId: EchoTreeId) => {
+    setGameState((prev) => performPurchaseEchoTreeRank(prev, treeId, Date.now()));
+  };
+
+  const onAscend = () => {
+    setGameState((prev) => performAscension(prev, Date.now()));
+  };
+
   const onAdvanceEraOne = () => {
     setGameState((prev) => performAdvanceEraOneToTwo(prev, Date.now()));
   };
@@ -254,7 +325,7 @@ export default function App() {
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
           <h1 className="text-2xl font-semibold text-veil md:text-4xl">Someone is listening.</h1>
           <p className="max-w-3xl text-sm text-veil/70">
-            M6 loop active: offline simulation now returns lore summaries with bounded progression.
+            M7 loop active: ascension and echo trees now reshape each new cycle.
           </p>
         </header>
 
@@ -351,6 +422,18 @@ export default function App() {
           unravelingReady={unravelingGate.ready}
           onAdvanceEraOne={onAdvanceEraOne}
           onAdvanceEraTwo={onAdvanceEraTwo}
+        />
+
+        <AscensionPanel
+          era={gameState.era}
+          echoes={gameState.prestige.echoes}
+          lifetimeEchoes={gameState.prestige.lifetimeEchoes}
+          completedRuns={gameState.prestige.completedRuns}
+          ascensionEchoGain={ascensionEchoGain}
+          canAscend={canUseAscend}
+          treeViews={echoTreeViews}
+          onPurchaseTree={onPurchaseEchoTreeRank}
+          onAscend={onAscend}
         />
 
         <ProgressPanel

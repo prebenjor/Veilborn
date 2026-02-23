@@ -1,12 +1,15 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 6;
+export const GAME_STATE_SCHEMA_VERSION = 7;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
 export const OFFLINE_INFLUENCE_RETURN_RATIO = 0.5;
 export const OFFLINE_RIVAL_DRAIN_MULTIPLIER = 0.5;
 export const OFFLINE_VEIL_FLOOR = 15;
+export const ECHO_ASCENSION_DIVISOR = 150000;
+export const ECHO_TREE_MAX_RANK = 5;
+export const ECHO_TREE_RANK_COSTS = [1, 2, 3, 5, 8] as const;
 
 export const PROPHET_OUTPUT_BASE = 2;
 export const PROPHET_DOMAIN_OUTPUT_SCALE = 0.1;
@@ -200,6 +203,22 @@ export interface EchoBonuses {
   civRebuild: boolean;
 }
 
+export type EchoTreeId = "whispers" | "doctrine" | "cataclysm";
+export const ECHO_TREE_ORDER: EchoTreeId[] = ["whispers", "doctrine", "cataclysm"];
+
+export interface EchoTreeRanks {
+  whispers: number;
+  doctrine: number;
+  cataclysm: number;
+}
+
+export interface PrestigeState {
+  echoes: number;
+  lifetimeEchoes: number;
+  completedRuns: number;
+  treeRanks: EchoTreeRanks;
+}
+
 export interface ActivityState {
   lastEventAt: number;
   whisperWindowStartedAt: number;
@@ -274,6 +293,7 @@ export interface GameState {
   stats: RunStats;
   doctrine: DoctrineState;
   cataclysm: CataclysmState;
+  prestige: PrestigeState;
   echoBonuses: EchoBonuses;
   era: 1 | 2 | 3;
   mortals: Mortal[];
@@ -304,6 +324,43 @@ function createDefaultDomains(): DomainProgress[] {
 function createInitialRngState(nowMs: number): number {
   const seeded = (nowMs ^ 0x9e3779b9) >>> 0;
   return seeded === 0 ? 0x6d2b79f5 : seeded;
+}
+
+export function createDefaultEchoTreeRanks(): EchoTreeRanks {
+  return {
+    whispers: 0,
+    doctrine: 0,
+    cataclysm: 0
+  };
+}
+
+export function createDefaultEchoBonuses(): EchoBonuses {
+  return {
+    startInf: false,
+    faithFloor: false,
+    prophetThreshold: false,
+    cultCostBase: false,
+    era1Gate: false,
+    era2Gate: false,
+    actFloor: false,
+    actDiscount: false,
+    rivalDelay: false,
+    rivalWeaken: false,
+    veilRegen: false,
+    miracleVeilDiscount: false,
+    collapseThreshold: false,
+    collapseImmunity: false,
+    civRebuild: false
+  };
+}
+
+export function createDefaultPrestigeState(): PrestigeState {
+  return {
+    echoes: 0,
+    lifetimeEchoes: 0,
+    completedRuns: 0,
+    treeRanks: createDefaultEchoTreeRanks()
+  };
 }
 
 export function createInitialGameState(nowMs = Date.now()): GameState {
@@ -358,23 +415,8 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       totalVeilCollapses: 0,
       veilCollapseImmunityUntil: 0
     },
-    echoBonuses: {
-      startInf: false,
-      faithFloor: false,
-      prophetThreshold: false,
-      cultCostBase: false,
-      era1Gate: false,
-      era2Gate: false,
-      actFloor: false,
-      actDiscount: false,
-      rivalDelay: false,
-      rivalWeaken: false,
-      veilRegen: false,
-      miracleVeilDiscount: false,
-      collapseThreshold: false,
-      collapseImmunity: false,
-      civRebuild: false
-    },
+    prestige: createDefaultPrestigeState(),
+    echoBonuses: createDefaultEchoBonuses(),
     era: 1,
     mortals: [
       {
