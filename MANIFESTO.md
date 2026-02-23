@@ -468,7 +468,7 @@ Rules:
 - Early HUD minimalism: Era I top-level HUD should stay sparse. Metrics like Veil Thickness and Domain totals appear only after they are mechanically relevant and explained once.
 - First-contact explanation: when a new meter appears, attach one concise in-world explanation so players know what changed and why it matters.
 - Density budget: prioritize single-screen decision-making. Move long-form details to compact drawers, tabs, or a dedicated stats page.
-- Era II tab split is strict: `ACTIVE` is Whisper/Recruit cadence only; `GROWTH` contains domains/doctrine/progress plus rivals and the era threshold.
+- Era II tab split is strict: `ACTIVE` contains Whisper/Recruit, Influence pressure, Doctrine (Acts), and Doctrine Seeds; `GROWTH` contains Domains plus rivals/threshold progress surfaces.
 - Era II rivals may collapse to a one-line status when inactive; expand to full controls only when active.
 - Era II threshold tracking belongs in `GROWTH`, not `ACTIVE`, and should default to collapsed.
 - Vocabulary progression is era-locked: Era I uses `Murmurs`, Era II uses `Whispers`, Era III uses `Omens`.

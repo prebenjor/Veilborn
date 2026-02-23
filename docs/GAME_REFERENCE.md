@@ -373,9 +373,9 @@ Era II+:
 - sticky tab dock
 
 Era II:
-- `active` contains Whisper/Recruit only; threshold and rivals are removed from the active flow
+- `active` order: Whisper/Recruit -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds
 - era-II whisper surface keeps controls/cadence only (no additional subtitle text)
-- `growth` order: Domains -> Doctrine (Acts) -> Doctrine Seeds -> Rivals -> Threshold
+- `growth` order: Domains -> Rivals -> Threshold
 - rivals render as a single-line summary when inactive and expand to full panel when active
 - threshold renders at the bottom of `growth` (not in `active`)
 - threshold defaults to collapsed in Era II

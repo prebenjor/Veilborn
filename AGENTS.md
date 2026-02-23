@@ -20,7 +20,9 @@ Active manifesto mode is Revision B (uncapped Belief + offline progression).
 - Keep each play session capable of a meaningful 20-40 minute milestone.
 - Keep UI vocabulary progression consistent by era: Era I `Murmurs`, Era II `Whispers`, Era III `Omens`.
 - Keep the Stats drawer/page accessible in every era and tab; never era-lock access to it.
-- Preserve Era II tab contract for existing and future features: `ACTIVE` is Whisper/Recruit cadence only; progress/reference surfaces (including Threshold and inactive rivals) stay in `GROWTH`.
+- Preserve Era II tab contract for existing and future features:
+  - `ACTIVE`: Whisper/Recruit, Influence meter, Doctrine (Acts), Doctrine Seeds.
+  - `GROWTH`: Domains, then Rivals/Threshold progress surfaces.
 
 If a request conflicts with the manifesto, flag it and ask whether to revise the manifesto or make an intentional exception.
 

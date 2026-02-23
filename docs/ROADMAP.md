@@ -234,6 +234,7 @@ Deliverables:
   - Run 5: ~1.2h
   - Run 8+: ~45m floor
 - 30-60 second active decision cadence checks.
+- Era pacing audit within runs: Era II acceleration should be noticeable but not abrupt relative to Era I progression.
 - 20-40 minute milestone cadence checks.
 - Regression tests for core formulas and offline simulation.
 
@@ -256,8 +257,8 @@ Deliverables:
   - Era II: ACTIVE + GROWTH (+ constrained META content) tabbed structure
   - Era III: full ACTIVE/GROWTH/META flow with low-scroll decision surfaces
 - Era II tab contract:
-  - ACTIVE contains Whisper/Recruit cadence interactions only
-  - GROWTH order: Domains, Doctrine, Doctrine Seeds, Rivals, Threshold
+  - ACTIVE order: Whispers, Influence meter, Doctrine (Acts), Doctrine Seeds
+  - GROWTH order: Domains, Rivals, Threshold
   - Rivals collapse to one-line summary when inactive and expand only when active
   - Threshold sits at bottom of GROWTH (not ACTIVE) and defaults to collapsed
 - ACTIVE tab prioritizes time-sensitive systems (Cataclysm, rivals, whispers, Influence pressure).

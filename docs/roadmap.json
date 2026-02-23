@@ -272,6 +272,7 @@
       "deliverables": [
         "Timing and economy tuning for Revision B targets",
         "Decision and milestone cadence instrumentation",
+        "Era pacing audit inside runs: Era II speed-up is tangible but not abrupt versus Era I",
         "Regression tests for formulas and offline sim"
       ],
       "validation": [
@@ -290,7 +291,7 @@
       "notes": "Consolidates PF-02 and PF-03 scope into a dedicated milestone for era shell structure, anti-clutter flow, and strict reveal behavior.",
       "deliverables": [
         "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+constrained META content), Era III full ACTIVE/GROWTH/META",
-        "Era II tab contract: ACTIVE is Whisper/Recruit cadence only; GROWTH order is Domains -> Doctrine -> Doctrine Seeds -> Rivals -> Threshold",
+        "Era II tab contract: ACTIVE order is Whispers -> Influence meter -> Doctrine -> Doctrine Seeds; GROWTH order is Domains -> Rivals -> Threshold",
         "Era II rivals collapse to one-line status when inactive and expand to full controls when active",
         "Era II threshold sits at the bottom of GROWTH (not ACTIVE) and defaults to collapsed",
         "ACTIVE tab prioritizes Cataclysm, rivals, whispers, and influence pressure in Era III",

@@ -1042,6 +1042,25 @@ export default function App() {
     />
   );
 
+  const eraTwoInfluenceFill = influenceCap <= 0
+    ? 0
+    : Math.max(0, Math.min(1, gameState.resources.influence / influenceCap));
+  const eraTwoInfluenceNearCap = eraTwoInfluenceFill >= 0.8;
+  const eraTwoInfluenceMeter =
+    era === 2 ? (
+      <div className="px-1 py-1">
+        <p className={`text-sm ${eraTwoInfluenceNearCap ? "text-ember" : "text-veil/75"}`}>
+          {formatResource(gameState.resources.influence)} / {formatResource(influenceCap)}
+        </p>
+        <div className="mt-2 h-2 overflow-hidden rounded-full border border-white/15 bg-black/35">
+          <div
+            className={`h-full transition-all ${eraTwoInfluenceNearCap ? "bg-ember/75" : "bg-veil/60"}`}
+            style={{ width: `${(eraTwoInfluenceFill * 100).toFixed(2)}%` }}
+          />
+        </div>
+      </div>
+    ) : null;
+
   const eraTwoRivalsContent =
     era === 2 ? (
       hasActiveRivals ? (
@@ -1082,14 +1101,17 @@ export default function App() {
       ) : null}
       {era >= 3 ? doctrineRivalsPanel : null}
       {whisperPanel}
+      {eraTwoInfluenceMeter}
+      {era === 2 ? doctrineGrowthPanel : null}
+      {era === 2 ? progressPanel : null}
     </>
   );
 
   const growthTabContent = (
     <>
       {domainPanel}
-      {doctrineGrowthPanel}
-      {progressPanel}
+      {era >= 3 ? doctrineGrowthPanel : null}
+      {era >= 3 ? progressPanel : null}
       {eraTwoRivalsContent}
       {era === 2 ? eraGatePanel : null}
     </>
