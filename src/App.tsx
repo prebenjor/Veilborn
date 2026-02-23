@@ -72,6 +72,7 @@ import {
   getUiRevealState,
   veilMaskText
 } from "./core/engine/uiReveal";
+import { useVeilAudio } from "./core/audio/useVeilAudio";
 import {
   DOMAIN_LABELS,
   MIRACLE_TIERS,
@@ -230,6 +231,31 @@ export default function App() {
   const canAdvanceEraTwo = canAdvanceEraTwoToThree(gameState);
   const canUseAscend = canAscend(gameState);
   const eraLabel = gameState.era === 1 ? "I" : gameState.era === 2 ? "II" : "III";
+  const totalDomainLevel = getTotalDomainLevel(gameState);
+
+  const { controls: audioControls, enableAudio, disableAudio, toggleMute, useSilentFallback } =
+    useVeilAudio({
+      era: gameState.era,
+      veil: gameState.resources.veil,
+      civilizationHealth: gameState.cataclysm.civilizationHealth,
+      civilizationCollapsed: gameState.cataclysm.civilizationCollapsed,
+      rivalCount: gameState.doctrine.rivals.length,
+      totalDomainLevel,
+      domains: gameState.domains.reduce(
+        (accumulator, domain) => {
+          accumulator[domain.id] = domain.level;
+          return accumulator;
+        },
+        {
+          fire: 0,
+          death: 0,
+          harvest: 0,
+          storm: 0,
+          memory: 0,
+          void: 0
+        } satisfies Record<DomainId, number>
+      )
+    });
 
   const echoTreeViews = ECHO_TREE_META
     .filter((tree) => {
@@ -449,7 +475,7 @@ export default function App() {
             {uiReveal.showDomainSumHud ? (
               <article className="rounded-xl border border-white/10 bg-black/20 p-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Domain Level Sum</p>
-                <p className="mt-2 text-xl text-white">{formatNumber(getTotalDomainLevel(gameState))}</p>
+                <p className="mt-2 text-xl text-white">{formatNumber(totalDomainLevel)}</p>
               </article>
             ) : null}
           </section>
@@ -626,6 +652,11 @@ export default function App() {
             secondsSinceLastEvent={secondsSinceLastEvent}
             whispersInWindow={gameState.activity.whispersInWindow}
             whisperResetInSeconds={whisperResetInSeconds}
+            audioControls={audioControls}
+            onEnableAudio={enableAudio}
+            onDisableAudio={disableAudio}
+            onToggleAudioMute={toggleMute}
+            onUseAudioFallback={useSilentFallback}
           />
         ) : null}
       </motion.div>

@@ -211,7 +211,7 @@
     {
       "id": "M11",
       "title": "Audio as System Feedback",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [
         "M5"
       ],
