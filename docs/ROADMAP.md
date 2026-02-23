@@ -238,3 +238,92 @@ Definition of Done:
 - Playtest data aligns with timing targets.
 - Compression floor (~45m) is preserved.
 - No high-severity simulation regressions.
+
+## M15 - Save Integrity and Recovery
+
+Objective: Ensure players never lose meaningful progress due to schema drift or corrupted save state.
+
+Notes:
+- Must precede M14 balance stress tuning.
+- Players must not lose runs during stress testing or normal play due to save corruption.
+
+Deliverables:
+- Versioned save migration pipeline for schema changes.
+- Secondary snapshot slot: auto-saved "last good state" before each ascension and each era transition.
+- Manual save export to JSON file (download).
+- Save import with version validation and conflict warnings.
+- Graceful corruption recovery: detect bad state, offer rollback or fresh run with explanation.
+
+Definition of Done:
+- Corrupted localStorage does not crash the game.
+- Exported save can be re-imported and continues correctly.
+- Schema migration from prior version produces valid state.
+- Ascension snapshot correctly reflects pre-reset state.
+
+## M16 - Instrumentation and Playtesting Telemetry
+
+Objective: Make balance tuning evidence-based through local, structured run instrumentation.
+
+Notes:
+- Must precede or run parallel with M14.
+- All telemetry is local-only unless opt-in is explicitly added later.
+
+Deliverables:
+- Structured local event log for era transitions, collapses, ascensions, rival suppression, and miracle use; each entry includes timestamp and key state snapshot.
+- Per-run summary object written to localStorage on ascension: total time, belief earned, echo gained, peak B/s, collapse count, and miracle count by tier.
+- In-game Stats page reading and displaying run history summaries.
+- Optional console/JSON export for manual analysis during playtesting.
+- Hooks for M14 regression tests to read instrumentation output.
+
+Definition of Done:
+- Era transition events are logged with correct timestamps.
+- Per-run summary is written correctly on ascension.
+- Stats page renders run history without performance impact.
+- Log does not grow unbounded; cap at last 20 runs.
+
+## M17 - Accessibility and Mobile Resilience
+
+Objective: Ensure the full core loop remains completable and readable on mobile and accessible across input/visual preferences.
+
+Notes:
+- The 45-minute floor run and offline check-in model imply intermittent mobile use.
+- This milestone ensures the game is completable on mobile without layout breakage or battery abuse.
+
+Deliverables:
+- Responsive layout audit: all panels usable at 375px width without horizontal scroll.
+- Touch target sizing: all interactive elements meet 44x44px minimum.
+- Tick rate throttling when tab is backgrounded or device signals low power.
+- Reduced-motion support: disable Framer Motion animations when prefers-reduced-motion is set.
+- Keyboard navigation for all primary actions (Whisper, Recruit, Invest, Act, Miracle).
+- Focus management when new panels unlock progressively.
+
+Definition of Done:
+- Full Era I loop completable on 375px mobile viewport.
+- No layout overflow or hidden buttons at small sizes.
+- Background tab does not spin CPU at full tick rate.
+- All primary actions reachable via keyboard alone.
+- Reduced-motion mode produces no animation jank.
+
+## M18 - New Game+ Convergence Mode
+
+Objective: Add run 8+ structural novelty beyond speed compression while preserving core cadence and ending ambiguity.
+
+Notes:
+- Run 8+ needs structural novelty beyond compression speed.
+- Convergence is not a difficulty mode; it is a layered game state where prior-run echoes alter run shape.
+- Design must not break the 45-minute floor or the ambiguous final choice.
+
+Deliverables:
+- Convergence flag unlocked after completing Remembrance path once.
+- Ghost interference layer: imported or locally-generated prior-run signatures passively alter domain synergy, faith decay timing, and rival spawn patterns in the active run.
+- Accumulated betrayal/alliance history produces Pantheon disposition modifiers that compound across Convergence runs.
+- Convergence-only omen log entries that reference prior-run events by name.
+- Convergence does not alter core formulas or gate conditions; pressure is narrative and systemic, not numerical inflation.
+- Optional Convergence run summary screen showing which ghost echoes were active and their observed effects.
+
+Definition of Done:
+- Convergence run is structurally distinct from standard run 8+.
+- Ghost interference is perceptible but does not guarantee win or loss.
+- Final choice presentation remains ambiguous and unresolved.
+- 45-minute floor is preserved under Convergence conditions.
+- Convergence does not require M12 Ghost Echoes import to function; it falls back to local prior-run signatures.
