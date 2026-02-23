@@ -49,7 +49,7 @@ Four core resources, each with a distinct role:
 
 Active formula:
 
-`B/s = [sum(prophet_output * domain_multiplier * faith_decay) + sum(cult_output * domain_synergy)] * veil_bonus * ghost_bonus`
+`B/s = [sum(prophet_output * domain_multiplier * faith_decay) + sum(cult_output * domain_synergy)] * veil_bonus * ghost_bonus * pantheon_modifier * architecture_belief_modifier`
 
 No post-formula softcap modifier is applied.
 Output growth is controlled by scaling costs and systemic pressure, not hidden multipliers.
@@ -68,6 +68,10 @@ Output growth is controlled by scaling costs and systemic pressure, not hidden m
 `domain_synergy = 1 + (0.25 * matching_domain_pairs)`
 
 `veil_bonus = 1 + ((100 - veil) * 0.008)`
+
+`pantheon_modifier = 1.0` if no active alliance, else alliance share/bonus modifier from Pantheon state.
+
+`architecture_belief_modifier = architecture_belief_rule_modifier * final_choice_belief_modifier`
 
 Faith decay is mandatory engagement pressure, especially in Era I.
 
@@ -175,6 +179,38 @@ Doctrine follower rites (Era III only):
 - Added high-cost rites for active follower bursts in Doctrine panel.
 - Costs scale per-rite by usage count and do not reset on short timers.
 - Rites consume both Belief and Influence and scale from cult/shrine/prophet/domain/faith/veil/civ state.
+
+Rite cost formulas:
+
+`rite_influence_cost(type, uses) = base_influence[type] * cost_scalar[type]^uses`
+
+`rite_belief_cost(type, uses) = base_belief[type] * cost_scalar[type]^uses`
+
+Constants:
+- `base_influence[procession] = 220`
+- `base_influence[convergence] = 680`
+- `base_belief[procession] = 12000`
+- `base_belief[convergence] = 90000`
+- `cost_scalar[procession] = 1.28`
+- `cost_scalar[convergence] = 1.35`
+
+Rite follower gain:
+
+`rite_followers = base_followers[type] * infrastructure_mult * faithDecay * (civHealth/100) * rite_veil_mult * lineage_conversion_modifier`
+
+`base_followers[procession] = 180`
+
+`base_followers[convergence] = 900`
+
+`infrastructure_mult = 1 + (0.08*cults) + (0.06*shrines) + (0.04*prophets) + (0.07*matching_domain_pairs) + (0.01*total_domain_level)`
+
+`rite_veil_mult`:
+- Veil `>55`: `0.95`
+- Veil `30-55`: `1.10`
+- Veil `<30`: `1.20`
+
+Implementation note:
+- Rite use counters currently scale within a run (not a short timer reset) and reset on ascension/new run.
 
 ## Rival System
 
@@ -400,7 +436,7 @@ Hard rule:
 Implementation governance is now formally bound to `docs/roadmap.json`.
 That file is the machine-readable execution ledger and includes:
 
-- Milestones `M0` through `M19`.
+- Milestones `M0` through `M20`.
 - Post-final improvements `PF-01` through `PF-20`.
 
 Expanded roadmap commitments:
@@ -409,6 +445,7 @@ Expanded roadmap commitments:
 - `M17` Accessibility and Mobile Resilience is required for 375px-playable completion and low-power resilience.
 - `M18` New Game+ Convergence Mode adds run 8+ structural novelty without breaking the 45-minute floor or final-choice ambiguity.
 - `M19` Documentation and Wiki Foundation formalizes `docs/GAME_REFERENCE.md` and future wiki publication workflow.
+- `M20` Era UI Restructure and Disclosure Consolidation captures ACTIVE/GROWTH/META structure, progressive era theming, and anti-clutter layout scope previously split across PFs.
 
 Expanded PF commitments (additions beyond `PF-01` to `PF-07`):
 - `PF-08` through `PF-20` are adopted, including onboarding veil pacing, number legibility, faith-decay indicator, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, and remembrance condition tracking.

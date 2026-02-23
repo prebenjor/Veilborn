@@ -308,6 +308,9 @@ Echo trees:
 - max rank `5`
 - rank costs: `1, 2, 3, 5, 8`
 
+Domain carry:
+- `domain_carry` is currently a planned upgrade path and not active in runtime.
+
 ### Lineage Memory
 
 Persistent lineage dimensions:

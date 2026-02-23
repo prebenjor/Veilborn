@@ -189,9 +189,12 @@ Deliverables:
 - Tone.js layer mapping domains to instruments.
 - Instability detune/dropout behavior.
 - Performance-safe fallbacks and mute controls.
+- Layered signal chain (dry bus + reverb bus + master filter) with era-sensitive mix behavior.
+- Low-Veil drone and staged instability transitions (detune -> dropout -> muffling).
 
 Definition of Done:
 - Players can hear destabilization before major visual consequences.
+- Audio remains readable (no clipping/chaotic overlap) across full Era III density.
 
 ## M12 - Ghost Echoes and Async Signatures
 
@@ -238,6 +241,31 @@ Definition of Done:
 - Playtest data aligns with timing targets.
 - Compression floor (~45m) is preserved.
 - No high-severity simulation regressions.
+
+## M20 - Era UI Restructure and Disclosure Consolidation
+
+Objective: Resolve late-era clutter and decision-latency by formalizing the era-progression layout system.
+
+Notes:
+- This milestone consolidates scope previously split across PF-02 and PF-03.
+- Must execute after M14 and before M17 completion work.
+
+Deliverables:
+- Era-locked shell behavior:
+  - Era I: minimal single-column layout, no tabs
+  - Era II: ACTIVE + GROWTH (+ light META) tabbed structure
+  - Era III: full ACTIVE/GROWTH/META flow with low-scroll decision surfaces
+- ACTIVE tab prioritizes time-sensitive systems (Cataclysm, rivals, whispers, Influence pressure).
+- Unraveling gate as persistent strip in Era III.
+- Echo trees and other between-run systems constrained to META view.
+- Omen surface persistent across tabs (drawer/strip), not competing as a main panel.
+- Era-based theme token progression (`data-era`) for palette/texture/typography density shifts.
+- Strict future-era disclosure enforcement via shared reveal helper.
+
+Definition of Done:
+- Era III critical actions are accessible without long scrolling.
+- Future-era systems are not visible before unlock.
+- Layout remains coherent at 375px without horizontal overflow in core loop screens.
 
 ## M15 - Save Integrity and Recovery
 
@@ -288,6 +316,7 @@ Objective: Ensure the full core loop remains completable and readable on mobile 
 Notes:
 - The 45-minute floor run and offline check-in model imply intermittent mobile use.
 - This milestone ensures the game is completable on mobile without layout breakage or battery abuse.
+- Execute after M20 so accessibility hardening applies to the consolidated era shell.
 
 Deliverables:
 - Responsive layout audit: all panels usable at 375px width without horizontal scroll.

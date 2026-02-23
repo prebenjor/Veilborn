@@ -218,10 +218,13 @@
       "deliverables": [
         "Tone.js domain layers",
         "Instability detune/dropout",
-        "Mute and fallback controls"
+        "Mute and fallback controls",
+        "Layered signal chain (dry bus + reverb bus + master filter)",
+        "Low-Veil drone and staged instability transitions"
       ],
       "validation": [
-        "Players hear destabilization before major visual consequences"
+        "Players hear destabilization before major visual consequences",
+        "Audio remains readable under Era III domain density"
       ]
     },
     {
@@ -277,6 +280,30 @@
       ]
     },
     {
+      "id": "M20",
+      "title": "Era UI Restructure and Disclosure Consolidation",
+      "status": "pending",
+      "dependencies": [
+        "M14",
+        "M10"
+      ],
+      "notes": "Consolidates PF-02 and PF-03 scope into a dedicated milestone for era shell structure, anti-clutter flow, and strict reveal behavior.",
+      "deliverables": [
+        "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+lite META), Era III full ACTIVE/GROWTH/META",
+        "ACTIVE tab prioritizes Cataclysm, rivals, whispers, and influence pressure in Era III",
+        "Unraveling gate as persistent strip in Era III",
+        "Echo trees constrained to META view; between-run systems removed from active flow",
+        "Persistent omen surface across tabs (drawer/strip)",
+        "Theme token progression by era (data-era) for palette/texture/typography density shifts",
+        "Shared reveal helper enforcement for future-era disclosure"
+      ],
+      "validation": [
+        "Era III critical actions are accessible without long scrolling",
+        "Future-era systems are hidden until unlock",
+        "Core loop screens remain coherent at 375px width without horizontal overflow"
+      ]
+    },
+    {
       "id": "M15",
       "title": "Save Integrity and Recovery",
       "status": "completed",
@@ -325,7 +352,8 @@
       "title": "Accessibility and Mobile Resilience",
       "status": "pending",
       "dependencies": [
-        "M10"
+        "M10",
+        "M20"
       ],
       "notes": "The 45-minute floor run and offline check-in model implies intermittent mobile use. This milestone ensures the game is completable on mobile without layout breakage or battery abuse.",
       "deliverables": [
@@ -406,6 +434,7 @@
       "title": "Strict Era-Locked UI Disclosure",
       "status": "completed",
       "execute_after": "M14",
+      "notes": "This scope is formalized structurally under M20 for milestone-level validation.",
       "scope": [
         "Hide all future-era systems until era unlock",
         "Fix current leak: Cataclysm content must not appear in Era II",
@@ -417,6 +446,7 @@
       "title": "Anti-Clutter Layout Pass",
       "status": "queued",
       "execute_after": "M14",
+      "notes": "Promoted into M20 as a dedicated milestone track for shell-level UI restructuring.",
       "scope": [
         "Reduce page scroll via docked tabs/section switcher",
         "Collapse secondary panels by default after unlock",
