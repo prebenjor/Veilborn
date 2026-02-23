@@ -11,6 +11,7 @@ interface EraOneLayoutProps {
   recruitCost: number;
   whisperPreview: string;
   recruitPreview: string;
+  devotionStacks: number;
   cadencePromptActive: boolean;
   canUseWhisper: boolean;
   canUseRecruit: boolean;
@@ -30,6 +31,7 @@ export function EraOneLayout({
   recruitCost,
   whisperPreview,
   recruitPreview,
+  devotionStacks,
   cadencePromptActive,
   canUseWhisper,
   canUseRecruit,
@@ -84,6 +86,18 @@ export function EraOneLayout({
         {hoveredAction ? (
           <p className="mt-2 text-xs text-veil/65">
             {hoveredAction === "whisper" ? `Whisper: ${whisperPreview}` : `Recruit: ${recruitPreview}`}
+          </p>
+        ) : null}
+        {devotionStacks > 0 ? (
+          <p className="mt-2 flex items-center gap-2 text-xs text-veil/70">
+            <span className="tracking-[0.2em]">
+              {[0, 1, 2].map((index) => (
+                <span key={index} className={index < devotionStacks ? "text-omen" : "text-white/30"}>
+                  ●
+                </span>
+              ))}
+            </span>
+            <span>Devotion</span>
           </p>
         ) : null}
 

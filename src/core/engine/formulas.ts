@@ -85,6 +85,8 @@ import {
   RECRUIT_BASE_FOLLOWERS,
   RECRUIT_DOMAIN_FOLLOWER_DIVISOR,
   RECRUIT_PROPHET_FOLLOWER_BONUS,
+  DEVOTION_STACK_MAX,
+  DEVOTION_RECRUIT_BONUS_PER_STACK,
   RIVAL_SPAWN_BASE_MS,
   RIVAL_SPAWN_ECHO_DELAY_MS,
   RIVAL_STRENGTH_SCALE,
@@ -704,6 +706,14 @@ export function getRecruitFollowerGainBase(state: GameState): number {
     state.prophets * RECRUIT_PROPHET_FOLLOWER_BONUS +
     Math.floor(getTotalDomainLevel(state) / RECRUIT_DOMAIN_FOLLOWER_DIVISOR)
   );
+}
+
+export function getDevotionStacks(state: GameState): number {
+  return Math.max(0, Math.min(DEVOTION_STACK_MAX, Math.floor(state.devotionStacks)));
+}
+
+export function getDevotionRecruitMultiplier(state: GameState): number {
+  return 1 + getDevotionStacks(state) * DEVOTION_RECRUIT_BONUS_PER_STACK;
 }
 
 export function getLineageTraitDistribution(state: GameState): TraitDistribution {

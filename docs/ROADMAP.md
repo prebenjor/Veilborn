@@ -75,7 +75,7 @@ Deliverables:
 - Era I gate checks.
 
 Definition of Done:
-- Player can reliably reach 3 prophets and domain level 3 through active play.
+- Player can reliably reach 3 prophets and 500 followers through active play.
 - Decisions occur at least every 30-60 seconds during active session.
 
 ## M4 - Doctrine Loop (Era II)
@@ -273,6 +273,35 @@ Definition of Done:
 - Era III critical actions are accessible without long scrolling.
 - Future-era systems are not visible before unlock.
 - Layout remains coherent at 375px without horizontal overflow in core loop screens.
+
+## M21 - Devotion Path System
+
+Objective: Expand the Era I Devotion foundation into behavior-shaped Era II/III path identity and run-to-run memory.
+
+Notes:
+- Era I foundation (stacks, recruit amplification, omen milestones, persistence/reset rules) is implemented.
+- This milestone covers only path differentiation and lineage carryover behavior.
+- Full architecture reference: `docs/DEVOTION_SYSTEM.md`.
+
+Deliverables:
+- Era II path emergence from play pattern:
+  - Act-heavy behavior pulls toward `Fervour`
+  - Cult-heavy behavior pulls toward `Accord`
+- Era III path crystallization into:
+  - `Fervour`, `Accord`, `Reverence`, `Ardour`
+- Distinct per-path mechanical effects (acts/miracles, cults/domains, Veil resilience, faith stability).
+- Path switching requires sustained behavioral change (not instantaneous).
+- Omen log announces path shifts in-world.
+- Run 2+ lineage memory grants one starting stack toward prior dominant path.
+- Stats surface displays current devotion path and stack state.
+- `MANIFESTO.md` and `docs/GAME_REFERENCE.md` updated for full path formulas when implemented.
+
+Definition of Done:
+- Era II path emergence tracks player behavior reliably.
+- Era III paths are distinct, viable, and none is strictly dominant.
+- Path switching is possible with sustained behavior change.
+- Lineage path memory applies correctly on run 2+.
+- Devotion remains non-decaying and inactivity-safe.
 
 ## M15 - Save Integrity and Recovery
 

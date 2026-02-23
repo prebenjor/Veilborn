@@ -31,6 +31,7 @@ import {
   RECRUIT_INFLUENCE_COST,
   RECRUIT_PROPHET_FOLLOWER_BONUS,
   RECRUIT_RANDOM_FOLLOWER_MAX,
+  DEVOTION_STACK_MAX,
   VEIL_MIN,
   WHISPER_BELIEF_GAIN,
   WHISPER_FOLLOWER_GAIN,
@@ -89,6 +90,8 @@ import {
   getMiracleCivDamage,
   getMiracleInfluenceCost,
   getMiracleVeilCost,
+  getDevotionStacks,
+  getDevotionRecruitMultiplier,
   getRecruitFollowerGainBase,
   getTotalDomainLevel,
   getInfluenceCap,
@@ -116,6 +119,7 @@ type OmenKind =
   | "ghostEcho"
   | "echoTree"
   | "ascension"
+  | "devotion"
   | "eraOneToTwo"
   | "eraTwoToThree";
 
@@ -202,6 +206,10 @@ const FOLLOWER_RITE_LABELS: Record<FollowerRiteType, string> = {
   convergence: "Convergence March"
 };
 
+const DEVOTION_OMEN_FIRST_STACK = "Something stirs at the edge of attention.";
+const DEVOTION_OMEN_MAX_STACK = "The devotion of your followers has taken root.";
+const DEVOTION_OMEN_AFTER_ASCENSION = "The stillness returns. Begin again.";
+
 const MAJOR_OMEN_KINDS: OmenKind[] = [
   "domainLevel",
   "prophet",
@@ -217,6 +225,7 @@ const MAJOR_OMEN_KINDS: OmenKind[] = [
   "ghostEcho",
   "echoTree",
   "ascension",
+  "devotion",
   "eraOneToTwo",
   "eraTwoToThree"
 ];
@@ -299,6 +308,67 @@ function getCadenceBonus(state: GameState): CadenceBonus {
     beliefBonus: CADENCE_ACTION_BELIEF_BONUS,
     followerBonus: CADENCE_ACTION_FOLLOWER_BONUS
   };
+}
+
+function hasRunOmenLine(state: GameState, text: string): boolean {
+  return state.omenLog.some((entry) => entry.text === text);
+}
+
+function withDevotionIncrementFromQualifyingAction(state: GameState): {
+  state: GameState;
+  previousStacks: number;
+  nextStacks: number;
+} {
+  const previousStacks = getDevotionStacks(state);
+  if (state.era !== 1 || previousStacks >= DEVOTION_STACK_MAX) {
+    return {
+      state,
+      previousStacks,
+      nextStacks: previousStacks
+    };
+  }
+
+  const nextStacks = Math.min(DEVOTION_STACK_MAX, previousStacks + 1);
+  return {
+    state: {
+      ...state,
+      devotionStacks: nextStacks
+    },
+    previousStacks,
+    nextStacks
+  };
+}
+
+function appendDevotionMilestoneOmens(
+  state: GameState,
+  nowMs: number,
+  previousStacks: number,
+  nextStacks: number
+): GameState {
+  if (nextStacks <= previousStacks) return state;
+
+  let nextState = state;
+
+  if (previousStacks === 0 && nextStacks >= 1) {
+    if (
+      nextState.prestige.completedRuns > 0 &&
+      !hasRunOmenLine(nextState, DEVOTION_OMEN_AFTER_ASCENSION)
+    ) {
+      nextState = appendOmen(nextState, nowMs, "devotion", DEVOTION_OMEN_AFTER_ASCENSION);
+    }
+
+    if (!hasRunOmenLine(nextState, DEVOTION_OMEN_FIRST_STACK)) {
+      nextState = appendOmen(nextState, nowMs, "devotion", DEVOTION_OMEN_FIRST_STACK);
+    }
+  }
+
+  if (previousStacks < DEVOTION_STACK_MAX && nextStacks >= DEVOTION_STACK_MAX) {
+    if (!hasRunOmenLine(nextState, DEVOTION_OMEN_MAX_STACK)) {
+      nextState = appendOmen(nextState, nowMs, "devotion", DEVOTION_OMEN_MAX_STACK);
+    }
+  }
+
+  return nextState;
 }
 
 function clampLineageMetric(value: number, max: number): number {
@@ -1033,6 +1103,13 @@ function createOmen(
     };
   }
 
+  if (kind === "devotion") {
+    return {
+      rngState: rngSeed,
+      text: (detail ?? DEVOTION_OMEN_FIRST_STACK).trim()
+    };
+  }
+
   if (kind === "eraOneToTwo") {
     const a = pickOne(rngSeed, eraOneToTwoStarts);
     return {
@@ -1154,10 +1231,17 @@ export function performWhisper(state: GameState, nowMs: number): GameState {
     }
   };
 
-  const withRecoveredLineage = applyLineageDelta(withWhisper, {
+  const devotionUpdate = withDevotionIncrementFromQualifyingAction(withWhisper);
+  const withRecoveredLineage = applyLineageDelta(devotionUpdate.state, {
     trustDebt: -LINEAGE_ACTION_RECOVERY_WHISPER,
     skepticism: -LINEAGE_ACTION_RECOVERY_WHISPER * 0.25
   });
+  const withDevotionMilestones = appendDevotionMilestoneOmens(
+    withRecoveredLineage,
+    nowMs,
+    devotionUpdate.previousStacks,
+    devotionUpdate.nextStacks
+  );
   const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
   const detail = [
     `${followerGain} new listeners held the whisper through the next bell.`,
@@ -1166,7 +1250,7 @@ export function performWhisper(state: GameState, nowMs: number): GameState {
     .filter((entry): entry is string => Boolean(entry))
     .join(" ");
   return appendOmen(
-    withPeakFollowers(withRecoveredLineage, withRecoveredLineage.resources.followers),
+    withPeakFollowers(withDevotionMilestones, withDevotionMilestones.resources.followers),
     nowMs,
     "whisper",
     detail
@@ -1181,11 +1265,13 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
   if (!canRecruit(state)) return state;
 
   const recruitBase = getRecruitFollowerGainBase(state);
+  const devotionMultiplier = getDevotionRecruitMultiplier(state);
   const recruitRandom = nextRandom(state.rngState);
   const randomFollowerBonus = Math.floor(recruitRandom.value * (RECRUIT_RANDOM_FOLLOWER_MAX + 1));
   const cadence = getCadenceBonus(state);
   const lineageFactors = getLineageConversionFactors(state);
-  const rawFollowerGain = recruitBase + randomFollowerBonus + cadence.followerBonus;
+  const rawFollowerGain =
+    (recruitBase + randomFollowerBonus + cadence.followerBonus) * devotionMultiplier;
   const followerGain = Math.max(1, Math.floor(rawFollowerGain * lineageFactors.totalModifier));
   const beliefGain = cadence.beliefBonus;
 
@@ -1209,10 +1295,17 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
     }
   };
 
-  const withRecoveredLineage = applyLineageDelta(withRecruit, {
+  const devotionUpdate = withDevotionIncrementFromQualifyingAction(withRecruit);
+  const withRecoveredLineage = applyLineageDelta(devotionUpdate.state, {
     trustDebt: -LINEAGE_ACTION_RECOVERY_RECRUIT,
     skepticism: -LINEAGE_ACTION_RECOVERY_RECRUIT * 0.35
   });
+  const withDevotionMilestones = appendDevotionMilestoneOmens(
+    withRecoveredLineage,
+    nowMs,
+    devotionUpdate.previousStacks,
+    devotionUpdate.nextStacks
+  );
   const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
   const detail = [
     `${followerGain} followers answered before the watch changed shifts.`,
@@ -1221,7 +1314,7 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
     .filter((entry): entry is string => Boolean(entry))
     .join(" ");
   return appendOmen(
-    withPeakFollowers(withRecoveredLineage, withRecoveredLineage.resources.followers),
+    withPeakFollowers(withDevotionMilestones, withDevotionMilestones.resources.followers),
     nowMs,
     "recruit",
     detail
@@ -1404,7 +1497,14 @@ export function performProphetAnoint(state: GameState, nowMs: number): GameState
     }
   };
 
-  const withDescendant = addLineageDescendant(withProphet, nowMs);
+  const devotionUpdate = withDevotionIncrementFromQualifyingAction(withProphet);
+  const withDevotionMilestones = appendDevotionMilestoneOmens(
+    devotionUpdate.state,
+    nowMs,
+    devotionUpdate.previousStacks,
+    devotionUpdate.nextStacks
+  );
+  const withDescendant = addLineageDescendant(withDevotionMilestones, nowMs);
   return appendOmen(withDescendant, nowMs, "prophet");
 }
 
@@ -2202,9 +2302,13 @@ export function getRecruitPreview(state: GameState): string {
 
   const floor = RECRUIT_BASE_FOLLOWERS + state.prophets * RECRUIT_PROPHET_FOLLOWER_BONUS;
   const domainBonus = Math.floor(getTotalDomainLevel(state) / RECRUIT_DOMAIN_FOLLOWER_DIVISOR);
+  const devotionMultiplier = getDevotionRecruitMultiplier(state);
   const lineageModifier = getLineageConversionModifier(state);
-  const low = Math.max(1, Math.floor((floor + domainBonus) * lineageModifier));
-  const high = Math.max(low, Math.floor((floor + domainBonus + RECRUIT_RANDOM_FOLLOWER_MAX) * lineageModifier));
+  const low = Math.max(1, Math.floor((floor + domainBonus) * devotionMultiplier * lineageModifier));
+  const high = Math.max(
+    low,
+    Math.floor((floor + domainBonus + RECRUIT_RANDOM_FOLLOWER_MAX) * devotionMultiplier * lineageModifier)
+  );
   return `${formatPreviewValue(low)}-${formatPreviewValue(high)} followers`;
 }
 

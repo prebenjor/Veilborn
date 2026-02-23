@@ -19,7 +19,7 @@ When runtime and manifesto diverge, either:
 
 ## Current Build Snapshot
 
-- Save schema: `12`
+- Save schema: `13`
 - Core loop: deterministic tick (`250ms`)
 - Persistence: localStorage save + migration + recovery snapshot
 - Offline sim: enabled (`8h cap`, `85% belief efficiency`)
@@ -34,17 +34,21 @@ Completed milestones in code:
 
 Pending milestones:
 - `M14` balance/runtime targets
+- `M20` era UI restructure/disclosure consolidation
+- `M21` devotion path system
 - `M17` accessibility/mobile resilience
 - `M18` convergence mode
 
 Completed PFs currently reflected in runtime:
 - `PF-01` bulk domain investing
 - `PF-02` strict era-locked disclosure
+- `PF-03` anti-clutter layout pass
 - `PF-04` runtime formatting in stats
 - `PF-06` omen frequency/authenticity baseline pass
 - `PF-07` progressive HUD reveal
 - `PF-09` number legibility formatting
 - `PF-15` act projection/result clarity baseline
+- `PF-18` veil mastery zone indicator baseline
 - `PF-17` domain synergy feedback baseline
 
 ## Core Systems and Formulas
@@ -61,7 +65,7 @@ Completed PFs currently reflected in runtime:
 
 Runtime formula:
 
-`B/s = (prophetStack + cultStack) * veilBonus * ghostBonus * pantheonModifier * architectureBeliefModifier`
+`B/s = (prophetStack + cultStack + followerTrickle) * veilBonus * ghostBonus * pantheonModifier * architectureBeliefModifier`
 
 Components:
 
@@ -71,6 +75,7 @@ Components:
 - `cultOutput = prophets * followers * 0.08 * domainSynergy`
 - `domainSynergy = (1 + 0.25 * matchingPairs) * architecture/final-choice/ghost adjustments`
 - `veilBonus = 1 + ((100 - veil) * 0.008)`
+- `followerTrickle = followers * 0.002`
 
 Faith floor:
 - base `0.0`
@@ -105,12 +110,38 @@ Recruit:
 - Cost: `25 Influence` (flat)
 - Follower base: `4 + 2*prophets + floor(totalDomainLevel / 2)`
 - Random bonus: `0..2`
+- Devotion multiplier: `* (1 + 0.08 * devotionStacks)`
 
 Cadence prompt:
 - Trigger after `45s` inactivity
 - Next action bonus: `+5 belief`, `+1 follower`
 
 Lineage conversion modifier applies to whisper/recruit follower gains.
+
+### Devotion (Era I Foundation)
+
+Devotion stacks:
+- Range: `0..3` (Era I cap)
+- Qualifying actions: Whisper, Recruit, Anoint Prophet
+- Gain rule: +1 stack per qualifying action, capped at `3`
+- No decay from inactivity
+
+Effect:
+
+`recruit_followers = base_followers * (1 + 0.08 * devotion_stacks)`
+
+Persistence:
+- Persists through offline sessions (no gain/loss offline)
+- Resets on ascension only
+
+Omen milestones (once per run):
+- First stack: `Something stirs at the edge of attention.`
+- First max stack: `The devotion of your followers has taken root.`
+- First qualifying action after ascension: `The stillness returns. Begin again.`
+
+Path differentiation:
+- Not active in runtime yet
+- Tracked under `M21` (Fervour/Accord/Reverence/Ardour)
 
 ### Prophet and Cult Economy
 
@@ -365,6 +396,7 @@ Era I:
 - minimal surface
 - Whisper/Recruit and Prophets render in a single merged card (no `Doctrine Seeds` section header)
 - Whisper/Recruit follower yield hints are shown on action hover/focus (not as static text)
+- Devotion indicator appears in the Whispers card after first qualifying action (`●/○`, max 3)
 - event log header: `Murmurs`
 - bottom status: one quiet atmospheric line
 
@@ -404,13 +436,14 @@ Stats drawer:
 - always accessible in every era and tab
 - run timers and cadence info
 - follower flow lines
+- devotion stack line
 - influence source breakdown
 - run history
 - audio controls
 - content scales by era without spoiling future systems
 
 Stats content by era:
-- Era I: no doctrine or cataclysm metrics (no cult output line, no shrine/cult influence lines, no rival or passive follower lines).
+- Era I: no doctrine or cataclysm metrics (no cult output line, no shrine/cult influence lines, no rival or passive follower lines); Devotion stack line visible.
 - Era II: doctrine metrics appear (cults, shrines, rival-related flow where active).
 - Era III: cataclysm-era metrics appear (passive follower arrival and other era-III-only lines).
 

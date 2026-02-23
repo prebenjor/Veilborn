@@ -13,6 +13,7 @@ import {
   OFFLINE_VEIL_FLOOR,
   RIVAL_DRAIN_RATE,
   RIVAL_EVENT_DURATION_MS,
+  DEVOTION_STACK_MAX,
   VEIL_MAX,
   createInitialGameState,
   type ActiveAct,
@@ -794,6 +795,13 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
     domains: sanitizeDomains(rawState.domains, fallback.domains),
     prophets: Math.max(0, Math.floor(readNumber(rawState.prophets, fallback.prophets))),
     cults: Math.max(0, Math.floor(readNumber(rawState.cults, fallback.cults))),
+    devotionStacks: Math.max(
+      0,
+      Math.min(
+        DEVOTION_STACK_MAX,
+        Math.floor(readNumber(rawState.devotionStacks, fallback.devotionStacks))
+      )
+    ),
     matchingDomainPairs: Math.max(0, Math.floor(readNumber(rawState.matchingDomainPairs, fallback.matchingDomainPairs))),
     rngState: Math.max(1, Math.floor(readNumber(rawState.rngState, fallback.rngState))) >>> 0,
     omenLog: sanitizeOmenLog(rawState.omenLog, fallback.omenLog),
@@ -823,7 +831,8 @@ const MIGRATORS: Record<number, Migrator> = {
   9: sanitizeState,
   10: sanitizeState,
   11: sanitizeState,
-  12: sanitizeState
+  12: sanitizeState,
+  13: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

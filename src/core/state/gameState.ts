@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 12;
+export const GAME_STATE_SCHEMA_VERSION = 13;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -43,6 +43,8 @@ export const RECRUIT_BASE_FOLLOWERS = 4;
 export const RECRUIT_PROPHET_FOLLOWER_BONUS = 2;
 export const RECRUIT_DOMAIN_FOLLOWER_DIVISOR = 2;
 export const RECRUIT_RANDOM_FOLLOWER_MAX = 2;
+export const DEVOTION_STACK_MAX = 3;
+export const DEVOTION_RECRUIT_BONUS_PER_STACK = 0.08;
 
 export const CADENCE_PROMPT_INTERVAL_MS = 45 * 1000;
 export const CADENCE_ACTION_BELIEF_BONUS = 5;
@@ -503,6 +505,7 @@ export interface GameState {
   domains: DomainProgress[];
   prophets: number;
   cults: number;
+  devotionStacks: number;
   matchingDomainPairs: number;
   rngState: number;
   omenLog: OmenEntry[];
@@ -740,6 +743,7 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     domains: createDefaultDomains(),
     prophets: 0,
     cults: 0,
+    devotionStacks: 0,
     matchingDomainPairs: 0,
     rngState: createInitialRngState(nowMs),
     omenLog: [

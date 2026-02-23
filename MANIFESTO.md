@@ -49,7 +49,7 @@ Four core resources, each with a distinct role:
 
 Active formula:
 
-`B/s = [sum(prophet_output * domain_multiplier * faith_decay) + sum(cult_output * domain_synergy)] * veil_bonus * ghost_bonus * pantheon_modifier * architecture_belief_modifier`
+`B/s = [sum(prophet_output * domain_multiplier * faith_decay) + sum(cult_output * domain_synergy) + follower_trickle] * veil_bonus * ghost_bonus * pantheon_modifier * architecture_belief_modifier`
 
 No post-formula softcap modifier is applied.
 Output growth is controlled by scaling costs and systemic pressure, not hidden multipliers.
@@ -68,6 +68,13 @@ Output growth is controlled by scaling costs and systemic pressure, not hidden m
 `domain_synergy = 1 + (0.25 * matching_domain_pairs)`
 
 `veil_bonus = 1 + ((100 - veil) * 0.008)`
+
+`follower_trickle = follower_count * 0.002`
+
+Passive floor term:
+- Active in all eras.
+- Prevents static Belief counters when followers exist.
+- Intentionally negligible relative to prophet/cult output at later scale.
 
 `pantheon_modifier = 1.0` if no active alliance, else alliance share/bonus modifier from Pantheon state.
 
@@ -93,6 +100,25 @@ Reference values with base threshold 50:
 
 Prophets are high-meaning units, not disposable commodities.
 Loss events must feel consequential.
+
+## Devotion System
+
+Devotion is a momentum resource that builds from player action and holds through inactivity.
+It does not decay and does not punish absence.
+
+Era I implementation (current runtime):
+- Stacks: `0-3` (cap `3`)
+- Qualifying actions: Whisper, Recruit, Anoint Prophet
+- Effect on Recruit yield:
+
+`recruit_followers = base_followers * (1 + 0.08 * devotion_stacks)`
+
+- Stacks persist through offline sessions.
+- Stacks reset on ascension.
+
+Era II+ roadmap:
+- Devotion differentiates into named behavior paths (Fervour, Accord, Reverence, Ardour).
+- Full path system is tracked under milestone `M21` and is not active in current runtime.
 
 ## Influence Economy
 
@@ -440,7 +466,7 @@ Hard rule:
 Implementation governance is now formally bound to `docs/roadmap.json`.
 That file is the machine-readable execution ledger and includes:
 
-- Milestones `M0` through `M20`.
+- Milestones `M0` through `M21`.
 - Post-final improvements `PF-01` through `PF-20`.
 
 Expanded roadmap commitments:
@@ -450,6 +476,7 @@ Expanded roadmap commitments:
 - `M18` New Game+ Convergence Mode adds run 8+ structural novelty without breaking the 45-minute floor or final-choice ambiguity.
 - `M19` Documentation and Wiki Foundation formalizes `docs/GAME_REFERENCE.md` and future wiki publication workflow.
 - `M20` Era UI Restructure and Disclosure Consolidation captures ACTIVE/GROWTH/META structure, progressive era theming, and anti-clutter layout scope previously split across PFs.
+- `M21` Devotion Path System expands Era I Devotion into Era II/III path differentiation with lineage memory carryover.
 
 Expanded PF commitments (additions beyond `PF-01` to `PF-07`):
 - `PF-08` through `PF-20` are adopted, including onboarding veil pacing, number legibility, faith-decay indicator, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, and remembrance condition tracking.

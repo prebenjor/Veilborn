@@ -27,6 +27,7 @@ interface StatsDrawerProps {
   };
   shrinesBuilt: number;
   currentFollowers: number;
+  devotionStacks: number;
   passiveFollowerRate: number;
   rivalFollowerDrainPerSecond: number;
   runHistory: Array<{
@@ -67,6 +68,7 @@ export function StatsDrawer({
   influenceBreakdown,
   shrinesBuilt,
   currentFollowers,
+  devotionStacks,
   passiveFollowerRate,
   rivalFollowerDrainPerSecond,
   runHistory,
@@ -81,6 +83,10 @@ export function StatsDrawer({
 }: StatsDrawerProps) {
   const isEraTwoPlus = era >= 2;
   const isEraThree = era >= 3;
+  const devotionStackCount = Math.max(0, Math.min(3, Math.floor(devotionStacks)));
+  const devotionDots = [0, 1, 2]
+    .map((index) => (index < devotionStackCount ? "●" : "○"))
+    .join(" ");
   const audioStatusLabel =
     audioControls.mode === "running"
       ? "Active"
@@ -150,6 +156,16 @@ export function StatsDrawer({
               <dd>-{formatResource(rivalFollowerDrainPerSecond, 1)} /s</dd>
             </>
           ) : null}
+        </dl>
+      </div>
+
+      <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+        <p className="uppercase tracking-[0.16em] text-veil/80">Devotion</p>
+        <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
+          <dt>Stacks</dt>
+          <dd>
+            {devotionDots} {"\u00b7"} {formatResource(devotionStackCount)} / 3
+          </dd>
         </dl>
       </div>
 

@@ -56,6 +56,7 @@ import {
   getDomainSynergy,
   getDomainInvestCost,
   getDomainXpNeeded,
+  getDevotionStacks,
   getEraOneGateStatus,
   getEraTwoGateStatus,
   getEchoTreeNextCost,
@@ -407,6 +408,7 @@ export default function App() {
   const whisperCost = getWhisperCost(gameState, nowMs);
   const whisperPreview = getWhisperPreview(gameState);
   const recruitPreview = getRecruitPreview(gameState);
+  const devotionStacks = getDevotionStacks(gameState);
   const nextProphetFollowers = getFollowersForNextProphet(gameState);
   const nextCultBeliefCost = getCultFormationCost(gameState);
   const eraOneGate = getEraOneGateStatus(gameState);
@@ -1144,6 +1146,7 @@ export default function App() {
       recruitCost={RECRUIT_INFLUENCE_COST}
       whisperPreview={whisperPreview}
       recruitPreview={recruitPreview}
+      devotionStacks={devotionStacks}
       cadencePromptActive={gameState.activity.cadencePromptActive}
       canUseWhisper={canUseWhisper}
       canUseRecruit={canUseRecruit}
@@ -1309,6 +1312,7 @@ export default function App() {
             influenceBreakdown={influenceRegenBreakdown}
             shrinesBuilt={gameState.doctrine.shrinesBuilt}
             currentFollowers={gameState.resources.followers}
+            devotionStacks={devotionStacks}
             passiveFollowerRate={passiveFollowerRate}
             rivalFollowerDrainPerSecond={rivalDrainPerSecond}
             runHistory={telemetryRunSummaries}

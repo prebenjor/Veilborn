@@ -420,6 +420,36 @@
         "Internal reference and wiki pages are cross-linked and consistent",
         "Mechanic changes are accompanied by MANIFESTO/roadmap/reference updates"
       ]
+    },
+    {
+      "id": "M21",
+      "title": "Devotion Path System",
+      "status": "pending",
+      "dependencies": [
+        "M14",
+        "M20"
+      ],
+      "notes": "Builds on Era I Devotion foundation. Implements path differentiation (Fervour, Accord, Reverence, Ardour) across Era II and Era III, and lineage Devotion memory for run 2+.",
+      "design_docs": [
+        "docs/DEVOTION_SYSTEM.md"
+      ],
+      "deliverables": [
+        "Era II Devotion path differentiation: Fervour (act-heavy) and Accord (cult-heavy) emerge from player behavior, not explicit choice",
+        "Era III named path crystallization: Fervour, Accord, Reverence, Ardour with distinct mechanical effects",
+        "Path switching requires sustained behavior change over time (not instant)",
+        "Omen log integration names path shifts in-world",
+        "Run 2+ lineage Devotion memory grants one free starting stack toward prior dominant path threshold",
+        "Stats page shows Devotion path label and stack count",
+        "MANIFESTO.md and docs/GAME_REFERENCE.md include full path-system formulas when implemented"
+      ],
+      "validation": [
+        "Era II path emergence tracks act-vs-cult behavior ratios correctly",
+        "Era III path effects are distinct and meaningfully affect play without dominating it",
+        "Path switching is possible but requires sustained behavior change",
+        "Lineage memory applies correctly in run 2+",
+        "Devotion never decays and does not punish inactivity",
+        "All four Era III paths are viable builds"
+      ]
     }
   ],
   "post_final_improvements": [
@@ -449,9 +479,9 @@
     {
       "id": "PF-03",
       "title": "Anti-Clutter Layout Pass",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
-      "notes": "Promoted into M20 as a dedicated milestone track for shell-level UI restructuring.",
+      "notes": "Promoted into M20 as a dedicated milestone. Full spec in docs/UI_RESTRUCTURE.md and docs/ERA2_TAB_REORGANISATION.md.",
       "scope": [
         "Reduce page scroll via docked tabs/section switcher",
         "Collapse secondary panels by default after unlock",
@@ -506,7 +536,7 @@
       "id": "PF-08",
       "title": "Run 1 Onboarding and Tutorial Veil",
       "status": "queued",
-      "execute_after": "M14",
+      "execute_after": "M20",
       "scope": [
         "Design the first 20 minutes of run 1 as a deliberate pacing artifact, not an afterthought",
         "Introduce Belief, Influence, and Whispers sequentially with contextual in-world cues rather than tutorial popups",
@@ -532,7 +562,7 @@
       "id": "PF-10",
       "title": "Faith Decay Visual Indicator",
       "status": "queued",
-      "execute_after": "M14",
+      "execute_after": "M20",
       "scope": [
         "Add a per-prophet or global decay indicator that shows the current faith_decay multiplier",
         "Visual should pulse or shift color as decay approaches penalty threshold, not just display a raw number",
@@ -545,7 +575,7 @@
       "id": "PF-11",
       "title": "Influence Spend Nudge System",
       "status": "queued",
-      "execute_after": "M14",
+      "execute_after": "M20",
       "scope": [
         "When Influence is within 10% of cap and no action has been taken in 45+ seconds, show a subtle ambient signal (not a notification) that spend is being lost",
         "Signal must be in-universe: e.g., an omen log line, a visual shimmer on the Influence meter — not a UI toast or alert",
@@ -558,7 +588,7 @@
       "id": "PF-12",
       "title": "Rival Threat Legibility",
       "status": "queued",
-      "execute_after": "M14",
+      "execute_after": "M20",
       "scope": [
         "Show active rival strength as a relative threat level, not a raw number, until Era II is established",
         "Display estimated follower drain rate alongside rival entry in the event log",
@@ -571,7 +601,7 @@
       "id": "PF-13",
       "title": "Collapse Recovery UX",
       "status": "queued",
-      "execute_after": "M14",
+      "execute_after": "M20",
       "scope": [
         "When Veil collapse or civ collapse occurs, present a brief narrative moment before resuming the tick — a 2-3 second pause with an in-world omen line describing what broke",
         "Post-collapse state should clearly show what was lost (follower count before/after, prophets lost) in the omen log",
@@ -610,7 +640,7 @@
       "id": "PF-16",
       "title": "Offline Return Narrative Polish",
       "status": "queued",
-      "execute_after": "M14",
+      "execute_after": "M20",
       "scope": [
         "Offline return summary should lead with a single evocative in-world sentence before showing deltas",
         "Deltas presented in order of narrative weight: followers, prophets, veil change, belief gained",
@@ -635,7 +665,7 @@
     {
       "id": "PF-18",
       "title": "Veil Mastery Zone Indicator",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
       "scope": [
         "Veil meter should visually communicate the three zones: safe (above 55), optimal (30-55), danger (below 30)",
@@ -649,7 +679,7 @@
       "id": "PF-19",
       "title": "Pantheon Relationship State Legibility",
       "status": "queued",
-      "execute_after": "M14",
+      "execute_after": "M20",
       "scope": [
         "Each Pantheon entity shows current disposition (ally / neutral / hostile) with one-line contextual flavor",
         "Betrayal history flagged permanently on the entity entry — in-universe language, not 'BETRAYED' label",
@@ -662,7 +692,7 @@
       "id": "PF-20",
       "title": "Remembrance Conditions Tracker",
       "status": "queued",
-      "execute_after": "M14",
+      "execute_after": "M20",
       "scope": [
         "All 8 Name Letter conditions tracked in a persistent, cross-run panel",
         "Conditions shown as in-world fragments, not mechanical labels — e.g., 'A domain remembered beyond forgetting' not 'Domain level 10'",
