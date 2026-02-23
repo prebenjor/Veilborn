@@ -79,6 +79,8 @@ export function StatsDrawer({
   onExportTelemetry,
   onDumpTelemetryToConsole
 }: StatsDrawerProps) {
+  const isEraTwoPlus = era >= 2;
+  const isEraThree = era >= 3;
   const audioStatusLabel =
     audioControls.mode === "running"
       ? "Active"
@@ -116,8 +118,12 @@ export function StatsDrawer({
           <dd>{formatResource(beliefBreakdown.totalPerSecond, 2)} /s</dd>
           <dt>Prophets</dt>
           <dd>{formatResource(beliefBreakdown.prophetPerSecond, 2)} /s</dd>
-          <dt>Cults</dt>
-          <dd>{formatResource(beliefBreakdown.cultPerSecond, 2)} /s</dd>
+          {isEraTwoPlus ? (
+            <>
+              <dt>Cults</dt>
+              <dd>{formatResource(beliefBreakdown.cultPerSecond, 2)} /s</dd>
+            </>
+          ) : null}
           {beliefBreakdown.followerPerSecond > 0 ? (
             <>
               <dt>Followers</dt>
@@ -132,13 +138,13 @@ export function StatsDrawer({
         <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
           <dt>Current</dt>
           <dd>{formatResource(currentFollowers)}</dd>
-          {era >= 3 ? (
+          {isEraThree ? (
             <>
               <dt>Arriving passively</dt>
               <dd>{formatResource(passiveFollowerRate, 1)} /s</dd>
             </>
           ) : null}
-          {rivalFollowerDrainPerSecond > 0 ? (
+          {isEraTwoPlus && rivalFollowerDrainPerSecond > 0 ? (
             <>
               <dt>Rival drain</dt>
               <dd>-{formatResource(rivalFollowerDrainPerSecond, 1)} /s</dd>
@@ -154,16 +160,20 @@ export function StatsDrawer({
           <dd>{formatResource(influenceBreakdown.totalPerSecond, 1)} /s</dd>
           <dt>Base (prophets)</dt>
           <dd>{formatResource(influenceBreakdown.basePerSecond, 1)} /s</dd>
-          <dt>Shrines ({formatResource(influenceBreakdown.shrineCount)})</dt>
-          <dd>{formatResource(influenceBreakdown.shrinePerSecond, 1)} /s</dd>
-          <dt>Shrines built</dt>
-          <dd>{formatResource(shrinesBuilt)}</dd>
-          <dt>Cults (active)</dt>
-          <dd>{formatResource(influenceBreakdown.cultPerSecond, 1)} /s</dd>
-          {influenceBreakdown.echoPerSecond > 0 ? (
+          {isEraTwoPlus ? (
             <>
-              <dt>Resonant Word</dt>
-              <dd>{formatResource(influenceBreakdown.echoPerSecond, 1)} /s</dd>
+              <dt>Shrines ({formatResource(influenceBreakdown.shrineCount)})</dt>
+              <dd>{formatResource(influenceBreakdown.shrinePerSecond, 1)} /s</dd>
+              <dt>Shrines built</dt>
+              <dd>{formatResource(shrinesBuilt)}</dd>
+              <dt>Cults (active)</dt>
+              <dd>{formatResource(influenceBreakdown.cultPerSecond, 1)} /s</dd>
+              {influenceBreakdown.echoPerSecond > 0 ? (
+                <>
+                  <dt>Resonant Word</dt>
+                  <dd>{formatResource(influenceBreakdown.echoPerSecond, 1)} /s</dd>
+                </>
+              ) : null}
             </>
           ) : null}
           <dt>Cap</dt>

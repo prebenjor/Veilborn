@@ -398,6 +398,11 @@ Stats drawer:
 - audio controls
 - content scales by era without spoiling future systems
 
+Stats content by era:
+- Era I: no doctrine or cataclysm metrics (no cult output line, no shrine/cult influence lines, no rival or passive follower lines).
+- Era II: doctrine metrics appear (cults, shrines, rival-related flow where active).
+- Era III: cataclysm-era metrics appear (passive follower arrival and other era-III-only lines).
+
 Telemetry:
 - local structured events:
   - era transition
