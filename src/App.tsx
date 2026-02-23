@@ -21,6 +21,7 @@ import {
   canWhisper,
   canRecruit,
   getRecruitPreview,
+  getWhisperPreview,
   performAdvanceEraOneToTwo,
   performAdvanceEraTwoToThree,
   performAscension,
@@ -270,6 +271,7 @@ export default function App() {
     getRecoverySnapshotMeta()
   );
   const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
+  const [eraOneHoveredAction, setEraOneHoveredAction] = useState<"whisper" | "recruit" | null>(null);
   const [transitionKind, setTransitionKind] = useState<TransitionKind | null>(null);
   const [transitionHint, setTransitionHint] = useState<string | null>(null);
   const [finalChoiceMaskVisible, setFinalChoiceMaskVisible] = useState(false);
@@ -395,6 +397,7 @@ export default function App() {
   const influenceRegenBreakdown = getInfluenceRegenBreakdown(gameState);
   const passiveFollowerRate = getPassiveFollowerRate(gameState, nowMs);
   const whisperCost = getWhisperCost(gameState, nowMs);
+  const whisperPreview = getWhisperPreview(gameState);
   const recruitPreview = getRecruitPreview(gameState);
   const nextProphetFollowers = getFollowersForNextProphet(gameState);
   const nextCultBeliefCost = getCultFormationCost(gameState);
@@ -930,6 +933,7 @@ export default function App() {
       era={gameState.era}
       influence={gameState.resources.influence}
       whisperCost={whisperCost}
+      whisperPreview={whisperPreview}
       recruitCost={RECRUIT_INFLUENCE_COST}
       recruitPreview={recruitPreview}
       cadencePromptActive={gameState.activity.cadencePromptActive}
@@ -1069,8 +1073,67 @@ export default function App() {
 
   const eraOneContent = (
     <>
-      {whisperPanel}
-      {progressPanel}
+      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
+        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Whispers</h2>
+        <p className="mt-3 text-sm text-veil/70">Words spread. Silence lets faith fade.</p>
+        {gameState.activity.cadencePromptActive ? (
+          <p className="mt-2 rounded-lg border border-ember/40 bg-ember/10 px-2 py-1 text-xs text-ember">
+            Silence is thickening. Act now for a cadence bonus.
+          </p>
+        ) : null}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={!canUseWhisper}
+            onClick={onWhisper}
+            onMouseEnter={() => setEraOneHoveredAction("whisper")}
+            onMouseLeave={() =>
+              setEraOneHoveredAction((previous) => (previous === "whisper" ? null : previous))
+            }
+            onFocus={() => setEraOneHoveredAction("whisper")}
+            onBlur={() => setEraOneHoveredAction((previous) => (previous === "whisper" ? null : previous))}
+            className="rounded-xl border border-ember/60 px-3 py-2 text-sm text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+          >
+            Whisper ({formatResource(whisperCost)} Influence)
+          </button>
+          <button
+            type="button"
+            disabled={!canUseRecruit}
+            onClick={onRecruit}
+            onMouseEnter={() => setEraOneHoveredAction("recruit")}
+            onMouseLeave={() =>
+              setEraOneHoveredAction((previous) => (previous === "recruit" ? null : previous))
+            }
+            onFocus={() => setEraOneHoveredAction("recruit")}
+            onBlur={() => setEraOneHoveredAction((previous) => (previous === "recruit" ? null : previous))}
+            className="rounded-xl border border-omen/60 px-3 py-2 text-sm text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+          >
+            Recruit ({formatResource(RECRUIT_INFLUENCE_COST)} Influence)
+          </button>
+        </div>
+        {eraOneHoveredAction ? (
+          <p className="mt-2 text-xs text-veil/65">
+            {eraOneHoveredAction === "whisper"
+              ? `Whisper: ${whisperPreview}`
+              : `Recruit: ${recruitPreview}`}
+          </p>
+        ) : null}
+
+        <div className="mt-4 border-t border-white/10 pt-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
+          <p className="mt-1 text-sm text-white">
+            {formatResource(gameState.prophets)} active · {formatResource(nextProphetFollowers)} followers to next
+          </p>
+          <button
+            type="button"
+            disabled={!canCreateProphet}
+            onClick={onAnointProphet}
+            className="mt-2 rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+          >
+            Anoint Prophet
+          </button>
+        </div>
+      </section>
       {eraGatePanel}
       <section className="veil-omen-compact rounded-2xl border border-white/10 bg-black/20 p-4 shadow-veil backdrop-blur-sm">
         <h2 className="text-xs uppercase tracking-[0.25em] text-veil/70">{uiReveal.omenTitle}</h2>

@@ -2207,3 +2207,22 @@ export function getRecruitPreview(state: GameState): string {
   const high = Math.max(low, Math.floor((floor + domainBonus + RECRUIT_RANDOM_FOLLOWER_MAX) * lineageModifier));
   return `${formatPreviewValue(low)}-${formatPreviewValue(high)} followers`;
 }
+
+export function getWhisperPreview(state: GameState): string {
+  const formatPreviewValue = (value: number): string => {
+    if (value >= 10000) {
+      return Intl.NumberFormat("en-US", {
+        notation: "compact",
+        compactDisplay: "short",
+        maximumFractionDigits: 2
+      }).format(value);
+    }
+    return Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
+  };
+
+  const cadence = getCadenceBonus(state);
+  const baseFollowerGain = WHISPER_FOLLOWER_GAIN + cadence.followerBonus;
+  const lineageModifier = getLineageConversionModifier(state);
+  const gain = Math.max(1, Math.floor(baseFollowerGain * lineageModifier));
+  return `${formatPreviewValue(gain)} followers`;
+}

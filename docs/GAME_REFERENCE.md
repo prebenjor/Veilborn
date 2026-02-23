@@ -363,6 +363,8 @@ Tone.js audio engine implemented with:
 Era I:
 - no tabbed shell
 - minimal surface
+- Whisper/Recruit and Prophets render in a single merged card (no `Doctrine Seeds` section header)
+- Whisper/Recruit follower yield hints are shown on action hover/focus (not as static text)
 - event log header: `Murmurs`
 - bottom status: one quiet atmospheric line
 

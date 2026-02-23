@@ -44,6 +44,7 @@ Stats visibility rule:
 ## Layout Rules
 
 - Era I: minimal single-column surface, no tabs.
+- Era I: Whisper/Recruit actions and Prophet conversion live in one merged card.
 - Era II: `ACTIVE` and `GROWTH`, with light `META`.
 - Era III: full `ACTIVE`, `GROWTH`, `META`.
 - Era III critical actions must be reachable without long scroll.
