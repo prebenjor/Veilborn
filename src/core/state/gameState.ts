@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 10;
+export const GAME_STATE_SCHEMA_VERSION = 11;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -279,12 +279,47 @@ export interface EchoTreeRanks {
   cataclysm: number;
 }
 
+export type ArchitectureBeliefRule = "orthodox" | "fervor" | "litany";
+export type ArchitectureCivilizationRule = "steady" | "expansion" | "fracture";
+export type ArchitectureDomainRule = "constellation" | "focused" | "chaotic";
+
+export interface ArchitectureState {
+  beliefRule: ArchitectureBeliefRule;
+  civilizationRule: ArchitectureCivilizationRule;
+  domainRule: ArchitectureDomainRule;
+}
+
+export interface RemembranceLetters {
+  domainLevelTen: boolean;
+  lifetimeEchoesFiftyThousand: boolean;
+  veilZeroSixtySeconds: boolean;
+  betrayedPantheonAlly: boolean;
+  civilizationsRebuiltThree: boolean;
+  allDomainsEight: boolean;
+  followersMillion: boolean;
+  beliefBillion: boolean;
+}
+
+export type FinalChoice = "none" | "remember" | "forget";
+
+export interface RemembranceState {
+  letters: RemembranceLetters;
+  lifetimeBeliefEarned: number;
+  lifetimeCivilizationRebuilds: number;
+  peakFollowersEver: number;
+  bestVeilZeroStreakMs: number;
+  finalChoice: FinalChoice;
+  finalChoiceAt: number | null;
+}
+
 export interface PrestigeState {
   echoes: number;
   lifetimeEchoes: number;
   completedRuns: number;
   treeRanks: EchoTreeRanks;
   pantheon: PantheonLegacyState;
+  architecture: ArchitectureState;
+  remembrance: RemembranceState;
 }
 
 export type PantheonDisposition = "neutral" | "allied" | "betrayed";
@@ -388,6 +423,7 @@ export interface CataclysmState {
   civilizationRebuildEndsAt: number;
   civilizationRebuilds: number;
   peakFollowers: number;
+  veilZeroStreakMs: number;
   wasBelowVeilCollapseThreshold: boolean;
   totalVeilCollapses: number;
   veilCollapseImmunityUntil: number;
@@ -499,13 +535,48 @@ export function createDefaultEchoBonuses(): EchoBonuses {
   };
 }
 
+export function createDefaultArchitectureState(): ArchitectureState {
+  return {
+    beliefRule: "orthodox",
+    civilizationRule: "steady",
+    domainRule: "constellation"
+  };
+}
+
+export function createDefaultRemembranceLetters(): RemembranceLetters {
+  return {
+    domainLevelTen: false,
+    lifetimeEchoesFiftyThousand: false,
+    veilZeroSixtySeconds: false,
+    betrayedPantheonAlly: false,
+    civilizationsRebuiltThree: false,
+    allDomainsEight: false,
+    followersMillion: false,
+    beliefBillion: false
+  };
+}
+
+export function createDefaultRemembranceState(): RemembranceState {
+  return {
+    letters: createDefaultRemembranceLetters(),
+    lifetimeBeliefEarned: 0,
+    lifetimeCivilizationRebuilds: 0,
+    peakFollowersEver: 0,
+    bestVeilZeroStreakMs: 0,
+    finalChoice: "none",
+    finalChoiceAt: null
+  };
+}
+
 export function createDefaultPrestigeState(): PrestigeState {
   return {
     echoes: 0,
     lifetimeEchoes: 0,
     completedRuns: 0,
     treeRanks: createDefaultEchoTreeRanks(),
-    pantheon: createDefaultPantheonLegacyState()
+    pantheon: createDefaultPantheonLegacyState(),
+    architecture: createDefaultArchitectureState(),
+    remembrance: createDefaultRemembranceState()
   };
 }
 
@@ -600,6 +671,7 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       civilizationRebuildEndsAt: 0,
       civilizationRebuilds: 0,
       peakFollowers: 0,
+      veilZeroStreakMs: 0,
       wasBelowVeilCollapseThreshold: false,
       totalVeilCollapses: 0,
       veilCollapseImmunityUntil: 0

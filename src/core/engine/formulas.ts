@@ -161,6 +161,55 @@ export interface UnravelingGateStatus {
   ready: boolean;
 }
 
+function getFinalChoiceBeliefModifier(state: GameState): number {
+  if (state.prestige.remembrance.finalChoice === "remember") return 1.08;
+  if (state.prestige.remembrance.finalChoice === "forget") return 0.94;
+  return 1;
+}
+
+function getFinalChoiceDomainModifier(state: GameState): number {
+  if (state.prestige.remembrance.finalChoice === "remember") return 1.03;
+  if (state.prestige.remembrance.finalChoice === "forget") return 0.98;
+  return 1;
+}
+
+function getFinalChoiceCivilizationModifier(state: GameState): number {
+  if (state.prestige.remembrance.finalChoice === "remember") return 0.88;
+  if (state.prestige.remembrance.finalChoice === "forget") return 1.12;
+  return 1;
+}
+
+function getFinalChoiceFaithPressure(state: GameState): number {
+  if (state.prestige.remembrance.finalChoice === "remember") return 0.06;
+  if (state.prestige.remembrance.finalChoice === "forget") return -0.06;
+  return 0;
+}
+
+export function isArchitectureUnlocked(state: GameState): boolean {
+  return state.prestige.completedRuns >= 2;
+}
+
+export function getArchitectureBeliefModifier(state: GameState): number {
+  if (!isArchitectureUnlocked(state)) return 1;
+  if (state.prestige.architecture.beliefRule === "fervor") return 1.12;
+  if (state.prestige.architecture.beliefRule === "litany") return 0.93;
+  return 1;
+}
+
+export function getArchitectureDomainModifier(state: GameState): number {
+  if (!isArchitectureUnlocked(state)) return 1;
+  if (state.prestige.architecture.domainRule === "focused") return 0.92;
+  if (state.prestige.architecture.domainRule === "chaotic") return 1.12;
+  return 1;
+}
+
+export function getArchitectureCivilizationModifier(state: GameState): number {
+  if (!isArchitectureUnlocked(state)) return 1;
+  if (state.prestige.architecture.civilizationRule === "expansion") return 1.15;
+  if (state.prestige.architecture.civilizationRule === "fracture") return 0.82;
+  return 1;
+}
+
 const WHISPERS_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
   "startInf",
   "prophetThreshold",
@@ -324,14 +373,25 @@ export function getDomainMultiplier(totalDomainLevel: number): number {
 export function getFaithDecay(state: GameState, nowMs: number): number {
   const minutesSinceLastEvent = Math.max(0, (nowMs - state.activity.lastEventAt) / 60000);
   const ghostInfluence = getGhostInfluenceTotals(state);
-  const adjustedMinutes = minutesSinceLastEvent * (1 + ghostInfluence.faithDecayDelta);
+  let architecturePressure = 0;
+  if (isArchitectureUnlocked(state)) {
+    if (state.prestige.architecture.beliefRule === "fervor") architecturePressure += 0.08;
+    if (state.prestige.architecture.beliefRule === "litany") architecturePressure -= 0.08;
+  }
+  architecturePressure += getFinalChoiceFaithPressure(state);
+
+  const adjustedMinutes =
+    minutesSinceLastEvent * Math.max(0.25, 1 + ghostInfluence.faithDecayDelta + architecturePressure);
   const baseDecay = Math.pow(FAITH_DECAY_BASE, adjustedMinutes);
   const floor = state.echoBonuses.faithFloor ? FAITH_DECAY_ECHO_FLOOR : FAITH_DECAY_FLOOR;
   return Math.max(floor, baseDecay);
 }
 
 export function getDomainSynergy(state: GameState): number {
-  const baseSynergy = 1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs;
+  const baseSynergy =
+    (1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs) *
+    getArchitectureDomainModifier(state) *
+    getFinalChoiceDomainModifier(state);
   const ghostInfluence = getGhostInfluenceTotals(state);
   return Math.max(0.5, baseSynergy * (1 + ghostInfluence.domainSynergyDelta));
 }
@@ -350,7 +410,10 @@ export function getVeilRegenPerSecond(state: GameState): number {
 export function getVeilErosionPerSecond(state: GameState): number {
   if (state.era < 3) return 0;
   const belief = Math.max(1, state.stats.totalBeliefEarned);
-  return VEIL_EROSION_LOG_SCALE * Math.log10(belief);
+  const base = VEIL_EROSION_LOG_SCALE * Math.log10(belief);
+  if (state.prestige.remembrance.finalChoice === "remember") return base * 1.15;
+  if (state.prestige.remembrance.finalChoice === "forget") return base * 0.9;
+  return base;
 }
 
 export function getVeilCollapseThreshold(state: GameState): number {
@@ -373,9 +436,15 @@ export function getBeliefPerSecond(state: GameState, nowMs: number): number {
   const cultStack = getCultOutput(state) * domainSynergy;
 
   const pantheonModifier = getPantheonAllianceFactors(state).totalModifier;
+  const architectureBeliefModifier =
+    getArchitectureBeliefModifier(state) * getFinalChoiceBeliefModifier(state);
   return Math.max(
     0,
-    (prophetStack + cultStack) * getVeilBonus(state.resources.veil) * GHOST_BONUS_BASE * pantheonModifier
+    (prophetStack + cultStack) *
+      getVeilBonus(state.resources.veil) *
+      GHOST_BONUS_BASE *
+      pantheonModifier *
+      architectureBeliefModifier
   );
 }
 
@@ -548,7 +617,11 @@ export function getCivilizationStability(state: GameState): number {
 export function getCivilizationRegenPerSecond(state: GameState): number {
   const base = CIV_REGEN_PER_MINUTE / 60;
   const shrine = (CIV_REGEN_PER_SHRINE_PER_MINUTE * state.doctrine.shrinesBuilt) / 60;
-  return base + shrine;
+  return (
+    (base + shrine) *
+    getArchitectureCivilizationModifier(state) *
+    getFinalChoiceCivilizationModifier(state)
+  );
 }
 
 export function getCivilizationRebuildSeconds(state: GameState): number {

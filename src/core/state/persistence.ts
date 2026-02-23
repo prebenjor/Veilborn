@@ -16,6 +16,10 @@ import {
   VEIL_MAX,
   createInitialGameState,
   type ActiveAct,
+  type ArchitectureBeliefRule,
+  type ArchitectureCivilizationRule,
+  type ArchitectureDomainRule,
+  type ArchitectureState,
   type CataclysmState,
   type DoctrineState,
   type DomainId,
@@ -30,10 +34,13 @@ import {
   type Mortal,
   type MortalTrait,
   type OmenEntry,
+  type FinalChoice,
   type PantheonAlly,
   type PantheonLegacyState,
   type PantheonState,
   type PrestigeState,
+  type RemembranceLetters,
+  type RemembranceState,
   type RivalState,
   type GhostState,
   type GhostRunSignature,
@@ -123,6 +130,35 @@ function readActType(value: unknown): ActiveAct["type"] | null {
 function readEchoTreeId(value: unknown): EchoTreeId | null {
   if (value === "whispers" || value === "doctrine" || value === "cataclysm") return value;
   return null;
+}
+
+function readArchitectureBeliefRule(
+  value: unknown,
+  fallback: ArchitectureBeliefRule
+): ArchitectureBeliefRule {
+  if (value === "orthodox" || value === "fervor" || value === "litany") return value;
+  return fallback;
+}
+
+function readArchitectureCivilizationRule(
+  value: unknown,
+  fallback: ArchitectureCivilizationRule
+): ArchitectureCivilizationRule {
+  if (value === "steady" || value === "expansion" || value === "fracture") return value;
+  return fallback;
+}
+
+function readArchitectureDomainRule(
+  value: unknown,
+  fallback: ArchitectureDomainRule
+): ArchitectureDomainRule {
+  if (value === "constellation" || value === "focused" || value === "chaotic") return value;
+  return fallback;
+}
+
+function readFinalChoice(value: unknown, fallback: FinalChoice): FinalChoice {
+  if (value === "none" || value === "remember" || value === "forget") return value;
+  return fallback;
 }
 
 function readHistoryMarkerKind(value: unknown): HistoryMarkerKind | null {
@@ -472,6 +508,7 @@ function sanitizeCataclysm(value: unknown, fallback: CataclysmState): CataclysmS
     civilizationRebuildEndsAt: Math.max(0, readNumber(value.civilizationRebuildEndsAt, fallback.civilizationRebuildEndsAt)),
     civilizationRebuilds: Math.max(0, Math.floor(readNumber(value.civilizationRebuilds, fallback.civilizationRebuilds))),
     peakFollowers: Math.max(0, Math.floor(readNumber(value.peakFollowers, fallback.peakFollowers))),
+    veilZeroStreakMs: Math.max(0, readNumber(value.veilZeroStreakMs, fallback.veilZeroStreakMs)),
     wasBelowVeilCollapseThreshold: readBoolean(
       value.wasBelowVeilCollapseThreshold,
       fallback.wasBelowVeilCollapseThreshold
@@ -499,6 +536,66 @@ function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses
     collapseThreshold: readBoolean(value.collapseThreshold, fallback.collapseThreshold),
     collapseImmunity: readBoolean(value.collapseImmunity, fallback.collapseImmunity),
     civRebuild: readBoolean(value.civRebuild, fallback.civRebuild)
+  };
+}
+
+function sanitizeArchitecture(value: unknown, fallback: ArchitectureState): ArchitectureState {
+  if (!isRecord(value)) return fallback;
+  return {
+    beliefRule: readArchitectureBeliefRule(value.beliefRule, fallback.beliefRule),
+    civilizationRule: readArchitectureCivilizationRule(value.civilizationRule, fallback.civilizationRule),
+    domainRule: readArchitectureDomainRule(value.domainRule, fallback.domainRule)
+  };
+}
+
+function sanitizeRemembranceLetters(
+  value: unknown,
+  fallback: RemembranceLetters
+): RemembranceLetters {
+  if (!isRecord(value)) return fallback;
+  return {
+    domainLevelTen: readBoolean(value.domainLevelTen, fallback.domainLevelTen),
+    lifetimeEchoesFiftyThousand: readBoolean(
+      value.lifetimeEchoesFiftyThousand,
+      fallback.lifetimeEchoesFiftyThousand
+    ),
+    veilZeroSixtySeconds: readBoolean(value.veilZeroSixtySeconds, fallback.veilZeroSixtySeconds),
+    betrayedPantheonAlly: readBoolean(value.betrayedPantheonAlly, fallback.betrayedPantheonAlly),
+    civilizationsRebuiltThree: readBoolean(
+      value.civilizationsRebuiltThree,
+      fallback.civilizationsRebuiltThree
+    ),
+    allDomainsEight: readBoolean(value.allDomainsEight, fallback.allDomainsEight),
+    followersMillion: readBoolean(value.followersMillion, fallback.followersMillion),
+    beliefBillion: readBoolean(value.beliefBillion, fallback.beliefBillion)
+  };
+}
+
+function sanitizeRemembrance(value: unknown, fallback: RemembranceState): RemembranceState {
+  if (!isRecord(value)) return fallback;
+  const finalChoice = readFinalChoice(value.finalChoice, fallback.finalChoice);
+  return {
+    letters: sanitizeRemembranceLetters(value.letters, fallback.letters),
+    lifetimeBeliefEarned: Math.max(0, readNumber(value.lifetimeBeliefEarned, fallback.lifetimeBeliefEarned)),
+    lifetimeCivilizationRebuilds: Math.max(
+      0,
+      Math.floor(readNumber(value.lifetimeCivilizationRebuilds, fallback.lifetimeCivilizationRebuilds))
+    ),
+    peakFollowersEver: Math.max(
+      0,
+      Math.floor(readNumber(value.peakFollowersEver, fallback.peakFollowersEver))
+    ),
+    bestVeilZeroStreakMs: Math.max(
+      0,
+      readNumber(value.bestVeilZeroStreakMs, fallback.bestVeilZeroStreakMs)
+    ),
+    finalChoice,
+    finalChoiceAt:
+      finalChoice === "none"
+        ? null
+        : typeof value.finalChoiceAt === "number" && Number.isFinite(value.finalChoiceAt)
+          ? Math.max(0, value.finalChoiceAt)
+          : fallback.finalChoiceAt
   };
 }
 
@@ -551,7 +648,9 @@ function sanitizePrestige(
     return {
       ...fallback,
       treeRanks: inferredTreeRanks,
-      pantheon: fallback.pantheon
+      pantheon: fallback.pantheon,
+      architecture: fallback.architecture,
+      remembrance: fallback.remembrance
     };
   }
 
@@ -589,7 +688,9 @@ function sanitizePrestige(
     ),
     completedRuns: Math.max(0, Math.floor(readNumber(value.completedRuns, fallback.completedRuns))),
     treeRanks,
-    pantheon: sanitizePantheonLegacy(value.pantheon, fallback.pantheon)
+    pantheon: sanitizePantheonLegacy(value.pantheon, fallback.pantheon),
+    architecture: sanitizeArchitecture(value.architecture, fallback.architecture),
+    remembrance: sanitizeRemembrance(value.remembrance, fallback.remembrance)
   };
 }
 
@@ -688,7 +789,8 @@ const MIGRATORS: Record<number, Migrator> = {
   7: sanitizeState,
   8: sanitizeState,
   9: sanitizeState,
-  10: sanitizeState
+  10: sanitizeState,
+  11: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

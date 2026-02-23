@@ -34,11 +34,15 @@ import {
   VEIL_MIN,
   WHISPER_BELIEF_GAIN,
   WHISPER_FOLLOWER_GAIN,
+  type ArchitectureBeliefRule,
+  type ArchitectureCivilizationRule,
+  type ArchitectureDomainRule,
   createInitialGameState,
   type ActType,
   type ActivityState,
   type DomainId,
   type EchoTreeId,
+  type FinalChoice,
   type GameState,
   type MiracleTier
 } from "../state/gameState";
@@ -50,6 +54,12 @@ import {
   mergeImportedGhostSignatures,
   parseGhostSignatureBundle
 } from "../ghost/ghostEchoes";
+import {
+  areAllNameLettersUnlocked,
+  evaluateRemembranceLetters,
+  mergeRemembranceLetters,
+  syncRemembranceState
+} from "./remembrance";
 import {
   getActBaseMultiplier,
   getBeliefPerSecond,
@@ -638,12 +648,25 @@ function resolveActivityAfterAction(activity: ActivityState, nowMs: number): Act
 
 function withPeakFollowers(state: GameState, followers: number): GameState {
   const peakFollowers = Math.max(state.cataclysm.peakFollowers, followers);
-  if (peakFollowers === state.cataclysm.peakFollowers) return state;
+  const peakFollowersEver = Math.max(state.prestige.remembrance.peakFollowersEver, peakFollowers);
+  if (
+    peakFollowers === state.cataclysm.peakFollowers &&
+    peakFollowersEver === state.prestige.remembrance.peakFollowersEver
+  ) {
+    return state;
+  }
   return {
     ...state,
     cataclysm: {
       ...state.cataclysm,
       peakFollowers
+    },
+    prestige: {
+      ...state.prestige,
+      remembrance: {
+        ...state.prestige.remembrance,
+        peakFollowersEver
+      }
     }
   };
 }
@@ -1641,6 +1664,108 @@ export function canPurchaseEchoTreeRank(state: GameState, treeId: EchoTreeId): b
   return state.prestige.echoes >= nextCost;
 }
 
+function canEditArchitecture(state: GameState): boolean {
+  return state.prestige.completedRuns >= 2;
+}
+
+function withArchitectureRevisionOmen(state: GameState, nowMs: number, detail: string): GameState {
+  const synced = syncRemembranceState(state).state;
+  return appendOmen(synced, nowMs, "echoTree", detail);
+}
+
+export function performSetArchitectureBeliefRule(
+  state: GameState,
+  rule: ArchitectureBeliefRule,
+  nowMs: number
+): GameState {
+  if (!canEditArchitecture(state)) return state;
+  if (state.prestige.architecture.beliefRule === rule) return state;
+
+  const revised: GameState = {
+    ...state,
+    prestige: {
+      ...state.prestige,
+      architecture: {
+        ...state.prestige.architecture,
+        beliefRule: rule
+      }
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return withArchitectureRevisionOmen(
+    revised,
+    nowMs,
+    "The architecture of belief accepted your revision."
+  );
+}
+
+export function performSetArchitectureCivilizationRule(
+  state: GameState,
+  rule: ArchitectureCivilizationRule,
+  nowMs: number
+): GameState {
+  if (!canEditArchitecture(state)) return state;
+  if (state.prestige.architecture.civilizationRule === rule) return state;
+
+  const revised: GameState = {
+    ...state,
+    prestige: {
+      ...state.prestige,
+      architecture: {
+        ...state.prestige.architecture,
+        civilizationRule: rule
+      }
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return withArchitectureRevisionOmen(
+    revised,
+    nowMs,
+    "Civilization growth now follows your edited law."
+  );
+}
+
+export function performSetArchitectureDomainRule(
+  state: GameState,
+  rule: ArchitectureDomainRule,
+  nowMs: number
+): GameState {
+  if (!canEditArchitecture(state)) return state;
+  if (state.prestige.architecture.domainRule === rule) return state;
+
+  const revised: GameState = {
+    ...state,
+    prestige: {
+      ...state.prestige,
+      architecture: {
+        ...state.prestige.architecture,
+        domainRule: rule
+      }
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return withArchitectureRevisionOmen(
+    revised,
+    nowMs,
+    "Domain semantics bent into a new alignment."
+  );
+}
+
 export function performPurchaseEchoTreeRank(
   state: GameState,
   treeId: EchoTreeId,
@@ -1685,6 +1810,54 @@ export function canAscend(state: GameState): boolean {
   return getUnravelingGateStatus(state).ready;
 }
 
+export function canInvokeFinalChoice(state: GameState): boolean {
+  if (state.era < 3) return false;
+  if (state.prestige.remembrance.finalChoice !== "none") return false;
+
+  const evaluated = evaluateRemembranceLetters(state);
+  const merged = mergeRemembranceLetters(state.prestige.remembrance.letters, evaluated);
+  return areAllNameLettersUnlocked(merged.letters);
+}
+
+export function performInvokeFinalChoice(
+  state: GameState,
+  choice: Exclude<FinalChoice, "none">,
+  nowMs: number
+): GameState {
+  if (!canInvokeFinalChoice(state)) return state;
+
+  const evaluated = evaluateRemembranceLetters(state);
+  const merged = mergeRemembranceLetters(state.prestige.remembrance.letters, evaluated);
+
+  const withChoice: GameState = {
+    ...state,
+    prestige: {
+      ...state.prestige,
+      remembrance: {
+        ...state.prestige.remembrance,
+        letters: merged.letters,
+        finalChoice: choice,
+        finalChoiceAt: nowMs
+      }
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  const synced = syncRemembranceState(withChoice).state;
+  return appendOmen(
+    synced,
+    nowMs,
+    "ascension",
+    choice === "remember"
+      ? "You spoke the full name and the old seal shifted in the dark."
+      : "You chose silence again and the world exhaled around the wound."
+  );
+}
+
 export function performAscension(state: GameState, nowMs: number): GameState {
   if (!canAscend(state)) return state;
 
@@ -1707,6 +1880,35 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     ),
     history: state.lineage.history.slice(0, LINEAGE_HISTORY_LIMIT)
   };
+  const remembranceBefore = poisonApplied.prestige.remembrance;
+  const nextLifetimeBeliefEarned =
+    remembranceBefore.lifetimeBeliefEarned + poisonApplied.stats.totalBeliefEarned;
+  const nextLifetimeCivilizationRebuilds =
+    remembranceBefore.lifetimeCivilizationRebuilds + poisonApplied.cataclysm.civilizationRebuilds;
+  const nextPeakFollowersEver = Math.max(
+    remembranceBefore.peakFollowersEver,
+    poisonApplied.cataclysm.peakFollowers,
+    poisonApplied.resources.followers
+  );
+  const nextBestVeilZeroStreakMs = Math.max(
+    remembranceBefore.bestVeilZeroStreakMs,
+    poisonApplied.cataclysm.veilZeroStreakMs
+  );
+  const remembranceCandidateState: GameState = {
+    ...poisonApplied,
+    prestige: {
+      ...poisonApplied.prestige,
+      remembrance: {
+        ...remembranceBefore,
+        lifetimeBeliefEarned: nextLifetimeBeliefEarned,
+        lifetimeCivilizationRebuilds: nextLifetimeCivilizationRebuilds,
+        peakFollowersEver: nextPeakFollowersEver,
+        bestVeilZeroStreakMs: nextBestVeilZeroStreakMs
+      }
+    }
+  };
+  const evaluatedLetters = evaluateRemembranceLetters(remembranceCandidateState);
+  const mergedLetters = mergeRemembranceLetters(remembranceBefore.letters, evaluatedLetters).letters;
   const nextPrestige = {
     ...poisonApplied.prestige,
     echoes: poisonApplied.prestige.echoes + gainedEchoes,
@@ -1718,6 +1920,14 @@ export function performAscension(state: GameState, nowMs: number): GameState {
         poisonApplied.prestige.pantheon.betrayalsLifetime + poisonApplied.pantheon.betrayalsThisRun,
       betrayedAllyEver:
         poisonApplied.prestige.pantheon.betrayedAllyEver || poisonApplied.pantheon.betrayalsThisRun > 0
+    },
+    remembrance: {
+      ...remembranceBefore,
+      letters: mergedLetters,
+      lifetimeBeliefEarned: nextLifetimeBeliefEarned,
+      lifetimeCivilizationRebuilds: nextLifetimeCivilizationRebuilds,
+      peakFollowersEver: nextPeakFollowersEver,
+      bestVeilZeroStreakMs: nextBestVeilZeroStreakMs
     }
   };
   const nextEchoBonuses = getEchoBonusesFromTreeRanks(nextPrestige.treeRanks);

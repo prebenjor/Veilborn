@@ -121,6 +121,15 @@ body {
   color: rgba(222, 233, 246, 0.82);
 }
 
+.veil-final-choice-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 72;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(8, 8, 10, 0.55) 0%, rgba(3, 3, 4, 0.98) 70%);
+  animation: veil-final-choice-mask 1800ms ease forwards;
+}
+
 .veil-omen-preview-line {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -234,6 +243,18 @@ body {
   }
 }
 
+@keyframes veil-final-choice-mask {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (min-width: 768px) {
   .veil-shell[data-era="3"] .veil-omen-preview-line {
     white-space: normal;
@@ -258,7 +279,8 @@ body {
   }
 
   .veil-transition-fade,
-  .veil-transition-vignette {
+  .veil-transition-vignette,
+  .veil-final-choice-mask {
     animation: none;
     opacity: 0;
   }

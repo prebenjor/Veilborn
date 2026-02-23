@@ -244,7 +244,7 @@
     {
       "id": "M13",
       "title": "Architecture Layer and Remembrance Endgame",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [
         "M9",
         "M12"

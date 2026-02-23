@@ -9,6 +9,7 @@ import {
   canCastMiracle,
   canFormCult,
   canFormPantheonAlliance,
+  canInvokeFinalChoice,
   canPurchaseEchoTreeRank,
   canStartAct,
   canSuppressRival,
@@ -31,8 +32,12 @@ import {
   performPurchaseEchoTreeRank,
   performProphetAnoint,
   performRecruit,
+  performSetArchitectureBeliefRule,
+  performSetArchitectureCivilizationRule,
+  performSetArchitectureDomainRule,
   performStartAct,
   performSuppressRival,
+  performInvokeFinalChoice,
   performWhisper
 } from "./core/engine/actions";
 import {
@@ -67,6 +72,7 @@ import {
   getUnravelingGateStatus,
   getPantheonAllianceFactors,
   hasPantheonBetrayalHook,
+  isArchitectureUnlocked,
   isPantheonUnlocked,
   getVeilBonus,
   getVeilCollapseThreshold,
@@ -74,6 +80,11 @@ import {
   getVeilRegenPerSecond,
   getWhisperCost
 } from "./core/engine/formulas";
+import {
+  getRemembranceConditionViews,
+  getRemembranceLetterDefinitions,
+  getUnlockedNameLetterCount
+} from "./core/engine/remembrance";
 import { advanceWorld } from "./core/engine/worldTick";
 import {
   getUiRevealState,
@@ -89,8 +100,12 @@ import {
   WHISPER_WINDOW_MS,
   WORLD_TICK_MS,
   type ActType,
+  type ArchitectureBeliefRule,
+  type ArchitectureCivilizationRule,
+  type ArchitectureDomainRule,
   type DomainId,
   type EchoTreeId,
+  type FinalChoice,
   type GameState,
   type MiracleTier
 } from "./core/state/gameState";
@@ -109,6 +124,7 @@ import { PantheonPanel } from "./ui/panels/PantheonPanel";
 import { ProgressPanel } from "./ui/panels/ProgressPanel";
 import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
+import { RemembrancePanel } from "./ui/panels/RemembrancePanel";
 import { formatRate, formatResource } from "./core/ui/numberFormat";
 
 const UI_TAB_KEY = "veilborn.ui.active_tab.v1";
@@ -219,9 +235,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
   const [transitionKind, setTransitionKind] = useState<TransitionKind | null>(null);
   const [transitionHint, setTransitionHint] = useState<string | null>(null);
+  const [finalChoiceMaskVisible, setFinalChoiceMaskVisible] = useState(false);
   const gameStateRef = useRef(gameState);
   const previousEraRef = useRef<EraValue>(gameState.era);
   const transitionTimerRef = useRef<number | null>(null);
+  const finalChoiceMaskTimerRef = useRef<number | null>(null);
   const nowMs = gameState.meta.updatedAt;
 
   useEffect(() => {
@@ -318,6 +336,9 @@ export default function App() {
     return () => {
       if (transitionTimerRef.current !== null) {
         window.clearTimeout(transitionTimerRef.current);
+      }
+      if (finalChoiceMaskTimerRef.current !== null) {
+        window.clearTimeout(finalChoiceMaskTimerRef.current);
       }
     };
   }, []);
@@ -494,6 +515,11 @@ export default function App() {
   const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
   const surfaceOmenPreview = gameState.omenLog.slice(0, surfaceOmenPreviewCount);
   const surfaceOmenExpanded = gameState.omenLog.slice(surfaceOmenPreviewCount, era >= 3 ? 6 : 4);
+  const architectureUnlocked = isArchitectureUnlocked(gameState);
+  const remembranceConditions = getRemembranceConditionViews(gameState);
+  const totalNameLetters = getRemembranceLetterDefinitions().length;
+  const unlockedNameLetters = getUnlockedNameLetterCount(gameState.prestige.remembrance.letters);
+  const canUseFinalChoice = canInvokeFinalChoice(gameState);
 
   const onWhisper = () => {
     setGameState((prev) => performWhisper(prev, Date.now()));
@@ -529,6 +555,31 @@ export default function App() {
 
   const onPurchaseEchoTreeRank = (treeId: EchoTreeId) => {
     setGameState((prev) => performPurchaseEchoTreeRank(prev, treeId, Date.now()));
+  };
+
+  const onSetArchitectureBeliefRule = (rule: ArchitectureBeliefRule) => {
+    setGameState((prev) => performSetArchitectureBeliefRule(prev, rule, Date.now()));
+  };
+
+  const onSetArchitectureCivilizationRule = (rule: ArchitectureCivilizationRule) => {
+    setGameState((prev) => performSetArchitectureCivilizationRule(prev, rule, Date.now()));
+  };
+
+  const onSetArchitectureDomainRule = (rule: ArchitectureDomainRule) => {
+    setGameState((prev) => performSetArchitectureDomainRule(prev, rule, Date.now()));
+  };
+
+  const onInvokeFinalChoice = (choice: Exclude<FinalChoice, "none">) => {
+    if (!canUseFinalChoice) return;
+    setGameState((prev) => performInvokeFinalChoice(prev, choice, Date.now()));
+    setFinalChoiceMaskVisible(true);
+    if (finalChoiceMaskTimerRef.current !== null) {
+      window.clearTimeout(finalChoiceMaskTimerRef.current);
+    }
+    finalChoiceMaskTimerRef.current = window.setTimeout(() => {
+      setFinalChoiceMaskVisible(false);
+      finalChoiceMaskTimerRef.current = null;
+    }, 1800);
   };
 
   const onExportGhostSignatures = () => {
@@ -773,6 +824,21 @@ export default function App() {
           Echo structures remain dormant in this cycle.
         </section>
       )}
+      <RemembrancePanel
+        architectureUnlocked={architectureUnlocked}
+        beliefRule={gameState.prestige.architecture.beliefRule}
+        civilizationRule={gameState.prestige.architecture.civilizationRule}
+        domainRule={gameState.prestige.architecture.domainRule}
+        unlockedLetters={unlockedNameLetters}
+        totalLetters={totalNameLetters}
+        conditions={remembranceConditions}
+        finalChoice={gameState.prestige.remembrance.finalChoice}
+        canInvokeFinalChoice={canUseFinalChoice}
+        onSetBeliefRule={onSetArchitectureBeliefRule}
+        onSetCivilizationRule={onSetArchitectureCivilizationRule}
+        onSetDomainRule={onSetArchitectureDomainRule}
+        onInvokeFinalChoice={onInvokeFinalChoice}
+      />
       {uiReveal.showPantheonPanel ? (
         <PantheonPanel
           unlocked={pantheonUnlocked}
@@ -804,6 +870,7 @@ export default function App() {
           {transitionHint ? <p className="veil-transition-hint">{transitionHint}</p> : null}
         </div>
       ) : null}
+      {finalChoiceMaskVisible ? <div className="veil-final-choice-mask" aria-hidden="true" /> : null}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

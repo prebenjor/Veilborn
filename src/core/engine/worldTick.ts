@@ -37,6 +37,7 @@ import {
   getVeilRegenPerSecond,
   normalizeWhisperCycle
 } from "./formulas";
+import { syncRemembranceState } from "./remembrance";
 
 function applyCadencePrompt(activity: ActivityState, nowMs: number): ActivityState {
   if (activity.cadencePromptActive) return activity;
@@ -248,6 +249,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   const prophetsAfterVeilCollapse = shouldVeilCollapse
     ? Math.max(0, preTickState.prophets - VEIL_COLLAPSE_PROPHET_LOSS)
     : preTickState.prophets;
+  const veilZeroStreakMs = veilAfterTick <= VEIL_MIN ? preTickState.cataclysm.veilZeroStreakMs + simulatedMs : 0;
   const veilCollapseImmunityUntil = shouldVeilCollapse && preTickState.echoBonuses.collapseImmunity
     ? nowMs + VEIL_COLLAPSE_IMMUNITY_SECONDS * 1000
     : preTickState.cataclysm.veilCollapseImmunityUntil;
@@ -303,6 +305,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
       civilizationCollapsed,
       civilizationRebuildEndsAt,
       peakFollowers: Math.max(peakFollowers, followersAfterVeilCollapse),
+      veilZeroStreakMs,
       wasBelowVeilCollapseThreshold: belowThreshold,
       totalVeilCollapses: preTickState.cataclysm.totalVeilCollapses + (shouldVeilCollapse ? 1 : 0),
       veilCollapseImmunityUntil
@@ -359,6 +362,17 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
       nextState,
       nowMs,
       "From ash and hunger, a new city raised its first bell and dared to remember."
+    );
+  }
+
+  const remembranceSync = syncRemembranceState(nextState);
+  nextState = remembranceSync.state;
+  if (remembranceSync.newlyUnlockedIds.length > 0) {
+    const letters = remembranceSync.newlyUnlockedIds.join(", ");
+    nextState = appendSystemOmen(
+      nextState,
+      nowMs,
+      `A forgotten letter surfaced in your true name: ${letters}.`
     );
   }
 
