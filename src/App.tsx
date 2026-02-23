@@ -1,12 +1,17 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  canAdvanceEraOneToTwo,
   canAnointProphet,
   canFormCult,
   canWhisper,
+  canRecruit,
+  getRecruitPreview,
+  performAdvanceEraOneToTwo,
   performCultFormation,
   performDomainInvestment,
   performProphetAnoint,
+  performRecruit,
   performWhisper
 } from "./core/engine/actions";
 import {
@@ -14,14 +19,24 @@ import {
   getCultFormationCost,
   getDomainInvestCost,
   getDomainXpNeeded,
+  getEraOneGateStatus,
   getFollowersForNextProphet,
+  getHighestDomainLevel,
   getInfluenceCap,
+  getTotalDomainLevel,
   getWhisperCost
 } from "./core/engine/formulas";
 import { advanceWorld } from "./core/engine/worldTick";
-import { WHISPER_WINDOW_MS, WORLD_TICK_MS, type DomainId, type GameState } from "./core/state/gameState";
+import {
+  RECRUIT_INFLUENCE_COST,
+  WHISPER_WINDOW_MS,
+  WORLD_TICK_MS,
+  type DomainId,
+  type GameState
+} from "./core/state/gameState";
 import { loadGameState, saveGameState } from "./core/state/persistence";
 import { DomainPanel } from "./ui/panels/DomainPanel";
+import { EraGatePanel } from "./ui/panels/EraGatePanel";
 import { ProgressPanel } from "./ui/panels/ProgressPanel";
 import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
@@ -72,11 +87,18 @@ export default function App() {
   const beliefPerSecond = getBeliefPerSecond(gameState, nowMs);
   const influenceCap = getInfluenceCap(gameState);
   const whisperCost = getWhisperCost(gameState, nowMs);
+  const recruitPreview = getRecruitPreview(gameState);
   const nextProphetFollowers = getFollowersForNextProphet(gameState);
   const nextCultBeliefCost = getCultFormationCost(gameState);
+  const eraOneGate = getEraOneGateStatus(gameState);
+
   const canUseWhisper = canWhisper(gameState, nowMs);
+  const canUseRecruit = canRecruit(gameState);
   const canCreateProphet = canAnointProphet(gameState);
-  const canCreateCult = canFormCult(gameState);
+  const canCreateCult = gameState.era >= 2 && canFormCult(gameState);
+  const canAdvanceEra = canAdvanceEraOneToTwo(gameState);
+  const eraLabel = gameState.era === 1 ? "I" : gameState.era === 2 ? "II" : "III";
+
   const elapsedSeconds = Math.floor(gameState.simulation.totalElapsedMs / 1000);
   const secondsSinceLastEvent = Math.max(0, (nowMs - gameState.activity.lastEventAt) / 1000);
   const whisperCycleElapsed = Math.max(0, nowMs - gameState.activity.whisperWindowStartedAt);
@@ -89,6 +111,10 @@ export default function App() {
     setGameState((prev) => performWhisper(prev, Date.now()));
   };
 
+  const onRecruit = () => {
+    setGameState((prev) => performRecruit(prev, Date.now()));
+  };
+
   const onInvestDomain = (domainId: DomainId) => {
     setGameState((prev) => performDomainInvestment(prev, domainId, Date.now()));
   };
@@ -99,6 +125,10 @@ export default function App() {
 
   const onFormCult = () => {
     setGameState((prev) => performCultFormation(prev, Date.now()));
+  };
+
+  const onAdvanceEra = () => {
+    setGameState((prev) => performAdvanceEraOneToTwo(prev, Date.now()));
   };
 
   return (
@@ -115,21 +145,21 @@ export default function App() {
       >
         <header className="space-y-3">
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
-          <h1 className="text-2xl font-semibold text-veil md:text-4xl">
-            Someone is listening.
-          </h1>
+          <h1 className="text-2xl font-semibold text-veil md:text-4xl">Someone is listening.</h1>
           <p className="max-w-3xl text-sm text-veil/70">
-            M2 formula layer is active: uncapped belief output, faith decay pressure,
-            prophet and cult scaling, and domain investment progression.
+            M3 loop active: whisper and recruit pressure, cadence hooks, prophet growth,
+            and Era I gate tracking into Doctrine.
           </p>
         </header>
 
-        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-3">
+        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4">
+          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Era</p>
+            <p className="mt-2 text-xl text-white">{eraLabel}</p>
+          </article>
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Belief</p>
-            <p className="mt-2 text-xl text-white">
-              {formatNumber(gameState.resources.belief)}
-            </p>
+            <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.belief)}</p>
             <p className="mt-1 text-xs text-veil/65">{formatNumber(beliefPerSecond)} / sec</p>
           </article>
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
@@ -137,22 +167,18 @@ export default function App() {
             <p className="mt-2 text-xl text-white">
               {formatNumber(gameState.resources.influence)} / {formatNumber(influenceCap)}
             </p>
-            <p className="mt-1 text-xs text-veil/65">Whisper cost: {formatNumber(whisperCost)}</p>
+            <p className="mt-1 text-xs text-veil/65">Whisper: {formatNumber(whisperCost)}</p>
           </article>
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Thickness</p>
-            <p className="mt-2 text-xl text-white">
-              {formatNumber(gameState.resources.veil)}
-            </p>
+            <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.veil)}</p>
           </article>
         </section>
 
-        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-3">
+        <section className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 md:grid-cols-4">
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
-            <p className="mt-2 text-xl text-white">
-              {formatNumber(gameState.resources.followers)}
-            </p>
+            <p className="mt-2 text-xl text-white">{formatNumber(gameState.resources.followers)}</p>
           </article>
           <article className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
@@ -162,13 +188,21 @@ export default function App() {
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-2 text-xl text-white">{formatNumber(gameState.cults)}</p>
           </article>
+          <article className="rounded-xl border border-white/10 bg-black/20 p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Domain Level Sum</p>
+            <p className="mt-2 text-xl text-white">{formatNumber(getTotalDomainLevel(gameState))}</p>
+          </article>
         </section>
 
-        <div className="grid gap-4 md:grid-cols-[280px_1fr]">
+        <div className="grid gap-4 md:grid-cols-[320px_1fr]">
           <WhisperPanel
             influence={gameState.resources.influence}
-            cost={whisperCost}
+            whisperCost={whisperCost}
+            recruitCost={RECRUIT_INFLUENCE_COST}
+            recruitPreview={recruitPreview}
+            cadencePromptActive={gameState.activity.cadencePromptActive}
             onWhisper={onWhisper}
+            onRecruit={onRecruit}
           />
           <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
             <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Omens</h2>
@@ -180,8 +214,21 @@ export default function App() {
           </section>
         </div>
 
+        <EraGatePanel
+          era={gameState.era}
+          beliefProgress={gameState.stats.totalBeliefEarned}
+          beliefTarget={eraOneGate.beliefTarget}
+          prophetsProgress={gameState.prophets}
+          prophetsTarget={eraOneGate.prophetsTarget}
+          domainProgress={getHighestDomainLevel(gameState)}
+          domainTarget={eraOneGate.domainTarget}
+          ready={canAdvanceEra}
+          onAdvance={onAdvanceEra}
+        />
+
         <ProgressPanel
           belief={gameState.resources.belief}
+          era={gameState.era}
           followers={gameState.resources.followers}
           prophets={gameState.prophets}
           cults={gameState.cults}
@@ -202,10 +249,12 @@ export default function App() {
         />
 
         <p className="text-xs text-veil/60">
-          {canUseWhisper
-            ? "The veil yields if you speak now."
-            : "Influence is too thin; wait, then whisper again."}
-          {" "}Domain investments cost belief and level through XP thresholds.
+          {gameState.activity.cadencePromptActive
+            ? "Silence is building. Taking an action now grants a cadence bonus."
+            : "Act every 30-60 seconds to keep momentum and avoid faith drift."}
+          {!canUseWhisper && !canUseRecruit
+            ? " Influence is recovering; choose your next intervention when it peaks."
+            : " Whisper and recruit both satisfy cadence pressure."}
         </p>
 
         <StatsDrawer

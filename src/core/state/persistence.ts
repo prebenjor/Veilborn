@@ -112,7 +112,8 @@ function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses
     startInf: readBoolean(value.startInf, fallback.startInf),
     faithFloor: readBoolean(value.faithFloor, fallback.faithFloor),
     prophetThreshold: readBoolean(value.prophetThreshold, fallback.prophetThreshold),
-    cultCostBase: readBoolean(value.cultCostBase, fallback.cultCostBase)
+    cultCostBase: readBoolean(value.cultCostBase, fallback.cultCostBase),
+    era1Gate: readBoolean(value.era1Gate, fallback.era1Gate)
   };
 }
 
@@ -150,12 +151,15 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
     activity: {
       lastEventAt: Math.max(0, readNumber(rawActivity.lastEventAt, nowMs)),
       whisperWindowStartedAt: Math.max(0, readNumber(rawActivity.whisperWindowStartedAt, nowMs)),
-      whispersInWindow: Math.max(0, Math.floor(readNumber(rawActivity.whispersInWindow, 0)))
+      whispersInWindow: Math.max(0, Math.floor(readNumber(rawActivity.whispersInWindow, 0))),
+      lastCadencePromptAt: Math.max(0, readNumber(rawActivity.lastCadencePromptAt, nowMs)),
+      cadencePromptActive: readBoolean(rawActivity.cadencePromptActive, false)
     },
     stats: {
       totalBeliefEarned: Math.max(0, readNumber(rawStats.totalBeliefEarned, fallback.stats.totalBeliefEarned))
     },
     echoBonuses: sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses),
+    era: readNumber(rawState.era, fallback.era) >= 3 ? 3 : readNumber(rawState.era, fallback.era) >= 2 ? 2 : 1,
     mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
     domains: sanitizeDomains(rawState.domains, fallback.domains),
     prophets: Math.max(0, Math.floor(readNumber(rawState.prophets, fallback.prophets))),
@@ -179,7 +183,8 @@ type Migrator = (rawState: unknown, nowMs: number) => GameState;
 
 const MIGRATORS: Record<number, Migrator> = {
   1: migrateFromSchemaV1,
-  2: migrateFromSchemaV2
+  2: migrateFromSchemaV2,
+  3: sanitizeState
 };
 
 function toSaveEnvelope(state: GameState): SaveEnvelope {
@@ -225,4 +230,3 @@ export function loadGameState(nowMs = Date.now()): GameState {
     return createInitialGameState(nowMs);
   }
 }
-

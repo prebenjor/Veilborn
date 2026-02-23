@@ -65,7 +65,7 @@
     {
       "id": "M3",
       "title": "Whispers Loop (Era I)",
-      "status": "pending",
+      "status": "completed",
       "dependencies": ["M2"],
       "deliverables": [
         "Whisper and recruit actions",

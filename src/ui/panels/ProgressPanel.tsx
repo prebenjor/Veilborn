@@ -1,5 +1,6 @@
 interface ProgressPanelProps {
   belief: number;
+  era: number;
   followers: number;
   prophets: number;
   cults: number;
@@ -17,6 +18,7 @@ function formatNumber(value: number): string {
 
 export function ProgressPanel({
   belief,
+  era,
   followers,
   prophets,
   cults,
@@ -28,7 +30,7 @@ export function ProgressPanel({
   onFormCult
 }: ProgressPanelProps) {
   const cultRevealThreshold = nextCultBeliefCost * 0.9;
-  const showCultControls = cults > 0 || belief >= cultRevealThreshold;
+  const showCultControls = era >= 2 && (cults > 0 || belief >= cultRevealThreshold);
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -37,11 +39,9 @@ export function ProgressPanel({
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
           <p className="mt-1 text-sm text-white">
-            {formatNumber(prophets)} active • next requires {formatNumber(nextProphetFollowers)} followers
+            {formatNumber(prophets)} active - next requires {formatNumber(nextProphetFollowers)} followers
           </p>
-          <p className="mt-1 text-xs text-veil/70">
-            Current followers: {formatNumber(followers)}
-          </p>
+          <p className="mt-1 text-xs text-veil/70">Current followers: {formatNumber(followers)}</p>
           <button
             type="button"
             disabled={!canAnointProphet}
@@ -52,11 +52,18 @@ export function ProgressPanel({
           </button>
         </article>
 
-        {showCultControls ? (
+        {era < 2 ? (
+          <article className="rounded-xl border border-white/10 bg-black/25 p-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
+            <p className="mt-1 text-sm text-veil/70">
+              Cult doctrine remains sealed in Era I. Unlock Era II to found cults.
+            </p>
+          </article>
+        ) : showCultControls ? (
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cults</p>
             <p className="mt-1 text-sm text-white">
-              {formatNumber(cults)} formed • next costs {formatNumber(nextCultBeliefCost)} belief
+              {formatNumber(cults)} formed - next costs {formatNumber(nextCultBeliefCost)} belief
             </p>
             <button
               type="button"
@@ -79,3 +86,4 @@ export function ProgressPanel({
     </section>
   );
 }
+

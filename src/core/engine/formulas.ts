@@ -1,4 +1,8 @@
 import {
+  ERA_ONE_BELIEF_GATE_BASE,
+  ERA_ONE_DOMAIN_LEVEL_GATE,
+  ERA_ONE_GATE_ECHO_MULTIPLIER,
+  ERA_ONE_PROPHET_GATE,
   CULT_COST_BASE,
   CULT_COST_ECHO_BASE,
   CULT_COST_SCALAR,
@@ -23,6 +27,9 @@ import {
   PROPHET_THRESHOLD_BASE,
   PROPHET_THRESHOLD_ECHO_BASE,
   PROPHET_THRESHOLD_SCALAR,
+  RECRUIT_BASE_FOLLOWERS,
+  RECRUIT_DOMAIN_FOLLOWER_DIVISOR,
+  RECRUIT_PROPHET_FOLLOWER_BONUS,
   VEIL_BONUS_SCALE,
   WHISPER_BASE_COST,
   WHISPER_COST_SCALAR,
@@ -37,8 +44,22 @@ interface NormalizedWhisperCycle {
   whispersInWindow: number;
 }
 
+export interface EraOneGateStatus {
+  beliefTarget: number;
+  beliefReady: boolean;
+  prophetsTarget: number;
+  prophetsReady: boolean;
+  domainTarget: number;
+  domainReady: boolean;
+  ready: boolean;
+}
+
 export function getTotalDomainLevel(state: GameState): number {
   return state.domains.reduce((sum, domain) => sum + domain.level, 0);
+}
+
+export function getHighestDomainLevel(state: GameState): number {
+  return state.domains.reduce((max, domain) => Math.max(max, domain.level), 0);
 }
 
 export function getProphetOutput(totalDomainLevel: number): number {
@@ -126,6 +147,14 @@ export function getCultFormationCost(state: GameState): number {
   return Math.ceil(base * Math.pow(CULT_COST_SCALAR, state.cults));
 }
 
+export function getRecruitFollowerGainBase(state: GameState): number {
+  return (
+    RECRUIT_BASE_FOLLOWERS +
+    state.prophets * RECRUIT_PROPHET_FOLLOWER_BONUS +
+    Math.floor(getTotalDomainLevel(state) / RECRUIT_DOMAIN_FOLLOWER_DIVISOR)
+  );
+}
+
 export function getDomainInvestCost(domain: DomainProgress): number {
   return Math.ceil(DOMAIN_INVEST_BASE_COST * Math.pow(DOMAIN_INVEST_COST_SCALAR, domain.level));
 }
@@ -134,3 +163,26 @@ export function getDomainXpNeeded(domain: DomainProgress): number {
   return Math.ceil(DOMAIN_XP_BASE * Math.pow(DOMAIN_XP_SCALAR, domain.level));
 }
 
+export function getEraOneBeliefGateTarget(state: GameState): number {
+  const multiplier = state.echoBonuses.era1Gate ? ERA_ONE_GATE_ECHO_MULTIPLIER : 1;
+  return Math.ceil(ERA_ONE_BELIEF_GATE_BASE * multiplier);
+}
+
+export function getEraOneGateStatus(state: GameState): EraOneGateStatus {
+  const beliefTarget = getEraOneBeliefGateTarget(state);
+  const prophetsTarget = ERA_ONE_PROPHET_GATE;
+  const domainTarget = ERA_ONE_DOMAIN_LEVEL_GATE;
+  const beliefReady = state.stats.totalBeliefEarned >= beliefTarget;
+  const prophetsReady = state.prophets >= prophetsTarget;
+  const domainReady = getHighestDomainLevel(state) >= domainTarget;
+
+  return {
+    beliefTarget,
+    beliefReady,
+    prophetsTarget,
+    prophetsReady,
+    domainTarget,
+    domainReady,
+    ready: beliefReady && prophetsReady && domainReady
+  };
+}

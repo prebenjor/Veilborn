@@ -1,18 +1,40 @@
-import { DOMAIN_LABELS, WHISPER_BELIEF_GAIN, WHISPER_FOLLOWER_GAIN, type DomainId, type GameState } from "../state/gameState";
+import {
+  CADENCE_ACTION_BELIEF_BONUS,
+  CADENCE_ACTION_FOLLOWER_BONUS,
+  DOMAIN_LABELS,
+  RECRUIT_BASE_FOLLOWERS,
+  RECRUIT_DOMAIN_FOLLOWER_DIVISOR,
+  RECRUIT_INFLUENCE_COST,
+  RECRUIT_PROPHET_FOLLOWER_BONUS,
+  RECRUIT_RANDOM_FOLLOWER_MAX,
+  WHISPER_BELIEF_GAIN,
+  WHISPER_FOLLOWER_GAIN,
+  type ActivityState,
+  type DomainId,
+  type GameState
+} from "../state/gameState";
 import {
   getCultFormationCost,
   getDomainInvestCost,
   getDomainXpNeeded,
+  getEraOneGateStatus,
   getFollowersForNextProphet,
+  getRecruitFollowerGainBase,
+  getTotalDomainLevel,
   getWhisperCost,
   normalizeWhisperCycle
 } from "./formulas";
 
-type OmenKind = "whisper" | "domain" | "domainLevel" | "prophet" | "cult";
+type OmenKind = "whisper" | "recruit" | "domain" | "domainLevel" | "prophet" | "cult" | "era";
 
 interface RandomPick<T> {
   rngState: number;
   value: T;
+}
+
+interface CadenceBonus {
+  beliefBonus: number;
+  followerBonus: number;
 }
 
 function nextRandom(rngState: number): RandomPick<number> {
@@ -51,6 +73,26 @@ function getFollowerDescriptor(followers: number): string {
   return "a few households listened and did not mock the silence";
 }
 
+function getCadenceBonus(state: GameState): CadenceBonus {
+  if (!state.activity.cadencePromptActive) {
+    return { beliefBonus: 0, followerBonus: 0 };
+  }
+
+  return {
+    beliefBonus: CADENCE_ACTION_BELIEF_BONUS,
+    followerBonus: CADENCE_ACTION_FOLLOWER_BONUS
+  };
+}
+
+function resolveActivityAfterAction(activity: ActivityState, nowMs: number): ActivityState {
+  return {
+    ...activity,
+    lastEventAt: nowMs,
+    cadencePromptActive: false,
+    lastCadencePromptAt: activity.cadencePromptActive ? nowMs : activity.lastCadencePromptAt
+  };
+}
+
 function createOmen(
   state: GameState,
   kind: OmenKind,
@@ -63,13 +105,13 @@ function createOmen(
 
   const whisperStarts = [
     `${mortal.name} woke ${anchor} with ash on their palms.`,
-    `A bell in the east rang once, though no hand touched it.`,
-    `In the river quarter, dogs knelt and would not bark.`,
-    `A wind crossed the fields without bending the grain.`,
-    `A shrine keeper found the altar warm long before sunrise.`,
-    `Fishermen on the blackwater heard chanting under the tide.`,
-    `A widow in the hill district whispered to an empty doorway.`,
-    `Two travelers argued over a dream they both remembered.`
+    "A bell in the east rang once, though no hand touched it.",
+    "In the river quarter, dogs knelt and would not bark.",
+    "A wind crossed the fields without bending the grain.",
+    "A shrine keeper found the altar warm long before sunrise.",
+    "Fishermen on the blackwater heard chanting under the tide.",
+    "A widow in the hill district whispered to an empty doorway.",
+    "Two travelers argued over a dream they both remembered."
   ] as const;
 
   const whisperMiddles = [
@@ -81,6 +123,22 @@ function createOmen(
     "The children stopped laughing and listened to the rafters.",
     "Old doubters looked away and called it weather.",
     "No one agreed what was heard, only that it was real."
+  ] as const;
+
+  const recruitStarts = [
+    "You nudged a crowd at the edge of the market and they lingered.",
+    "A rumor crossed the district faster than the watch could deny it.",
+    "At dusk, one testimony became many.",
+    "A quiet procession formed where no banners flew.",
+    "In the southern quarter, strangers repeated the same forbidden phrase."
+  ] as const;
+
+  const recruitEndings = [
+    "More listeners stepped forward before the hourglass emptied.",
+    "A cluster of families offered names without being asked.",
+    "The skeptical did not convert, but they stopped interrupting.",
+    "By nightfall, the circle around your sign had widened.",
+    "No decree stopped the murmurs from multiplying."
   ] as const;
 
   const domainStarts = [
@@ -120,7 +178,7 @@ function createOmen(
 
   const prophetStarts = [
     `${mortal.name} refused sleep and spoke until sunrise.`,
-    `A listener in torn linen stood on a roof and did not tremble.`,
+    "A listener in torn linen stood on a roof and did not tremble.",
     "The market square fell quiet when one voice refused to break.",
     "At the drowned gate, a witness repeated your omen without faltering.",
     "A former skeptic lit a lantern and called the crowd by name.",
@@ -140,12 +198,27 @@ function createOmen(
     "At riverbend, initiates traced your sign into wet clay."
   ] as const;
 
+  const eraStarts = [
+    "The first veil gave way, and mortals named your silence a doctrine.",
+    "A line was crossed in the minds of the faithful; whispers became law.",
+    "Your shadow lengthened over the settlements and no one called it rumor anymore."
+  ] as const;
+
   if (kind === "whisper") {
     const a = pickOne(rngSeed, whisperStarts);
     const b = pickOne(a.rngState, whisperMiddles);
     return {
       rngState: b.rngState,
       text: `${a.value} ${b.value} By morning, ${getFollowerDescriptor(state.resources.followers + WHISPER_FOLLOWER_GAIN)}.`
+    };
+  }
+
+  if (kind === "recruit") {
+    const a = pickOne(rngSeed, recruitStarts);
+    const b = pickOne(a.rngState, recruitEndings);
+    return {
+      rngState: b.rngState,
+      text: `${a.value} ${b.value}`
     };
   }
 
@@ -175,6 +248,14 @@ function createOmen(
     };
   }
 
+  if (kind === "era") {
+    const a = pickOne(rngSeed, eraStarts);
+    return {
+      rngState: a.rngState,
+      text: `${a.value}`
+    };
+  }
+
   const a = pickOne(rngSeed, cultStarts);
   return {
     rngState: a.rngState,
@@ -188,7 +269,6 @@ function appendOmen(state: GameState, nowMs: number, kind: OmenKind, detail?: st
   let chosen = createOmen(state, kind, nowMs, detail, rngState);
   rngState = chosen.rngState;
 
-  // Retry a few times to avoid near-term exact repeats.
   for (let i = 0; i < 3; i += 1) {
     if (!recentTexts.has(chosen.text)) break;
     const retry = createOmen(state, kind, nowMs, detail, rngState);
@@ -220,23 +300,26 @@ export function performWhisper(state: GameState, nowMs: number): GameState {
   const cost = getWhisperCost(state, nowMs);
   if (state.resources.influence < cost) return state;
 
+  const cadence = getCadenceBonus(state);
   const withWhisper = {
     ...state,
     resources: {
       ...state.resources,
       influence: state.resources.influence - cost,
-      belief: state.resources.belief + WHISPER_BELIEF_GAIN,
-      followers: state.resources.followers + WHISPER_FOLLOWER_GAIN
+      belief: state.resources.belief + WHISPER_BELIEF_GAIN + cadence.beliefBonus,
+      followers: state.resources.followers + WHISPER_FOLLOWER_GAIN + cadence.followerBonus
     },
-    activity: {
-      ...state.activity,
-      whisperWindowStartedAt: normalizedCycle.whisperWindowStartedAt,
-      whispersInWindow: normalizedCycle.whispersInWindow + 1,
-      lastEventAt: nowMs
-    },
+    activity: resolveActivityAfterAction(
+      {
+        ...state.activity,
+        whisperWindowStartedAt: normalizedCycle.whisperWindowStartedAt,
+        whispersInWindow: normalizedCycle.whispersInWindow + 1
+      },
+      nowMs
+    ),
     stats: {
       ...state.stats,
-      totalBeliefEarned: state.stats.totalBeliefEarned + WHISPER_BELIEF_GAIN
+      totalBeliefEarned: state.stats.totalBeliefEarned + WHISPER_BELIEF_GAIN + cadence.beliefBonus
     },
     meta: {
       ...state.meta,
@@ -245,6 +328,43 @@ export function performWhisper(state: GameState, nowMs: number): GameState {
   };
 
   return appendOmen(withWhisper, nowMs, "whisper");
+}
+
+export function canRecruit(state: GameState): boolean {
+  return state.resources.influence >= RECRUIT_INFLUENCE_COST;
+}
+
+export function performRecruit(state: GameState, nowMs: number): GameState {
+  if (!canRecruit(state)) return state;
+
+  const recruitBase = getRecruitFollowerGainBase(state);
+  const recruitRandom = nextRandom(state.rngState);
+  const randomFollowerBonus = Math.floor(recruitRandom.value * (RECRUIT_RANDOM_FOLLOWER_MAX + 1));
+  const cadence = getCadenceBonus(state);
+  const followerGain = recruitBase + randomFollowerBonus + cadence.followerBonus;
+  const beliefGain = cadence.beliefBonus;
+
+  const withRecruit = {
+    ...state,
+    rngState: recruitRandom.rngState,
+    resources: {
+      ...state.resources,
+      influence: state.resources.influence - RECRUIT_INFLUENCE_COST,
+      followers: state.resources.followers + followerGain,
+      belief: state.resources.belief + beliefGain
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    stats: {
+      ...state.stats,
+      totalBeliefEarned: state.stats.totalBeliefEarned + beliefGain
+    },
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(withRecruit, nowMs, "recruit");
 }
 
 export function canInvestDomain(state: GameState, domainId: DomainId): boolean {
@@ -283,10 +403,7 @@ export function performDomainInvestment(state: GameState, domainId: DomainId, no
       ...state.resources,
       belief: state.resources.belief - cost
     },
-    activity: {
-      ...state.activity,
-      lastEventAt: nowMs
-    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
     meta: {
       ...state.meta,
       updatedAt: nowMs
@@ -297,7 +414,6 @@ export function performDomainInvestment(state: GameState, domainId: DomainId, no
     return appendOmen(withInvestment, nowMs, "domainLevel", DOMAIN_LABELS[domainId]);
   }
 
-  // Minor domain investments only emit an omen sometimes to avoid log spam.
   const ambientRoll = rollChance(withInvestment.rngState, 0.35);
   const withRolledRng = {
     ...withInvestment,
@@ -326,10 +442,7 @@ export function performProphetAnoint(state: GameState, nowMs: number): GameState
       ...state.resources,
       followers: state.resources.followers - threshold
     },
-    activity: {
-      ...state.activity,
-      lastEventAt: nowMs
-    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
     meta: {
       ...state.meta,
       updatedAt: nowMs
@@ -354,10 +467,7 @@ export function performCultFormation(state: GameState, nowMs: number): GameState
       ...state.resources,
       belief: state.resources.belief - cost
     },
-    activity: {
-      ...state.activity,
-      lastEventAt: nowMs
-    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
     meta: {
       ...state.meta,
       updatedAt: nowMs
@@ -366,3 +476,33 @@ export function performCultFormation(state: GameState, nowMs: number): GameState
 
   return appendOmen(withCult, nowMs, "cult");
 }
+
+export function canAdvanceEraOneToTwo(state: GameState): boolean {
+  if (state.era !== 1) return false;
+  return getEraOneGateStatus(state).ready;
+}
+
+export function performAdvanceEraOneToTwo(state: GameState, nowMs: number): GameState {
+  if (!canAdvanceEraOneToTwo(state)) return state;
+
+  const withEraShift = {
+    ...state,
+    era: 2 as const,
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(withEraShift, nowMs, "era");
+}
+
+export function getRecruitPreview(state: GameState): string {
+  const floor = RECRUIT_BASE_FOLLOWERS + state.prophets * RECRUIT_PROPHET_FOLLOWER_BONUS;
+  const domainBonus = Math.floor(getTotalDomainLevel(state) / RECRUIT_DOMAIN_FOLLOWER_DIVISOR);
+  const low = floor + domainBonus;
+  const high = low + RECRUIT_RANDOM_FOLLOWER_MAX;
+  return `${low}-${high} followers`;
+}
+

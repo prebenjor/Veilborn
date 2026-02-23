@@ -1,5 +1,21 @@
+import { CADENCE_PROMPT_INTERVAL_MS, type ActivityState, type GameState } from "../state/gameState";
 import { getBeliefPerSecond, getInfluenceCap, getInfluenceRegenPerSecond, normalizeWhisperCycle } from "./formulas";
-import type { GameState } from "../state/gameState";
+
+function applyCadencePrompt(activity: ActivityState, nowMs: number): ActivityState {
+  if (activity.cadencePromptActive) return activity;
+
+  const inactiveMs = nowMs - activity.lastEventAt;
+  if (inactiveMs < CADENCE_PROMPT_INTERVAL_MS) return activity;
+
+  const sinceLastPrompt = nowMs - activity.lastCadencePromptAt;
+  if (sinceLastPrompt < CADENCE_PROMPT_INTERVAL_MS) return activity;
+
+  return {
+    ...activity,
+    cadencePromptActive: true,
+    lastCadencePromptAt: nowMs
+  };
+}
 
 export function advanceWorld(state: GameState, nowMs: number): GameState {
   const elapsedSinceLastTick = nowMs - state.simulation.lastTickAt;
@@ -12,13 +28,18 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
 
   if (ticks <= 0) {
     const whisperCycle = normalizeWhisperCycle(state.activity, nowMs);
-    return {
-      ...state,
-      activity: {
+    const updatedActivity = applyCadencePrompt(
+      {
         ...state.activity,
         whisperWindowStartedAt: whisperCycle.whisperWindowStartedAt,
         whispersInWindow: whisperCycle.whispersInWindow
       },
+      nowMs
+    );
+
+    return {
+      ...state,
+      activity: updatedActivity,
       simulation: {
         ...state.simulation,
         lastTickAt: nowMs,
@@ -38,6 +59,14 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   const influenceCap = getInfluenceCap(state);
   const influenceGain = getInfluenceRegenPerSecond(state) * simulatedSeconds;
   const whisperCycle = normalizeWhisperCycle(state.activity, nowMs);
+  const updatedActivity = applyCadencePrompt(
+    {
+      ...state.activity,
+      whisperWindowStartedAt: whisperCycle.whisperWindowStartedAt,
+      whispersInWindow: whisperCycle.whispersInWindow
+    },
+    nowMs
+  );
 
   return {
     ...state,
@@ -46,11 +75,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
       belief: state.resources.belief + beliefGain,
       influence: Math.min(influenceCap, state.resources.influence + influenceGain)
     },
-    activity: {
-      ...state.activity,
-      whisperWindowStartedAt: whisperCycle.whisperWindowStartedAt,
-      whispersInWindow: whisperCycle.whispersInWindow
-    },
+    activity: updatedActivity,
     stats: {
       ...state.stats,
       totalBeliefEarned: state.stats.totalBeliefEarned + beliefGain

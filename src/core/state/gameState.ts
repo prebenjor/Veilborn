@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 2;
+export const GAME_STATE_SCHEMA_VERSION = 3;
 export const WORLD_TICK_MS = 250;
 
 export const PROPHET_OUTPUT_BASE = 2;
@@ -25,6 +25,15 @@ export const WHISPER_COST_SCALAR = 1.4;
 export const WHISPER_WINDOW_MS = 4 * 60 * 1000;
 export const WHISPER_BELIEF_GAIN = 2;
 export const WHISPER_FOLLOWER_GAIN = 1;
+export const RECRUIT_INFLUENCE_COST = 25;
+export const RECRUIT_BASE_FOLLOWERS = 4;
+export const RECRUIT_PROPHET_FOLLOWER_BONUS = 2;
+export const RECRUIT_DOMAIN_FOLLOWER_DIVISOR = 2;
+export const RECRUIT_RANDOM_FOLLOWER_MAX = 2;
+
+export const CADENCE_PROMPT_INTERVAL_MS = 45 * 1000;
+export const CADENCE_ACTION_BELIEF_BONUS = 5;
+export const CADENCE_ACTION_FOLLOWER_BONUS = 1;
 
 export const PROPHET_THRESHOLD_BASE = 50;
 export const PROPHET_THRESHOLD_ECHO_BASE = 20;
@@ -38,6 +47,11 @@ export const DOMAIN_INVEST_BASE_COST = 50;
 export const DOMAIN_INVEST_COST_SCALAR = 1.8;
 export const DOMAIN_XP_BASE = 3;
 export const DOMAIN_XP_SCALAR = 1.5;
+
+export const ERA_ONE_BELIEF_GATE_BASE = 10000;
+export const ERA_ONE_GATE_ECHO_MULTIPLIER = 0.7;
+export const ERA_ONE_PROPHET_GATE = 3;
+export const ERA_ONE_DOMAIN_LEVEL_GATE = 3;
 
 export type MortalTrait = "skeptical" | "zealous" | "cautious";
 export type DomainId = "fire" | "death" | "harvest" | "storm" | "memory" | "void";
@@ -81,12 +95,15 @@ export interface EchoBonuses {
   faithFloor: boolean;
   prophetThreshold: boolean;
   cultCostBase: boolean;
+  era1Gate: boolean;
 }
 
 export interface ActivityState {
   lastEventAt: number;
   whisperWindowStartedAt: number;
   whispersInWindow: number;
+  lastCadencePromptAt: number;
+  cadencePromptActive: boolean;
 }
 
 export interface RunStats {
@@ -115,6 +132,7 @@ export interface GameState {
   activity: ActivityState;
   stats: RunStats;
   echoBonuses: EchoBonuses;
+  era: 1 | 2 | 3;
   mortals: Mortal[];
   domains: DomainProgress[];
   prophets: number;
@@ -169,7 +187,9 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     activity: {
       lastEventAt: nowMs,
       whisperWindowStartedAt: nowMs,
-      whispersInWindow: 0
+      whispersInWindow: 0,
+      lastCadencePromptAt: nowMs,
+      cadencePromptActive: false
     },
     stats: {
       totalBeliefEarned: 0
@@ -178,8 +198,10 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       startInf: false,
       faithFloor: false,
       prophetThreshold: false,
-      cultCostBase: false
+      cultCostBase: false,
+      era1Gate: false
     },
+    era: 1,
     mortals: [
       {
         id: "mortal-1",
