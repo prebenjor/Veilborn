@@ -73,6 +73,7 @@ import {
   getMiracleBeliefGain,
   getMiracleCivDamage,
   getMiracleInfluenceCost,
+  getMiracleReserveCap,
   getMiracleVeilCost,
   getPassiveFollowerRate,
   getRivalSpawnIntervalMs,
@@ -165,6 +166,7 @@ import { ProgressPanel } from "./ui/panels/ProgressPanel";
 import { StatsDrawer } from "./ui/panels/StatsDrawer";
 import { WhisperPanel } from "./ui/panels/WhisperPanel";
 import { RemembrancePanel } from "./ui/panels/RemembrancePanel";
+import { EchoTreeQuickPanel } from "./ui/panels/EchoTreeQuickPanel";
 import { EraOneLayout } from "./ui/eras/EraOneLayout";
 import { EraTwoActiveLayout } from "./ui/eras/EraTwoActiveLayout";
 import { EraTwoGrowthLayout } from "./ui/eras/EraTwoGrowthLayout";
@@ -958,6 +960,7 @@ export default function App() {
   const veilRegenPerSecond = getVeilRegenPerSecond(gameState);
   const veilErosionPerSecond = getVeilErosionPerSecond(gameState);
   const veilCollapseThreshold = getVeilCollapseThreshold(gameState);
+  const miracleReserveCap = getMiracleReserveCap(gameState);
   const civilizationRebuildSeconds = gameState.cataclysm.civilizationCollapsed
     ? Math.max(0, Math.ceil((gameState.cataclysm.civilizationRebuildEndsAt - nowMs) / 1000))
     : 0;
@@ -1782,6 +1785,10 @@ export default function App() {
     era >= 3 ? (
       <CataclysmPanel
         era={gameState.era}
+        influence={gameState.resources.influence}
+        influenceCap={influenceCap}
+        miracleReserve={gameState.cataclysm.miracleReserve}
+        miracleReserveCap={miracleReserveCap}
         veil={gameState.resources.veil}
         veilBonus={veilBonus}
         veilRegenPerSecond={veilRegenPerSecond}
@@ -1873,6 +1880,14 @@ export default function App() {
       onResolveDoubtChoice={onResolveDoubtChoice}
     />
   );
+  const eraOneEchoQuickPanel =
+    era === 1 && gameState.prestige.completedRuns > 0 ? (
+      <EchoTreeQuickPanel
+        echoes={gameState.prestige.echoes}
+        treeViews={echoTreeViews}
+        onPurchaseTree={onPurchaseEchoTreeRank}
+      />
+    ) : null;
 
   const activeTabContent = era === 2 ? eraTwoActiveContent : eraThreeActiveContent;
   const growthTabContent = era === 2 ? eraTwoGrowthContent : eraThreeGrowthContent;
@@ -1971,6 +1986,9 @@ export default function App() {
     beliefBreakdown,
     influenceBreakdown: influenceRegenBreakdown,
     shrinesBuilt: gameState.doctrine.shrinesBuilt,
+    miracleReserve: gameState.cataclysm.miracleReserve,
+    miracleReserveCap,
+    currentInfluence: gameState.resources.influence,
     currentFollowers: gameState.resources.followers,
     devotionStacks,
     devotionPathLabel,
@@ -2058,7 +2076,10 @@ export default function App() {
               <TabDock availableTabs={availableTabs} activeTab={safeActiveTab} onSelectTab={setActiveTab} />
             ) : null}
             {era === 1 ? (
-              <>{eraOneContent}</>
+              <>
+                {eraOneContent}
+                {eraOneEchoQuickPanel}
+              </>
             ) : safeActiveTab === "active" ? (
               <>{activeTabContent}</>
             ) : safeActiveTab === "growth" ? (

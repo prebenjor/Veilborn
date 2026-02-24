@@ -758,12 +758,13 @@
     {
       "id": "PF-22",
       "title": "Influence Cap Scaling - Era III Late Game",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
-      "notes": "Current formula: influenceCap = 100 + (20 * prophets) + 50 if startInf. At 18 prophets this yields 460 - demonstrably insufficient at 52B Belief / 1d 18h runtime with 26 cults and 240 shrines. The cap must scale with late Era III infrastructure. Requires manifesto revision.",
+      "notes": "Implemented. Era III Influence cap now scales with cult count, average domain level, and shrine count to prevent late-game under-cap bottlenecks.",
       "scope": [
         "Add a cult-count term to the Influence cap formula for Era III: +5 per cult above 3",
         "Add an optional domain-level term: +2 per point of average domain level above 5",
+        "Add shrine scaling term for Era III: +0.5 per shrine above 20",
         "Reference target: player with 18 prophets, 26 cults, domain avg level 6 should have cap ~700-800",
         "Cap scaling must not trivialize Miracle costs - cap growth should trail regen growth so spend-before-cap behavior remains relevant",
         "Update influenceCap formula in MANIFESTO.md and GAME_REFERENCE.md in same change",
@@ -803,9 +804,9 @@
     {
       "id": "PF-25",
       "title": "Veil Pressure Rebalance and Miracle Naming",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
-      "notes": "Two interconnected Era III balance issues addressed together. Shrine regen is so strong at late Era III scale that Veil danger-zone pressure collapses. Miracle labels also still use developer tier names. Scope of PF-21 is absorbed into this task.",
+      "notes": "Completed baseline pass. Shrine regen now uses diminishing returns, erosion includes shrine pressure, and miracle labels are in-world names. Follow-up numeric miracle retunes are tracked separately under PF-27.",
       "scope": [
         "Apply diminishing returns to shrine Veil regen: shrine_regen_per_second = (shrine_count * base_shrine_rate) / (1 + shrine_count * 0.015)",
         "Set base_shrine_rate to 1/90, or 1/80 with veilRegen echo bonus",
@@ -816,13 +817,13 @@
         "Replace Miracle T4 with Unraveling",
         "Apply miracle names everywhere tier labels appear: Cataclysm panel, omen log, stats surfaces, and any tier-referenced tooltip/projection text",
         "Update MANIFESTO.md and docs/GAME_REFERENCE.md in the same change with revised Veil formulas and miracle names",
-        "Do not change miracle costs, returns, Veil costs, or civilization damage values"
+        "Keep non-PF25 miracle numeric retunes tracked in dedicated follow-up items"
       ],
       "validation": [
         "At high shrine counts, Veil pressure requires active management and does not trivially stay in safe zone",
         "At low shrine counts, early Era III remains meaningfully recoverable between miracles",
         "All four miracle tiers display in-world names everywhere tier labels were shown",
-        "Miracle numeric costs/returns/penalties are unchanged",
+        "Any subsequent miracle numeric retune is documented in a dedicated follow-up item",
         "MANIFESTO.md and docs/GAME_REFERENCE.md match runtime formulas"
       ]
     },
@@ -852,6 +853,28 @@
         "Tab/era content in the left column remains readable with no horizontal overflow",
         "Stat Bar and Era III Unraveling strip remain full width",
         "OMENS and STATS sections in right panel scroll independently"
+      ]
+    },
+    {
+      "id": "PF-27",
+      "title": "Miracle Power Reserve and Legacy Echo Access",
+      "status": "completed",
+      "execute_after": "M14",
+      "notes": "Implemented as a follow-up balance/access pass after PF-22 and PF-25. Addresses late-era miracle access friction and post-ascension echo investment dead-time.",
+      "scope": [
+        "Introduce Era III miracle reserve pool fed by Influence overflow at cap",
+        "Miracle cast affordability checks and costs use total miracle power (Influence + reserve), spending Influence first then reserve",
+        "Expose miracle reserve and total miracle power in Cataclysm and Stats surfaces",
+        "Retune Whisper of Providence output profile (base gain, Veil cost, civ damage) to reduce overperformance",
+        "Add post-ascension Era I Legacy Echoes quick-spend panel so Echo points are investable before returning to Era III",
+        "Update MANIFESTO.md, docs/GAME_REFERENCE.md, and regression coverage for the new formulas/behavior"
+      ],
+      "validation": [
+        "Miracles remain castable through reserve when Influence alone is below cost",
+        "Influence overflow at cap accumulates reserve up to reserve cap; reserve does not grow offline",
+        "Cataclysm and Stats surfaces show reserve and total miracle power accurately",
+        "Whisper of Providence retune reduces early-miracle dominance without changing tier ordering",
+        "Echo spending is reachable in Era I after at least one completed run"
       ]
     }
   ]

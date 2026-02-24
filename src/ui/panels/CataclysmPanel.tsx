@@ -14,6 +14,10 @@ interface MiracleOption {
 
 interface CataclysmPanelProps {
   era: number;
+  influence: number;
+  influenceCap: number;
+  miracleReserve: number;
+  miracleReserveCap: number;
   veil: number;
   veilBonus: number;
   veilRegenPerSecond: number;
@@ -29,6 +33,10 @@ interface CataclysmPanelProps {
 
 export function CataclysmPanel({
   era,
+  influence,
+  influenceCap,
+  miracleReserve,
+  miracleReserveCap,
   veil,
   veilBonus,
   veilRegenPerSecond,
@@ -43,6 +51,7 @@ export function CataclysmPanel({
 }: CataclysmPanelProps) {
   if (era < 3) return null;
   const stability = getVeilStabilityView(veil, veilCollapseThreshold);
+  const miraclePower = influence + miracleReserve;
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -72,6 +81,11 @@ export function CataclysmPanel({
             <p className="mt-1 text-xs text-veil/65">Stable enough to sustain miracle returns.</p>
           )}
           <p className="mt-1 text-xs text-veil/65">Miracles this run: {formatResource(miraclesThisRun)}</p>
+          <p className="mt-1 text-xs text-veil/65">
+            Miracle power {formatResource(miraclePower)} (Influence {formatResource(influence)} /{" "}
+            {formatResource(influenceCap)} + Reserve {formatResource(miracleReserve)} /{" "}
+            {formatResource(miracleReserveCap)})
+          </p>
         </article>
       </div>
 
@@ -80,7 +94,7 @@ export function CataclysmPanel({
           <article key={miracle.tier} className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs tracking-[0.08em] text-veil/70">{MIRACLE_NAMES[miracle.tier]}</p>
             <p className="mt-1 text-xs text-veil/65">
-              Cost {formatResource(miracle.influenceCost)} Influence
+              Cost {formatResource(miracle.influenceCost)} Power
             </p>
             <p className="mt-1 text-xs text-veil/65">Return {formatResource(miracle.beliefGain)} Belief</p>
             <p className="mt-1 text-xs text-veil/65">

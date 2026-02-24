@@ -1,6 +1,23 @@
 import {
   createInitialGameState,
   DEVOTION_STACK_MAX,
+  INFLUENCE_BASE_CAP,
+  INFLUENCE_CAP_CULT_BASELINE,
+  INFLUENCE_CAP_DOMAIN_LEVEL_BASELINE,
+  INFLUENCE_CAP_PER_CULT_OVER_BASE,
+  INFLUENCE_CAP_PER_DOMAIN_LEVEL_OVER_BASE,
+  INFLUENCE_CAP_PER_PROPHET,
+  INFLUENCE_CAP_PER_SHRINE_OVER_BASE,
+  INFLUENCE_CAP_SHRINE_BASELINE,
+  INFLUENCE_START_BONUS,
+  MIRACLE_RESERVE_BASE_CAP,
+  MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE,
+  MIRACLE_RESERVE_MAX_CAP,
+  MIRACLE_RESERVE_PER_CULT,
+  MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE,
+  MIRACLE_RESERVE_PER_PROPHET,
+  MIRACLE_RESERVE_PER_SHRINE,
+  MIRACLE_RESERVE_START_BONUS,
   OFFLINE_INFLUENCE_RETURN_RATIO,
   OFFLINE_MAX_SECONDS,
   OFFLINE_VEIL_FLOOR,
@@ -11,11 +28,13 @@ import {
   VEIL_REGEN_SHRINE_DIMINISHING_SCALE
 } from "../src/core/state/gameState";
 import {
+  canCastMiracle,
   performAscension,
   performCastMiracle,
   performCultFormation,
   performStartAct
 } from "../src/core/engine/actions";
+import { advanceWorld } from "../src/core/engine/worldTick";
 import { runOfflineSimulationForRegression } from "../src/core/state/persistence";
 import {
   getActRewardBelief,
@@ -27,6 +46,7 @@ import {
   getFaithDecay,
   getInfluenceCap,
   getInfluenceRegenBreakdown,
+  getMiracleReserveCap,
   getPassiveFollowerRate,
   getVeilRegenPerSecond,
   getVeilErosionPerSecond
@@ -99,6 +119,96 @@ function testInfluenceBreakdownFormula(): void {
   assertApprox(breakdown.shrinePerSecond, 0.6, 1e-9, "Influence shrine regen mismatch.");
   assertApprox(breakdown.cultPerSecond, 12, 1e-9, "Influence cult regen mismatch.");
   assertApprox(breakdown.totalPerSecond, 18.6, 1e-9, "Influence total regen mismatch.");
+}
+
+function testEraThreeInfluenceCapScaling(): void {
+  const nowMs = 3_500_000;
+  const state = createInitialGameState(nowMs);
+  state.era = 3;
+  state.echoBonuses.startInf = true;
+  state.prophets = 18;
+  state.cults = 26;
+  state.doctrine.shrinesBuilt = 240;
+  for (const domain of state.domains) {
+    domain.level = 6;
+  }
+
+  const baseCap = INFLUENCE_BASE_CAP + state.prophets * INFLUENCE_CAP_PER_PROPHET + INFLUENCE_START_BONUS;
+  const cultBonus =
+    Math.max(0, state.cults - INFLUENCE_CAP_CULT_BASELINE) * INFLUENCE_CAP_PER_CULT_OVER_BASE;
+  const domainAverage = state.domains.reduce((sum, domain) => sum + domain.level, 0) / state.domains.length;
+  const domainBonus =
+    Math.max(0, domainAverage - INFLUENCE_CAP_DOMAIN_LEVEL_BASELINE) *
+    INFLUENCE_CAP_PER_DOMAIN_LEVEL_OVER_BASE;
+  const shrineBonus =
+    Math.max(0, state.doctrine.shrinesBuilt - INFLUENCE_CAP_SHRINE_BASELINE) *
+    INFLUENCE_CAP_PER_SHRINE_OVER_BASE;
+  const expectedCap = Math.floor(baseCap + cultBonus + domainBonus + shrineBonus);
+
+  assertApprox(getInfluenceCap(state), expectedCap, 1e-9, "Era III influence cap scaling mismatch.");
+}
+
+function testMiracleReserveCapAndOverflow(): void {
+  const nowMs = 3_750_000;
+  const state = createInitialGameState(nowMs);
+  state.era = 3;
+  state.echoBonuses.startInf = true;
+  state.prophets = 12;
+  state.cults = 10;
+  state.doctrine.shrinesBuilt = 50;
+  for (const domain of state.domains) {
+    domain.level = 5;
+  }
+  state.resources.influence = getInfluenceCap(state);
+  state.cataclysm.miracleReserve = 0;
+
+  const domainAverage = state.domains.reduce((sum, domain) => sum + domain.level, 0) / state.domains.length;
+  const expectedReserveCap = Math.max(
+    0,
+    Math.min(
+      MIRACLE_RESERVE_MAX_CAP,
+      Math.floor(
+        MIRACLE_RESERVE_BASE_CAP +
+          state.prophets * MIRACLE_RESERVE_PER_PROPHET +
+          state.cults * MIRACLE_RESERVE_PER_CULT +
+          state.doctrine.shrinesBuilt * MIRACLE_RESERVE_PER_SHRINE +
+          Math.max(0, domainAverage - MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE) *
+            MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE +
+          MIRACLE_RESERVE_START_BONUS
+      )
+    )
+  );
+  assertApprox(
+    getMiracleReserveCap(state),
+    expectedReserveCap,
+    1e-9,
+    "Miracle reserve cap formula mismatch."
+  );
+
+  const next = advanceWorld(state, nowMs + 5000);
+  assert(
+    next.cataclysm.miracleReserve > state.cataclysm.miracleReserve,
+    "Influence overflow should accumulate into miracle reserve."
+  );
+}
+
+function testMiracleReserveCastingAccessibility(): void {
+  const nowMs = 3_900_000;
+  const state = createInitialGameState(nowMs);
+  state.era = 3;
+  state.resources.influence = 500;
+  state.cataclysm.miracleReserve = 1_100;
+  state.cataclysm.civilizationCollapsed = false;
+  state.cataclysm.civilizationHealth = 100;
+  state.prophets = 8;
+  state.cults = 8;
+  state.doctrine.shrinesBuilt = 40;
+
+  assert(canCastMiracle(state, 2), "Tier-2 miracle should be castable via influence + reserve.");
+
+  const cast = performCastMiracle(state, 2, nowMs + 500);
+  assert(cast.resources.influence === 0, "Miracle casting should spend available influence first.");
+  assert(cast.cataclysm.miracleReserve === 0, "Miracle casting should spend reserve for remaining cost.");
 }
 
 function testPassiveFollowerRateFormula(): void {
@@ -379,6 +489,9 @@ function main(): void {
     { name: "Era I gate uses follower threshold", run: testEraOneGateFollowerCondition },
     { name: "Devotion recruit multiplier scaling", run: testDevotionRecruitMultiplier },
     { name: "Influence regen breakdown formula", run: testInfluenceBreakdownFormula },
+    { name: "Era III influence cap scaling", run: testEraThreeInfluenceCapScaling },
+    { name: "Miracle reserve cap + overflow behavior", run: testMiracleReserveCapAndOverflow },
+    { name: "Miracle reserve casting accessibility", run: testMiracleReserveCastingAccessibility },
     { name: "Passive follower rate formula", run: testPassiveFollowerRateFormula },
     { name: "Follower trickle belief floor", run: testFollowerTrickleBeliefFloor },
     { name: "Devotion path emergence and switching", run: testDevotionPathEmergenceAndSwitching },

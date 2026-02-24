@@ -57,13 +57,27 @@ import {
   GHOST_BONUS_BASE,
   INFLUENCE_BASE_CAP,
   INFLUENCE_BASE_REGEN_PER_SECOND,
+  INFLUENCE_CAP_CULT_BASELINE,
+  INFLUENCE_CAP_DOMAIN_LEVEL_BASELINE,
   INFLUENCE_CAP_PER_PROPHET,
+  INFLUENCE_CAP_PER_CULT_OVER_BASE,
+  INFLUENCE_CAP_PER_DOMAIN_LEVEL_OVER_BASE,
+  INFLUENCE_CAP_PER_SHRINE_OVER_BASE,
+  INFLUENCE_CAP_SHRINE_BASELINE,
   INFLUENCE_REGEN_PER_CULT_CAP,
   INFLUENCE_REGEN_PER_CULT_FOLLOWER,
   INFLUENCE_REGEN_PER_PROPHET_PER_SECOND,
   INFLUENCE_REGEN_PER_SHRINE_PER_SECOND,
   INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND,
   INFLUENCE_START_BONUS,
+  MIRACLE_RESERVE_BASE_CAP,
+  MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE,
+  MIRACLE_RESERVE_MAX_CAP,
+  MIRACLE_RESERVE_PER_CULT,
+  MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE,
+  MIRACLE_RESERVE_PER_PROPHET,
+  MIRACLE_RESERVE_PER_SHRINE,
+  MIRACLE_RESERVE_START_BONUS,
   FOLLOWER_RITE_BASE_BELIEF_COST,
   FOLLOWER_RITE_BASE_FOLLOWERS,
   FOLLOWER_RITE_BASE_INFLUENCE_COST,
@@ -718,9 +732,44 @@ export function getBeliefPerSecond(state: GameState, nowMs: number): number {
   return getBeliefGenerationBreakdown(state, nowMs).totalPerSecond;
 }
 
+function getAverageDomainLevel(state: GameState): number {
+  if (state.domains.length <= 0) return 0;
+  return getTotalDomainLevel(state) / state.domains.length;
+}
+
 export function getInfluenceCap(state: GameState): number {
   const startBonus = state.echoBonuses.startInf ? INFLUENCE_START_BONUS : 0;
-  return INFLUENCE_BASE_CAP + state.prophets * INFLUENCE_CAP_PER_PROPHET + startBonus;
+  const baseCap = INFLUENCE_BASE_CAP + state.prophets * INFLUENCE_CAP_PER_PROPHET + startBonus;
+  if (state.era < 3) return baseCap;
+
+  const cultBonus =
+    Math.max(0, state.cults - INFLUENCE_CAP_CULT_BASELINE) * INFLUENCE_CAP_PER_CULT_OVER_BASE;
+  const averageDomainLevel = getAverageDomainLevel(state);
+  const domainBonus =
+    Math.max(0, averageDomainLevel - INFLUENCE_CAP_DOMAIN_LEVEL_BASELINE) *
+    INFLUENCE_CAP_PER_DOMAIN_LEVEL_OVER_BASE;
+  const shrineBonus =
+    Math.max(0, state.doctrine.shrinesBuilt - INFLUENCE_CAP_SHRINE_BASELINE) *
+    INFLUENCE_CAP_PER_SHRINE_OVER_BASE;
+
+  return Math.floor(baseCap + cultBonus + domainBonus + shrineBonus);
+}
+
+export function getMiracleReserveCap(state: GameState): number {
+  if (state.era < 3) return 0;
+
+  const averageDomainLevel = getAverageDomainLevel(state);
+  const startBonus = state.echoBonuses.startInf ? MIRACLE_RESERVE_START_BONUS : 0;
+  const total =
+    MIRACLE_RESERVE_BASE_CAP +
+    state.prophets * MIRACLE_RESERVE_PER_PROPHET +
+    state.cults * MIRACLE_RESERVE_PER_CULT +
+    state.doctrine.shrinesBuilt * MIRACLE_RESERVE_PER_SHRINE +
+    Math.max(0, averageDomainLevel - MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE) *
+      MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE +
+    startBonus;
+
+  return Math.max(0, Math.min(MIRACLE_RESERVE_MAX_CAP, Math.floor(total)));
 }
 
 function getInfluenceBaseRegenPerSecond(state: GameState): number {

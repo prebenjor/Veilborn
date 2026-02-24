@@ -28,6 +28,9 @@ interface StatsDrawerProps {
     fillTimeSeconds: number | null;
   };
   shrinesBuilt: number;
+  miracleReserve: number;
+  miracleReserveCap: number;
+  currentInfluence: number;
   currentFollowers: number;
   devotionStacks: number;
   devotionPathLabel: string;
@@ -91,6 +94,9 @@ export function StatsDrawer({
   whisperResetInSeconds,
   influenceBreakdown,
   shrinesBuilt,
+  miracleReserve,
+  miracleReserveCap,
+  currentInfluence,
   currentFollowers,
   devotionStacks,
   devotionPathLabel,
@@ -246,6 +252,16 @@ export function StatsDrawer({
           ) : null}
           <dt>Cap</dt>
           <dd>{formatResource(influenceBreakdown.cap)}</dd>
+          {isEraThree ? (
+            <>
+              <dt>Miracle reserve</dt>
+              <dd>
+                {formatResource(miracleReserve)} / {formatResource(miracleReserveCap)}
+              </dd>
+              <dt>Miracle power</dt>
+              <dd>{formatResource(currentInfluence + miracleReserve)}</dd>
+            </>
+          ) : null}
           <dt>Fill time (from 0)</dt>
           <dd>
             {influenceBreakdown.fillTimeSeconds === null

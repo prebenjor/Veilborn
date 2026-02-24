@@ -19,7 +19,7 @@ When runtime and manifesto diverge, either:
 
 ## Current Build Snapshot
 
-- Save schema: `14`
+- Save schema: `15`
 - Core loop: deterministic tick (`250ms`)
 - Persistence: localStorage save + migration + recovery snapshot
 - Offline sim: enabled (`8h cap`, `85% belief efficiency`)
@@ -51,6 +51,10 @@ Completed PFs currently reflected in runtime:
 - `PF-15` act projection/result clarity baseline
 - `PF-18` veil mastery zone indicator baseline
 - `PF-17` domain synergy feedback baseline
+- `PF-22` era III influence cap scaling
+- `PF-25` veil pressure rebalance and miracle naming baseline
+- `PF-26` persistent right panel (omens/stats)
+- `PF-27` miracle reserve + legacy echo access
 
 ## Core Systems and Formulas
 
@@ -88,6 +92,14 @@ Cap:
 
 `influenceCap = 100 + (20 * prophets) + 50 if startInf`
 
+Era III bonus terms:
+
+`+ 5 * max(0, cults - 3)`
+
+`+ 2 * max(0, avgDomainLevel - 5)`
+
+`+ 0.5 * max(0, shrinesBuilt - 20)`
+
 Total regen per second:
 
 `total = base + shrine + cult + echo`
@@ -100,6 +112,12 @@ Total regen per second:
 Notes:
 - Cult regen uses average followers per cult and applies a per-cult cap before multiplying.
 - Stats page exposes full influence regen breakdown.
+- Overflow Influence at cap is redirected into Era III `miracleReserve` (no offline gain, no decay).
+- Miracles spend total power: `influence + miracleReserve` (Influence spent first).
+
+Miracle reserve cap (Era III):
+
+`miracleReserveCap = min(5000, floor(600 + 20*prophets + 30*cults + 4*shrines + 25*max(0, avgDomainLevel-4) + 150 if startInf))`
 
 ### Whisper and Recruit
 
@@ -326,19 +344,19 @@ Miracle influence costs:
 - Unraveling: `10000`
 
 Miracle base gains:
-- Whisper of Providence: `8000`
+- Whisper of Providence: `5500`
 - The Anointing: `30000`
 - The Rending: `90000`
 - Unraveling: `300000`
 
 Miracle veil costs:
-- Whisper of Providence: `8` (`5` with `miracleVeilDiscount`)
+- Whisper of Providence: `10` (`5` with `miracleVeilDiscount`)
 - The Anointing: `15`
 - The Rending: `25`
 - Unraveling: `40`
 
 Civilization damage:
-- Whisper of Providence: `4`
+- Whisper of Providence: `5`
 - The Anointing: `8`
 - The Rending: `14`
 - Unraveling: `24`
@@ -382,6 +400,7 @@ Echo trees:
 - `whispers`, `doctrine`, `cataclysm`
 - max rank `5`
 - rank costs: `1, 2, 3, 5, 8`
+- post-ascension Era I includes a `Legacy Echoes` quick-spend panel so Echoes can be invested before returning to Era III
 
 Domain carry:
 - `domain_carry` is currently a planned upgrade path and not active in runtime.
@@ -483,7 +502,7 @@ Era III:
 Disclosure policy:
 - future-era systems hidden until unlock
 - cult controls reveal near affordability threshold (`90%`)
-- stats drawer is always visible (all eras, all tabs) and only shows unlocked-system metrics.
+- stats surface is always accessible (embedded in persistent right panel on wide viewports, floating drawer on mobile) and only shows unlocked-system metrics.
 
 ### Stats, Telemetry, and Exports
 

@@ -141,6 +141,14 @@ Path effect layer (multipliers are stack-scaled and momentum-weighted):
 
 `influence_max = 100 + (20 * prophet_count) + 50 if start_inf upgrade is owned`
 
+Era III cap scaling (runtime):
+
+`+5 per cult above 3`
+
+`+2 per point of average domain level above 5`
+
+`+0.5 per shrine above 20`
+
 `influence_regen_per_second = 1 + (0.5 * prophet_count)`
 
 Implementation-expanded regen stack:
@@ -161,6 +169,15 @@ Costs:
   - The Anointing: `1600`
   - The Rending: `4100`
   - Unraveling: `10000`
+
+Miracle Reserve (Era III):
+- Overflow Influence at cap is redirected into a reserve pool instead of being lost.
+- Miracles consume total power: `influence + reserve`.
+- Reserve does not gain offline and does not decay.
+
+`miracle_reserve_cap = 600 + 20*prophets + 30*cults + 4*shrines + 25*max(0,avg_domain_level-4) + 150 if start_inf`
+
+`miracle_reserve_cap` is clamped to `5000`.
 
 The 4-minute whisper reset defines the short-cycle cadence and supports periodic check-ins.
 
@@ -296,7 +313,7 @@ Natural erosion (Era III):
 - `erosion_per_second = 0.001 * log10(totalBeliefEarned) + 0.0002 * shrine_count`
 
 Miracle Veil costs:
-- Tier 1: `-8`, or `-5` with Echo veil discount
+- Tier 1: `-10`, or `-5` with Echo veil discount
 - Tier 2: `-15`
 - Tier 3: `-25`
 - Tier 4: `-40`
@@ -334,7 +351,7 @@ Miracle return:
 `domain_bonus = domain_level * 0.1`
 
 Tier constants:
-- Whisper of Providence: cost 500, base gain 8000, Veil cost 8, civ damage 4
+- Whisper of Providence: cost 500, base gain 5500, Veil cost 10, civ damage 5
 - The Anointing: cost 1600, base gain 30000, Veil cost 15, civ damage 8
 - The Rending: cost 4100, base gain 90000, Veil cost 25, civ damage 14
 - Unraveling: cost 10000, base gain 300000, Veil cost 40, civ damage 24
@@ -392,6 +409,12 @@ Revision note (Veil regen, PF-25):
 - Shrine regen now uses diminishing returns to prevent late-game shrine counts from trivializing Veil pressure.
 - Shrine-count erosion term added: more infrastructure now pushes harder against the Veil.
 - Early Era III (around 10 shrines) remains broadly stable between miracles.
+
+Revision note (Miracle access and pacing, PF-27):
+- Era III Influence cap now scales with cult count, average domain level, and shrine count.
+- Overflow Influence at cap is redirected into Miracle Reserve and consumed by miracles as total power (`influence + reserve`).
+- Whisper of Providence was retuned to reduce early-miracle overperformance while preserving the same cost tier.
+- Echo spending remains reachable immediately after ascension via an Era I legacy quick-spend surface.
 
 Gate design rule:
 - All gates are multi-condition.
@@ -538,6 +561,7 @@ Rules:
 - Bottom status line progression is era-locked: Era I one quiet atmospheric line, Era II one directive line, Era III hidden.
 - Stats page is exempt from era-lock visibility and must remain accessible in every era and tab.
 - Stats content still follows progressive disclosure: only show metrics for systems the player has already unlocked or experienced.
+- After the first ascension, Echo spending must be reachable before returning to Era III (legacy quick-spend surface in Era I is acceptable).
 - UI architecture should preserve era boundaries in code: keep era composition in dedicated layout files, with `App.tsx` as orchestration only.
 
 ## Design Rules (Do Not Break)

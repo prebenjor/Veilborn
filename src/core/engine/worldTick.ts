@@ -29,6 +29,7 @@ import {
   getInfluenceCap,
   getInfluenceRegenPerSecond,
   getMatchingDomainPairs,
+  getMiracleReserveCap,
   getPassiveFollowerRate,
   getRivalSpawnIntervalMs,
   getRivalStrength,
@@ -243,7 +244,16 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   const beliefPerSecond = getBeliefPerSecond(preTickState, nowMs);
   const baseBeliefGain = beliefPerSecond * simulatedSeconds;
   const influenceCap = getInfluenceCap(preTickState);
+  const miracleReserveCap = getMiracleReserveCap(preTickState);
+  const currentMiracleReserve = Math.max(
+    0,
+    Math.min(miracleReserveCap, preTickState.cataclysm.miracleReserve)
+  );
   const influenceGain = getInfluenceRegenPerSecond(preTickState) * simulatedSeconds;
+  const influenceAfterGain = preTickState.resources.influence + influenceGain;
+  const influenceAfterCap = Math.min(influenceCap, influenceAfterGain);
+  const overflowInfluence = Math.max(0, influenceAfterGain - influenceCap);
+  const miracleReserveAfterTick = Math.min(miracleReserveCap, currentMiracleReserve + overflowInfluence);
   const passiveFollowerRate = getPassiveFollowerRate(preTickState, nowMs);
   const passiveFollowerGain = passiveFollowerRate * simulatedSeconds;
   const whisperCycle = normalizeWhisperCycle(preTickState.activity, nowMs);
@@ -352,7 +362,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     resources: {
       ...preTickState.resources,
       belief: preTickState.resources.belief + baseBeliefGain + actBeliefGain,
-      influence: Math.min(influenceCap, preTickState.resources.influence + influenceGain),
+      influence: influenceAfterCap,
       followers: followersAfterVeilCollapse,
       veil: veilAfterTick
     },
@@ -374,6 +384,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     },
     cataclysm: {
       ...preTickState.cataclysm,
+      miracleReserve: miracleReserveAfterTick,
       civilizationHealth,
       civilizationCollapsed,
       civilizationRebuildEndsAt,

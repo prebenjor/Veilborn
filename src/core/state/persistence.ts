@@ -59,6 +59,7 @@ import {
   getEchoBonusesFromTreeRanks,
   getFaithDecay,
   getInfluenceCap,
+  getMiracleReserveCap,
   getPassiveFollowerRate,
   getVeilErosionPerSecond,
   getVeilRegenPerSecond
@@ -539,6 +540,7 @@ function sanitizeCataclysm(value: unknown, fallback: CataclysmState): CataclysmS
   if (!isRecord(value)) return fallback;
   return {
     miraclesThisRun: Math.max(0, Math.floor(readNumber(value.miraclesThisRun, fallback.miraclesThisRun))),
+    miracleReserve: Math.max(0, readNumber(value.miracleReserve, fallback.miracleReserve)),
     civilizationHealth: Math.max(0, Math.min(100, readNumber(value.civilizationHealth, fallback.civilizationHealth))),
     civilizationCollapsed: readBoolean(value.civilizationCollapsed, fallback.civilizationCollapsed),
     civilizationRebuildEndsAt: Math.max(0, readNumber(value.civilizationRebuildEndsAt, fallback.civilizationRebuildEndsAt)),
@@ -862,7 +864,8 @@ const MIGRATORS: Record<number, Migrator> = {
   11: sanitizeState,
   12: sanitizeState,
   13: sanitizeState,
-  14: sanitizeState
+  14: sanitizeState,
+  15: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {
@@ -983,6 +986,10 @@ function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameState
       },
       cataclysm: {
         ...state.cataclysm,
+        miracleReserve: Math.max(
+          0,
+          Math.min(getMiracleReserveCap(state), state.cataclysm.miracleReserve)
+        ),
         civilizationHealth,
         civilizationCollapsed,
         civilizationRebuildEndsAt,

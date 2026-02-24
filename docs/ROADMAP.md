@@ -246,7 +246,9 @@ Notes:
   - Ascended/Beginner Era I speed ratio should be `< 1.00` and `>= 0.45`.
   - Ascended/Beginner Era II speed ratio should be `< 1.00` and `>= 0.45`.
 - Export-driven M14 loop: gather 2-3 beginner + 2-3 ascended telemetry exports, run compare/audit, apply one small constant delta, then re-run.
-- `PF-25` now owns Veil pressure rebalance + miracle naming and supersedes `PF-21`.
+- `PF-25` completed Veil pressure rebalance + miracle naming and superseded `PF-21`.
+- `PF-22` completed Era III Influence cap scaling (cult/domain/shrine terms).
+- `PF-27` completed miracle power reserve + post-ascension Era I legacy echo quick-spend access.
 - Remaining M14 scope is economy constant calibration against target run durations.
 
 Deliverables:

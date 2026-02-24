@@ -93,6 +93,7 @@ import {
   getMiracleBeliefGain,
   getMiracleCivDamage,
   getMiracleInfluenceCost,
+  getMiracleReserveCap,
   getMiracleVeilCost,
   getDevotionStacks,
   getDevotionRecruitMultiplier,
@@ -1859,13 +1860,24 @@ export function canCastMiracle(state: GameState, tier: MiracleTier): boolean {
   if (state.era < 3) return false;
   if (tier < 1 || tier > 4) return false;
   if (state.cataclysm.civilizationCollapsed) return false;
-  return state.resources.influence >= getMiracleInfluenceCost(tier);
+  return state.resources.influence + state.cataclysm.miracleReserve >= getMiracleInfluenceCost(tier);
 }
 
 export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: number): GameState {
   if (!canCastMiracle(state, tier)) return state;
 
   const influenceCost = getMiracleInfluenceCost(tier);
+  const availablePower = state.resources.influence + state.cataclysm.miracleReserve;
+  if (availablePower < influenceCost) return state;
+
+  let remainingCost = influenceCost;
+  const influenceSpent = Math.min(state.resources.influence, remainingCost);
+  remainingCost -= influenceSpent;
+  const reserveSpent = Math.min(state.cataclysm.miracleReserve, remainingCost);
+  remainingCost -= reserveSpent;
+  if (remainingCost > 0) return state;
+
+  const miracleReserveCap = getMiracleReserveCap(state);
   const beliefGain = getMiracleBeliefGain(state, tier);
   const veilCost = getMiracleVeilCost(state, tier);
   const civDamage = getMiracleCivDamage(tier);
@@ -1882,7 +1894,7 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     resources: {
       ...state.resources,
       belief: state.resources.belief + beliefGain,
-      influence: state.resources.influence - influenceCost,
+      influence: state.resources.influence - influenceSpent,
       veil: Math.max(VEIL_MIN, state.resources.veil - veilCost),
       followers: followersAfterCiv
     },
@@ -1894,6 +1906,10 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     cataclysm: {
       ...state.cataclysm,
       miraclesThisRun: state.cataclysm.miraclesThisRun + 1,
+      miracleReserve: Math.max(
+        0,
+        Math.min(miracleReserveCap, state.cataclysm.miracleReserve - reserveSpent)
+      ),
       civilizationHealth: nextCivHealth,
       civilizationCollapsed,
       civilizationRebuildEndsAt: civilizationCollapsed

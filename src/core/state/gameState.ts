@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 14;
+export const GAME_STATE_SCHEMA_VERSION = 15;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -26,12 +26,26 @@ export const FOLLOWER_BELIEF_TRICKLE_PER_FOLLOWER = 0.002;
 export const INFLUENCE_BASE_CAP = 100;
 export const INFLUENCE_CAP_PER_PROPHET = 20;
 export const INFLUENCE_START_BONUS = 50;
+export const INFLUENCE_CAP_CULT_BASELINE = 3;
+export const INFLUENCE_CAP_PER_CULT_OVER_BASE = 5;
+export const INFLUENCE_CAP_DOMAIN_LEVEL_BASELINE = 5;
+export const INFLUENCE_CAP_PER_DOMAIN_LEVEL_OVER_BASE = 2;
+export const INFLUENCE_CAP_SHRINE_BASELINE = 20;
+export const INFLUENCE_CAP_PER_SHRINE_OVER_BASE = 0.5;
 export const INFLUENCE_BASE_REGEN_PER_SECOND = 1;
 export const INFLUENCE_REGEN_PER_PROPHET_PER_SECOND = 0.5;
 export const INFLUENCE_REGEN_PER_SHRINE_PER_SECOND = 0.2;
 export const INFLUENCE_REGEN_PER_CULT_FOLLOWER = 0.001;
 export const INFLUENCE_REGEN_PER_CULT_CAP = 2.0;
 export const INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND = 2.0;
+export const MIRACLE_RESERVE_BASE_CAP = 600;
+export const MIRACLE_RESERVE_MAX_CAP = 5000;
+export const MIRACLE_RESERVE_PER_PROPHET = 20;
+export const MIRACLE_RESERVE_PER_CULT = 30;
+export const MIRACLE_RESERVE_PER_SHRINE = 4;
+export const MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE = 4;
+export const MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE = 25;
+export const MIRACLE_RESERVE_START_BONUS = 150;
 
 export const WHISPER_BASE_COST = 10;
 export const WHISPER_COST_SCALAR = 1.4;
@@ -178,20 +192,20 @@ export const MIRACLE_INFLUENCE_COST: Record<MiracleTier, number> = {
   4: 10000
 };
 export const MIRACLE_BASE_GAIN: Record<MiracleTier, number> = {
-  1: 8000,
+  1: 5500,
   2: 30000,
   3: 90000,
   4: 300000
 };
 export const MIRACLE_VEIL_COST: Record<MiracleTier, number> = {
-  1: 8,
+  1: 10,
   2: 15,
   3: 25,
   4: 40
 };
 export const MIRACLE_VEIL_COST_TIER_ONE_ECHO = 5;
 export const MIRACLE_CIV_DAMAGE: Record<MiracleTier, number> = {
-  1: 4,
+  1: 5,
   2: 8,
   3: 14,
   4: 24
@@ -479,6 +493,7 @@ export interface DoctrineState {
 
 export interface CataclysmState {
   miraclesThisRun: number;
+  miracleReserve: number;
   civilizationHealth: number;
   civilizationCollapsed: boolean;
   civilizationRebuildEndsAt: number;
@@ -745,6 +760,7 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     },
     cataclysm: {
       miraclesThisRun: 0,
+      miracleReserve: 0,
       civilizationHealth: CIV_HEALTH_MAX,
       civilizationCollapsed: false,
       civilizationRebuildEndsAt: 0,
