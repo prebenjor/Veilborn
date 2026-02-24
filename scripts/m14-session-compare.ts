@@ -51,6 +51,7 @@ interface SessionSummary {
 }
 
 const ACTION_INTERVAL_MIN_MS = 1000;
+type CheckLevel = "PASS" | "WARN" | "FAIL";
 
 function usage(): void {
   console.log(
@@ -357,7 +358,38 @@ function printSession(title: string, session: SessionSummary): void {
   );
 }
 
-function compareSessions(a: SessionSummary, b: SessionSummary): void {
+function evaluateAccelerationRatio(
+  ratio: number | null,
+  eraLabel: "Era I" | "Era II"
+): { level: CheckLevel; text: string } {
+  if (ratio === null || !Number.isFinite(ratio)) {
+    return { level: "WARN", text: `${eraLabel} speed ratio unavailable (missing transition timing data).` };
+  }
+  const ratioLabel = ratio.toFixed(3);
+  if (ratio < 0.45) {
+    return {
+      level: "FAIL",
+      text: `${eraLabel} speed ratio ${ratioLabel} is below 0.450 (acceleration is too abrupt).`
+    };
+  }
+  if (ratio >= 1) {
+    return {
+      level: "WARN",
+      text: `${eraLabel} speed ratio ${ratioLabel} is >= 1.000 (no acceleration vs baseline).`
+    };
+  }
+  return {
+    level: "PASS",
+    text: `${eraLabel} speed ratio ${ratioLabel} is within pace-lock band (0.450-0.999).`
+  };
+}
+
+function printCheck(level: CheckLevel, text: string): void {
+  const prefix = level === "PASS" ? "[PASS]" : level === "WARN" ? "[WARN]" : "[FAIL]";
+  console.log(`${prefix} ${text}`);
+}
+
+function compareSessions(a: SessionSummary, b: SessionSummary): { failCount: number; warnCount: number } {
   console.log("Comparison (Session B - Session A)");
   console.log(`- Era reached delta: ${b.eraReached - a.eraReached}`);
   console.log(
@@ -446,6 +478,19 @@ function compareSessions(a: SessionSummary, b: SessionSummary): void {
   console.log(
     `- Era II speed ratio (B/A): ${eraIISpeedRatio === null ? "n/a" : eraIISpeedRatio.toFixed(2)}`
   );
+
+  console.log("");
+  console.log("Pace-lock checks (assumes Session A baseline, Session B comparison):");
+  const eraICheck = evaluateAccelerationRatio(eraISpeedRatio, "Era I");
+  const eraIICheck = evaluateAccelerationRatio(eraIISpeedRatio, "Era II");
+  printCheck(eraICheck.level, eraICheck.text);
+  printCheck(eraIICheck.level, eraIICheck.text);
+
+  const levels = [eraICheck.level, eraIICheck.level];
+  return {
+    failCount: levels.filter((level) => level === "FAIL").length,
+    warnCount: levels.filter((level) => level === "WARN").length
+  };
 }
 
 function main(): void {
@@ -472,7 +517,10 @@ function main(): void {
   console.log("");
   printSession("Session B", sessionB);
   console.log("");
-  compareSessions(sessionA, sessionB);
+  const checks = compareSessions(sessionA, sessionB);
+  if (checks.failCount > 0) {
+    process.exitCode = 2;
+  }
 }
 
 main();
