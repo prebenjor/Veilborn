@@ -15,10 +15,9 @@ When a milestone is complete, update `docs/roadmap.json`, commit, and push to `o
 
 ## Current Priority Order (Feature-First)
 
-1. `M21` Devotion path differentiation and lineage carryover.
-2. `M14` balance lock and pacing calibration (beginner vs ascended) with telemetry-driven tests.
-3. `M18` convergence mode once M14 timing is stable.
-4. `M19` documentation/wiki foundation sync once feature and pacing behavior are stable.
+1. `M14` balance lock and pacing calibration (beginner vs ascended) with telemetry-driven tests.
+2. `M18` convergence mode once M14 timing is stable.
+3. `M19` documentation/wiki foundation sync once feature and pacing behavior are stable.
 
 ## Milestones
 
@@ -311,6 +310,7 @@ Notes:
 - This milestone covers only path differentiation and lineage carryover behavior.
 - Full architecture reference: `docs/DEVOTION_SYSTEM.md`.
 - Prioritized before M14 so pace tuning calibrates against final Devotion-era mechanics.
+- Status: completed.
 
 Deliverables:
 - Era II path emergence from play pattern:

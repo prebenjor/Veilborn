@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 13;
+export const GAME_STATE_SCHEMA_VERSION = 14;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -45,6 +45,15 @@ export const RECRUIT_DOMAIN_FOLLOWER_DIVISOR = 2;
 export const RECRUIT_RANDOM_FOLLOWER_MAX = 2;
 export const DEVOTION_STACK_MAX = 3;
 export const DEVOTION_RECRUIT_BONUS_PER_STACK = 0.08;
+export type DevotionPath = "none" | "fervour" | "accord" | "reverence" | "ardour";
+export const DEVOTION_PATH_IDS = ["none", "fervour", "accord", "reverence", "ardour"] as const;
+
+export interface DevotionMomentum {
+  fervour: number;
+  accord: number;
+  reverence: number;
+  ardour: number;
+}
 
 export const CADENCE_PROMPT_INTERVAL_MS = 45 * 1000;
 export const CADENCE_ACTION_BELIEF_BONUS = 5;
@@ -358,6 +367,7 @@ export interface PrestigeState {
   echoes: number;
   lifetimeEchoes: number;
   completedRuns: number;
+  dominantDevotionPath: DevotionPath;
   treeRanks: EchoTreeRanks;
   pantheon: PantheonLegacyState;
   architecture: ArchitectureState;
@@ -506,6 +516,8 @@ export interface GameState {
   prophets: number;
   cults: number;
   devotionStacks: number;
+  devotionPath: DevotionPath;
+  devotionMomentum: DevotionMomentum;
   matchingDomainPairs: number;
   rngState: number;
   omenLog: OmenEntry[];
@@ -618,10 +630,20 @@ export function createDefaultPrestigeState(): PrestigeState {
     echoes: 0,
     lifetimeEchoes: 0,
     completedRuns: 0,
+    dominantDevotionPath: "none",
     treeRanks: createDefaultEchoTreeRanks(),
     pantheon: createDefaultPantheonLegacyState(),
     architecture: createDefaultArchitectureState(),
     remembrance: createDefaultRemembranceState()
+  };
+}
+
+export function createDefaultDevotionMomentum(): DevotionMomentum {
+  return {
+    fervour: 0,
+    accord: 0,
+    reverence: 0,
+    ardour: 0
   };
 }
 
@@ -744,6 +766,8 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     prophets: 0,
     cults: 0,
     devotionStacks: 0,
+    devotionPath: "none",
+    devotionMomentum: createDefaultDevotionMomentum(),
     matchingDomainPairs: 0,
     rngState: createInitialRngState(nowMs),
     omenLog: [

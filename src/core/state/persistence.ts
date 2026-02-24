@@ -14,7 +14,9 @@ import {
   RIVAL_DRAIN_RATE,
   RIVAL_EVENT_DURATION_MS,
   DEVOTION_STACK_MAX,
+  DEVOTION_PATH_IDS,
   VEIL_MAX,
+  createDefaultDevotionMomentum,
   createInitialGameState,
   type ActiveAct,
   type ArchitectureBeliefRule,
@@ -26,6 +28,8 @@ import {
   type DomainId,
   type DomainPoisonRuns,
   type DomainProgress,
+  type DevotionMomentum,
+  type DevotionPath,
   type EchoTreeId,
   type EchoBonuses,
   type GameState,
@@ -720,10 +724,30 @@ function sanitizePrestige(
       )
     ),
     completedRuns: Math.max(0, Math.floor(readNumber(value.completedRuns, fallback.completedRuns))),
+    dominantDevotionPath: sanitizeDevotionPath(value.dominantDevotionPath, fallback.dominantDevotionPath),
     treeRanks,
     pantheon: sanitizePantheonLegacy(value.pantheon, fallback.pantheon),
     architecture: sanitizeArchitecture(value.architecture, fallback.architecture),
     remembrance: sanitizeRemembrance(value.remembrance, fallback.remembrance)
+  };
+}
+
+function sanitizeDevotionPath(value: unknown, fallback: DevotionPath): DevotionPath {
+  if (typeof value !== "string") return fallback;
+  return DEVOTION_PATH_IDS.includes(value as DevotionPath) ? (value as DevotionPath) : fallback;
+}
+
+function sanitizeDevotionMomentum(value: unknown, fallback: DevotionMomentum): DevotionMomentum {
+  if (!isRecord(value)) return fallback;
+
+  const readMomentum = (key: keyof DevotionMomentum): number =>
+    Math.max(0, Math.floor(readNumber(value[key], fallback[key])));
+
+  return {
+    fervour: readMomentum("fervour"),
+    accord: readMomentum("accord"),
+    reverence: readMomentum("reverence"),
+    ardour: readMomentum("ardour")
   };
 }
 
@@ -802,6 +826,11 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
         Math.floor(readNumber(rawState.devotionStacks, fallback.devotionStacks))
       )
     ),
+    devotionPath: sanitizeDevotionPath(rawState.devotionPath, fallback.devotionPath),
+    devotionMomentum: sanitizeDevotionMomentum(
+      rawState.devotionMomentum,
+      createDefaultDevotionMomentum()
+    ),
     matchingDomainPairs: Math.max(0, Math.floor(readNumber(rawState.matchingDomainPairs, fallback.matchingDomainPairs))),
     rngState: Math.max(1, Math.floor(readNumber(rawState.rngState, fallback.rngState))) >>> 0,
     omenLog: sanitizeOmenLog(rawState.omenLog, fallback.omenLog),
@@ -832,7 +861,8 @@ const MIGRATORS: Record<number, Migrator> = {
   10: sanitizeState,
   11: sanitizeState,
   12: sanitizeState,
-  13: sanitizeState
+  13: sanitizeState,
+  14: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

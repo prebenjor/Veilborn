@@ -116,9 +116,26 @@ Era I implementation (current runtime):
 - Stacks persist through offline sessions.
 - Stacks reset on ascension.
 
-Era II+ roadmap:
-- Devotion differentiates into named behavior paths (Fervour, Accord, Reverence, Ardour).
-- Full path system is tracked under milestone `M21` and is not active in current runtime.
+Era II+ implementation (current runtime):
+- Path momentum does not decay and persists in save state.
+- Era II path candidates: `Fervour`, `Accord`.
+- Era III path candidates: `Fervour`, `Accord`, `Reverence`, `Ardour`.
+- Path emergence: top momentum `>= 4`.
+- Path switching: challenger momentum `>= 7` and lead over active path `>= 3`.
+- Run 2+ lineage memory: the dominant prior-run path starts the next run with `+1` momentum in that path.
+
+Momentum sources:
+- `Fervour`: start act `+2`, cast miracle `+2` (Era III)
+- `Accord`: form cult `+2`, perform follower rite `+1` (Era III)
+- `Reverence`: suppress rival `+2` (Era III)
+- `Ardour`: whisper/recruit/anoint prophet `+1` (Era III)
+
+Path effect layer (multipliers are stack-scaled and momentum-weighted):
+- `momentum_scale = clamp(1 + momentum * 0.01, 1.0, 1.4)`
+- `Fervour`: `act_return *= (1 + 0.05 * stacks) * momentum_scale`; in Era III also `miracle_gain *= (1 + 0.06 * stacks) * momentum_scale`
+- `Accord`: `cult_output *= (1 + 0.03 * stacks) * momentum_scale`; in Era III also `domain_synergy *= (1 + 0.02 * stacks + min(0.08, momentum * 0.002))`
+- `Reverence` (Era III): `veil_erosion *= max(0.58, 1 - 0.08 * stacks - min(0.1, momentum * 0.003))`
+- `Ardour` (Era III): `prophet_output *= (1 + 0.03 * stacks) * momentum_scale`; `faith_decay_minutes *= max(0.52, 1 - 0.1 * stacks - min(0.12, momentum * 0.004))`
 
 ## Influence Economy
 

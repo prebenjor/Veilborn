@@ -56,6 +56,8 @@ import {
   getDomainInvestCost,
   getDomainXpNeeded,
   getDevotionStacks,
+  getDevotionPath,
+  getDevotionPathLabel,
   getEraOneGateStatus,
   getEraTwoGateStatus,
   getEchoTreeNextCost,
@@ -789,6 +791,7 @@ export default function App() {
   const whisperPreview = getWhisperPreview(gameState);
   const recruitPreview = getRecruitPreview(gameState);
   const devotionStacks = getDevotionStacks(gameState);
+  const devotionPathLabel = getDevotionPathLabel(getDevotionPath(gameState));
   const nextProphetFollowers = getFollowersForNextProphet(gameState);
   const nextCultBeliefCost = getCultFormationCost(gameState);
   const eraOneGate = getEraOneGateStatus(gameState);
@@ -2035,6 +2038,7 @@ export default function App() {
             shrinesBuilt={gameState.doctrine.shrinesBuilt}
             currentFollowers={gameState.resources.followers}
             devotionStacks={devotionStacks}
+            devotionPathLabel={devotionPathLabel}
             passiveFollowerRate={passiveFollowerRate}
             rivalFollowerDrainPerSecond={rivalDrainPerSecond}
             runHistory={telemetryRunSummaries}

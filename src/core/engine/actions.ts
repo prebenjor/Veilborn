@@ -31,6 +31,7 @@ import {
   RECRUIT_INFLUENCE_COST,
   RECRUIT_PROPHET_FOLLOWER_BONUS,
   RECRUIT_RANDOM_FOLLOWER_MAX,
+  createDefaultDevotionMomentum,
   DEVOTION_STACK_MAX,
   VEIL_MIN,
   WHISPER_BELIEF_GAIN,
@@ -42,6 +43,8 @@ import {
   type ActType,
   type ActivityState,
   type DomainId,
+  type DevotionMomentum,
+  type DevotionPath,
   type EchoTreeId,
   type FinalChoice,
   type FollowerRiteType,
@@ -92,6 +95,7 @@ import {
   getMiracleVeilCost,
   getDevotionStacks,
   getDevotionRecruitMultiplier,
+  getDevotionPathLabel,
   getRecruitFollowerGainBase,
   getTotalDomainLevel,
   getInfluenceCap,
@@ -209,6 +213,10 @@ const FOLLOWER_RITE_LABELS: Record<FollowerRiteType, string> = {
 const DEVOTION_OMEN_FIRST_STACK = "Something stirs at the edge of attention.";
 const DEVOTION_OMEN_MAX_STACK = "The devotion of your followers has taken root.";
 const DEVOTION_OMEN_AFTER_ASCENSION = "The stillness returns. Begin again.";
+const DEVOTION_PATH_EMERGE_THRESHOLD = 4;
+const DEVOTION_PATH_SWITCH_THRESHOLD = 7;
+const DEVOTION_PATH_SWITCH_LEAD = 3;
+const DEVOTION_MOMENTUM_CAP = 9999;
 
 const MAJOR_OMEN_KINDS: OmenKind[] = [
   "domainLevel",
@@ -369,6 +377,130 @@ function appendDevotionMilestoneOmens(
   }
 
   return nextState;
+}
+
+function getDevotionCandidatePathsForEra(era: GameState["era"]): DevotionPath[] {
+  if (era >= 3) return ["fervour", "accord", "reverence", "ardour"];
+  if (era >= 2) return ["fervour", "accord"];
+  return [];
+}
+
+function getDevotionMomentumValue(momentum: DevotionMomentum, path: DevotionPath): number {
+  if (path === "none") return 0;
+  return momentum[path];
+}
+
+function resolveDevotionPathFromMomentum(
+  momentum: DevotionMomentum,
+  currentPath: DevotionPath,
+  era: GameState["era"]
+): DevotionPath {
+  if (era < 2) return "none";
+
+  const candidates = getDevotionCandidatePathsForEra(era);
+  if (candidates.length <= 0) return "none";
+
+  const ranked = [...candidates].sort((a, b) => {
+    const delta = getDevotionMomentumValue(momentum, b) - getDevotionMomentumValue(momentum, a);
+    if (delta !== 0) return delta;
+    return a.localeCompare(b);
+  });
+
+  const topPath = ranked[0];
+  const topScore = getDevotionMomentumValue(momentum, topPath);
+  const runnerScore = ranked.length > 1 ? getDevotionMomentumValue(momentum, ranked[1]) : 0;
+
+  const activePath = candidates.includes(currentPath) ? currentPath : "none";
+  if (activePath === "none") {
+    if (topScore >= DEVOTION_PATH_EMERGE_THRESHOLD && topScore - runnerScore >= 1) {
+      return topPath;
+    }
+    return "none";
+  }
+
+  if (topPath === activePath) return activePath;
+
+  const activeScore = getDevotionMomentumValue(momentum, activePath);
+  if (
+    topScore >= DEVOTION_PATH_SWITCH_THRESHOLD &&
+    topScore - activeScore >= DEVOTION_PATH_SWITCH_LEAD
+  ) {
+    return topPath;
+  }
+
+  return activePath;
+}
+
+function buildDevotionPathShiftOmen(nextPath: DevotionPath, previousPath: DevotionPath): string {
+  const nextLabel = getDevotionPathLabel(nextPath);
+  if (previousPath === "none") {
+    return `Devotion found a shape: ${nextLabel}.`;
+  }
+  const previousLabel = getDevotionPathLabel(previousPath);
+  return `Devotion shifted from ${previousLabel} to ${nextLabel}.`;
+}
+
+function withDevotionMomentumDelta(
+  state: GameState,
+  nowMs: number,
+  delta: Partial<Record<Exclude<DevotionPath, "none">, number>>
+): GameState {
+  if (state.era < 2) return state;
+
+  const nextMomentum: DevotionMomentum = {
+    fervour: Math.max(
+      0,
+      Math.min(
+        DEVOTION_MOMENTUM_CAP,
+        state.devotionMomentum.fervour + Math.floor(delta.fervour ?? 0)
+      )
+    ),
+    accord: Math.max(
+      0,
+      Math.min(
+        DEVOTION_MOMENTUM_CAP,
+        state.devotionMomentum.accord + Math.floor(delta.accord ?? 0)
+      )
+    ),
+    reverence: Math.max(
+      0,
+      Math.min(
+        DEVOTION_MOMENTUM_CAP,
+        state.devotionMomentum.reverence + Math.floor(delta.reverence ?? 0)
+      )
+    ),
+    ardour: Math.max(
+      0,
+      Math.min(
+        DEVOTION_MOMENTUM_CAP,
+        state.devotionMomentum.ardour + Math.floor(delta.ardour ?? 0)
+      )
+    )
+  };
+
+  const previousPath = state.devotionPath;
+  const nextPath = resolveDevotionPathFromMomentum(nextMomentum, previousPath, state.era);
+
+  const withMomentum = {
+    ...state,
+    devotionMomentum: nextMomentum,
+    devotionPath: nextPath
+  };
+
+  if (nextPath === previousPath || nextPath === "none") return withMomentum;
+  return appendOmen(withMomentum, nowMs, "devotion", buildDevotionPathShiftOmen(nextPath, previousPath));
+}
+
+function getDominantDevotionPathForMemory(state: GameState): DevotionPath {
+  const candidates: DevotionPath[] = ["fervour", "accord", "reverence", "ardour"];
+  const ranked = [...candidates].sort((a, b) => {
+    const delta = getDevotionMomentumValue(state.devotionMomentum, b) - getDevotionMomentumValue(state.devotionMomentum, a);
+    if (delta !== 0) return delta;
+    return a.localeCompare(b);
+  });
+  const topPath = ranked[0];
+  const topScore = getDevotionMomentumValue(state.devotionMomentum, topPath);
+  return topScore >= DEVOTION_PATH_EMERGE_THRESHOLD ? topPath : "none";
 }
 
 function clampLineageMetric(value: number, max: number): number {
@@ -1243,6 +1375,11 @@ export function performWhisper(state: GameState, nowMs: number, costOverride?: n
     devotionUpdate.previousStacks,
     devotionUpdate.nextStacks
   );
+  const withDevotionPath = withDevotionMomentumDelta(
+    withDevotionMilestones,
+    nowMs,
+    withDevotionMilestones.era >= 3 ? { ardour: 1 } : {}
+  );
   const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
   const detail = [
     `${followerGain} new listeners held the whisper through the next bell.`,
@@ -1251,7 +1388,7 @@ export function performWhisper(state: GameState, nowMs: number, costOverride?: n
     .filter((entry): entry is string => Boolean(entry))
     .join(" ");
   return appendOmen(
-    withPeakFollowers(withDevotionMilestones, withDevotionMilestones.resources.followers),
+    withPeakFollowers(withDevotionPath, withDevotionPath.resources.followers),
     nowMs,
     "whisper",
     detail
@@ -1307,6 +1444,11 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
     devotionUpdate.previousStacks,
     devotionUpdate.nextStacks
   );
+  const withDevotionPath = withDevotionMomentumDelta(
+    withDevotionMilestones,
+    nowMs,
+    withDevotionMilestones.era >= 3 ? { ardour: 1 } : {}
+  );
   const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
   const detail = [
     `${followerGain} followers answered before the watch changed shifts.`,
@@ -1315,7 +1457,7 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
     .filter((entry): entry is string => Boolean(entry))
     .join(" ");
   return appendOmen(
-    withPeakFollowers(withDevotionMilestones, withDevotionMilestones.resources.followers),
+    withPeakFollowers(withDevotionPath, withDevotionPath.resources.followers),
     nowMs,
     "recruit",
     detail
@@ -1505,7 +1647,12 @@ export function performProphetAnoint(state: GameState, nowMs: number): GameState
     devotionUpdate.previousStacks,
     devotionUpdate.nextStacks
   );
-  const withDescendant = addLineageDescendant(withDevotionMilestones, nowMs);
+  const withDevotionPath = withDevotionMomentumDelta(
+    withDevotionMilestones,
+    nowMs,
+    withDevotionMilestones.era >= 3 ? { ardour: 1 } : {}
+  );
+  const withDescendant = addLineageDescendant(withDevotionPath, nowMs);
   return appendOmen(withDescendant, nowMs, "prophet");
 }
 
@@ -1533,8 +1680,9 @@ export function performCultFormation(state: GameState, nowMs: number): GameState
       updatedAt: nowMs
     }
   };
+  const withDevotionPath = withDevotionMomentumDelta(withCult, nowMs, { accord: 2 });
 
-  return appendOmen(withCult, nowMs, "cult", `Current domain synergy rests at x${synergy.toFixed(2)}.`);
+  return appendOmen(withDevotionPath, nowMs, "cult", `Current domain synergy rests at x${synergy.toFixed(2)}.`);
 }
 
 export function getActSlotCap(state: GameState): number {
@@ -1588,7 +1736,8 @@ export function performStartAct(state: GameState, type: ActType, nowMs: number):
     trustDebt: -LINEAGE_ACTION_RECOVERY_ACT,
     skepticism: -LINEAGE_ACTION_RECOVERY_ACT * 0.25
   });
-  return appendOmen(withLineageRecovery, nowMs, "act", ACT_LABELS[type]);
+  const withDevotionPath = withDevotionMomentumDelta(withLineageRecovery, nowMs, { fervour: 2 });
+  return appendOmen(withDevotionPath, nowMs, "act", ACT_LABELS[type]);
 }
 
 export function canPerformFollowerRite(state: GameState, type: FollowerRiteType): boolean {
@@ -1638,10 +1787,11 @@ export function performFollowerRite(
     trustDebt: -LINEAGE_ACTION_RECOVERY_ACT * 1.4,
     skepticism: -LINEAGE_ACTION_RECOVERY_ACT * 0.4
   });
+  const withDevotionPath = withDevotionMomentumDelta(withLineageRecovery, nowMs, { accord: 1 });
 
   const detail = `${FOLLOWER_RITE_LABELS[type]} gathered ${followerGain} followers. Uses this run: ${nextUses}.`;
   return appendOmen(
-    withPeakFollowers(withLineageRecovery, withLineageRecovery.resources.followers),
+    withPeakFollowers(withDevotionPath, withDevotionPath.resources.followers),
     nowMs,
     "followerRite",
     detail
@@ -1696,7 +1846,12 @@ export function performSuppressRival(state: GameState, nowMs: number): GameState
     }
   );
 
-  return appendOmen(withLineageMarker, nowMs, "suppress");
+  const withDevotionPath = withDevotionMomentumDelta(
+    withLineageMarker,
+    nowMs,
+    withLineageMarker.era >= 3 ? { reverence: 2 } : {}
+  );
+  return appendOmen(withDevotionPath, nowMs, "suppress");
 }
 
 export function canCastMiracle(state: GameState, tier: MiracleTier): boolean {
@@ -1775,7 +1930,8 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     4: "An age-defining wound opened in history and would not close."
   };
   const miracleDetail = miracleDetailByTier[tier];
-  const withMiracleOmen = appendOmen(withLineageImpact, nowMs, "miracle", miracleDetail);
+  const withDevotionPath = withDevotionMomentumDelta(withLineageImpact, nowMs, { fervour: 2 });
+  const withMiracleOmen = appendOmen(withDevotionPath, nowMs, "miracle", miracleDetail);
   if (!civilizationCollapsed) return withMiracleOmen;
   return appendOmen(withMiracleOmen, nowMs, "civCollapse");
 }
@@ -2121,6 +2277,7 @@ export function performAscension(state: GameState, nowMs: number): GameState {
   if (!canAscend(state)) return state;
 
   const gainedEchoes = getAscensionEchoGain(state.stats.totalBeliefEarned);
+  const dominantDevotionPath = getDominantDevotionPathForMemory(state);
   const capturedSignature = createGhostRunSignature(state, nowMs);
   const ghostWithCapturedRun = appendLocalGhostSignature(state.ghost, capturedSignature);
   const poisonAdvanced = withPoisonWindowsAdvanced(state);
@@ -2173,6 +2330,7 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     echoes: poisonApplied.prestige.echoes + gainedEchoes,
     lifetimeEchoes: poisonApplied.prestige.lifetimeEchoes + gainedEchoes,
     completedRuns: poisonApplied.prestige.completedRuns + 1,
+    dominantDevotionPath,
     pantheon: {
       ...poisonApplied.prestige.pantheon,
       betrayalsLifetime:
@@ -2192,6 +2350,10 @@ export function performAscension(state: GameState, nowMs: number): GameState {
   const nextEchoBonuses = getEchoBonusesFromTreeRanks(nextPrestige.treeRanks);
 
   const resetState = createInitialGameState(nowMs);
+  const inheritedDevotionMomentum = createDefaultDevotionMomentum();
+  if (nextPrestige.dominantDevotionPath !== "none") {
+    inheritedDevotionMomentum[nextPrestige.dominantDevotionPath] = 1;
+  }
   const initializedGhost = initializeGhostForRun(
     ghostWithCapturedRun,
     resetState.meta.runId,
@@ -2206,7 +2368,9 @@ export function performAscension(state: GameState, nowMs: number): GameState {
       unlocked: pantheonUnlocksOnNextRun
     },
     ghost: initializedGhost,
-    echoBonuses: nextEchoBonuses
+    echoBonuses: nextEchoBonuses,
+    devotionPath: "none",
+    devotionMomentum: inheritedDevotionMomentum
   };
 
   const influenceCap = getInfluenceCap(ascendedState);
@@ -2233,7 +2397,17 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     "You carried remembrance through the fracture into a younger world."
   );
 
-  const withPantheon = ensurePantheonInitialized(withAscensionOmen, nowMs);
+  const withDevotionMemoryOmen =
+    nextPrestige.dominantDevotionPath === "none"
+      ? withAscensionOmen
+      : appendOmen(
+          withAscensionOmen,
+          nowMs,
+          "devotion",
+          `A trace of ${getDevotionPathLabel(nextPrestige.dominantDevotionPath)} survived the fracture.`
+        );
+
+  const withPantheon = ensurePantheonInitialized(withDevotionMemoryOmen, nowMs);
   if (initializedGhost.activeInfluences.length <= 0) {
     return withPantheon;
   }

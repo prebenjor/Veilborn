@@ -19,7 +19,7 @@ When runtime and manifesto diverge, either:
 
 ## Current Build Snapshot
 
-- Save schema: `13`
+- Save schema: `14`
 - Core loop: deterministic tick (`250ms`)
 - Persistence: localStorage save + migration + recovery snapshot
 - Offline sim: enabled (`8h cap`, `85% belief efficiency`)
@@ -31,13 +31,14 @@ Completed milestones in code:
 - `M0` through `M13`
 - `M15`
 - `M16`
+- `M17`
 - `M20`
+- `M21`
 
 Pending milestones:
-- `M21` devotion path system
-- `M17` accessibility/mobile resilience
 - `M14` balance/runtime targets (feature-first ordering: after M21 + M17)
 - `M18` convergence mode
+- `M19` documentation/wiki foundation
 
 Completed PFs currently reflected in runtime:
 - `PF-01` bulk domain investing
@@ -118,7 +119,7 @@ Cadence prompt:
 
 Lineage conversion modifier applies to whisper/recruit follower gains.
 
-### Devotion (Era I Foundation)
+### Devotion (Path System Active)
 
 Devotion stacks:
 - Range: `0..3` (Era I cap)
@@ -140,8 +141,24 @@ Omen milestones (once per run):
 - First qualifying action after ascension: `The stillness returns. Begin again.`
 
 Path differentiation:
-- Not active in runtime yet
-- Tracked under `M21` (Fervour/Accord/Reverence/Ardour)
+- Era II candidates: `Fervour`, `Accord`
+- Era III candidates: `Fervour`, `Accord`, `Reverence`, `Ardour`
+- Emergence threshold: top momentum `>= 4`
+- Switching threshold: challenger `>= 7` and lead over active path `>= 3`
+- Run 2+ lineage memory: dominant prior-run path starts next run with `+1` momentum toward that path
+
+Momentum sources:
+- `Fervour`: start act `+2`, cast miracle `+2` (Era III)
+- `Accord`: form cult `+2`, follower rite `+1` (Era III)
+- `Reverence`: suppress rival `+2` (Era III)
+- `Ardour`: whisper/recruit/anoint prophet `+1` (Era III)
+
+Path effects (stack + momentum scaled):
+- `momentumScale = clamp(1 + momentum*0.01, 1.0, 1.4)`
+- `Fervour`: act return multiplier and Era III miracle gain multiplier
+- `Accord`: cult output multiplier and Era III domain synergy bonus
+- `Reverence`: Era III veil erosion reduction multiplier
+- `Ardour`: Era III prophet output multiplier and faith-decay pressure reduction
 
 ### Era I Moments of Doubt
 
@@ -461,7 +478,7 @@ Stats drawer:
 - always accessible in every era and tab
 - run timers and cadence info
 - follower flow lines
-- devotion stack line
+- devotion path + stack line (path appears in Era II+)
 - influence source breakdown
 - run history (includes cadence summary and era pacing durations for ascended runs)
 - audio controls
@@ -474,7 +491,7 @@ Stats drawer:
 
 Stats content by era:
 - Era I: no doctrine or cataclysm metrics (no cult output line, no shrine/cult influence lines, no rival or passive follower lines); Devotion stack line visible.
-- Era II: doctrine metrics appear (cults, shrines, rival-related flow where active).
+- Era II: doctrine metrics appear (cults, shrines, rival-related flow where active) and Devotion path label appears.
 - Era III: cataclysm-era metrics appear (passive follower arrival and other era-III-only lines).
 
 Telemetry:

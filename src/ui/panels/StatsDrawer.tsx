@@ -28,6 +28,7 @@ interface StatsDrawerProps {
   shrinesBuilt: number;
   currentFollowers: number;
   devotionStacks: number;
+  devotionPathLabel: string;
   passiveFollowerRate: number;
   rivalFollowerDrainPerSecond: number;
   runHistory: Array<{
@@ -89,6 +90,7 @@ export function StatsDrawer({
   shrinesBuilt,
   currentFollowers,
   devotionStacks,
+  devotionPathLabel,
   passiveFollowerRate,
   rivalFollowerDrainPerSecond,
   runHistory,
@@ -190,6 +192,12 @@ export function StatsDrawer({
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
         <p className="uppercase tracking-[0.16em] text-veil/80">Devotion</p>
         <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
+          {isEraTwoPlus ? (
+            <>
+              <dt>Path</dt>
+              <dd>{devotionPathLabel}</dd>
+            </>
+          ) : null}
           <dt>Stacks</dt>
           <dd>
             {devotionDots} {"\u00b7"} {formatResource(devotionStackCount)} / 3

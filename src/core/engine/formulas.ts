@@ -107,6 +107,8 @@ import {
   WHISPER_WINDOW_MS,
   type ActType,
   type ActivityState,
+  type DevotionMomentum,
+  type DevotionPath,
   type DomainProgress,
   type DomainId,
   type EchoBonuses,
@@ -217,6 +219,99 @@ export interface DomainInvestmentSimulation {
   totalCost: number;
   resultingDomain: DomainProgress;
   levelsGained: number;
+}
+
+interface DevotionPathModifiers {
+  actRewardMultiplier: number;
+  miracleBeliefMultiplier: number;
+  cultOutputMultiplier: number;
+  domainSynergyBonus: number;
+  prophetOutputMultiplier: number;
+  faithDecayMinutesMultiplier: number;
+  veilErosionMultiplier: number;
+}
+
+const DEVOTION_PATH_LABELS: Record<DevotionPath, string> = {
+  none: "Dormant",
+  fervour: "Fervour",
+  accord: "Accord",
+  reverence: "Reverence",
+  ardour: "Ardour"
+};
+
+function getDefaultDevotionPathModifiers(): DevotionPathModifiers {
+  return {
+    actRewardMultiplier: 1,
+    miracleBeliefMultiplier: 1,
+    cultOutputMultiplier: 1,
+    domainSynergyBonus: 0,
+    prophetOutputMultiplier: 1,
+    faithDecayMinutesMultiplier: 1,
+    veilErosionMultiplier: 1
+  };
+}
+
+function getDevotionMomentumValue(momentum: DevotionMomentum, path: DevotionPath): number {
+  if (path === "none") return 0;
+  return momentum[path];
+}
+
+export function getDevotionPath(state: GameState): DevotionPath {
+  if (state.era < 2) return "none";
+  if (state.era === 2 && (state.devotionPath === "reverence" || state.devotionPath === "ardour")) {
+    return "none";
+  }
+  return state.devotionPath;
+}
+
+export function getDevotionPathLabel(path: DevotionPath): string {
+  return DEVOTION_PATH_LABELS[path];
+}
+
+function getDevotionPathModifiers(state: GameState): DevotionPathModifiers {
+  if (state.era < 2) return getDefaultDevotionPathModifiers();
+
+  const path = getDevotionPath(state);
+  const stacks = getDevotionStacks(state);
+  if (path === "none" || stacks <= 0) return getDefaultDevotionPathModifiers();
+
+  const modifiers = getDefaultDevotionPathModifiers();
+  const momentumScore = getDevotionMomentumValue(state.devotionMomentum, path);
+  const momentumScale = Math.max(1, Math.min(1.4, 1 + momentumScore * 0.01));
+
+  if (path === "fervour") {
+    modifiers.actRewardMultiplier = (1 + stacks * 0.05) * momentumScale;
+    if (state.era >= 3) {
+      modifiers.miracleBeliefMultiplier = (1 + stacks * 0.06) * momentumScale;
+    }
+    return modifiers;
+  }
+
+  if (path === "accord") {
+    modifiers.cultOutputMultiplier = (1 + stacks * 0.03) * momentumScale;
+    if (state.era >= 3) {
+      modifiers.domainSynergyBonus = stacks * 0.02 + Math.min(0.08, momentumScore * 0.002);
+    }
+    return modifiers;
+  }
+
+  if (state.era < 3) return modifiers;
+
+  if (path === "reverence") {
+    modifiers.veilErosionMultiplier = Math.max(0.58, 1 - stacks * 0.08 - Math.min(0.1, momentumScore * 0.003));
+    return modifiers;
+  }
+
+  if (path === "ardour") {
+    modifiers.prophetOutputMultiplier = (1 + stacks * 0.03) * momentumScale;
+    modifiers.faithDecayMinutesMultiplier = Math.max(
+      0.52,
+      1 - stacks * 0.1 - Math.min(0.12, momentumScore * 0.004)
+    );
+    return modifiers;
+  }
+
+  return modifiers;
 }
 
 function getFinalChoiceBeliefModifier(state: GameState): number {
@@ -424,8 +519,11 @@ export function getMatchingDomainPairs(state: GameState): number {
   return Math.floor(activeDomains / 2);
 }
 
-export function getProphetOutput(totalDomainLevel: number): number {
-  return PROPHET_OUTPUT_BASE + totalDomainLevel * PROPHET_DOMAIN_OUTPUT_SCALE;
+export function getProphetOutput(totalDomainLevel: number, state?: GameState): number {
+  const base = PROPHET_OUTPUT_BASE + totalDomainLevel * PROPHET_DOMAIN_OUTPUT_SCALE;
+  if (!state) return base;
+  const modifiers = getDevotionPathModifiers(state);
+  return base * modifiers.prophetOutputMultiplier;
 }
 
 export function getDomainMultiplier(totalDomainLevel: number): number {
@@ -443,15 +541,19 @@ export function getFaithDecay(state: GameState, nowMs: number): number {
   architecturePressure += getFinalChoiceFaithPressure(state);
 
   const adjustedMinutes =
-    minutesSinceLastEvent * Math.max(0.25, 1 + ghostInfluence.faithDecayDelta + architecturePressure);
+    minutesSinceLastEvent *
+    Math.max(0.25, 1 + ghostInfluence.faithDecayDelta + architecturePressure) *
+    getDevotionPathModifiers(state).faithDecayMinutesMultiplier;
   const baseDecay = Math.pow(FAITH_DECAY_BASE, adjustedMinutes);
   const floor = state.echoBonuses.faithFloor ? FAITH_DECAY_ECHO_FLOOR : FAITH_DECAY_FLOOR;
   return Math.max(floor, baseDecay);
 }
 
 export function getDomainSynergy(state: GameState): number {
+  const devotionModifiers = getDevotionPathModifiers(state);
   const baseSynergy =
     (1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs) *
+    (1 + devotionModifiers.domainSynergyBonus) *
     getArchitectureDomainModifier(state) *
     getFinalChoiceDomainModifier(state);
   const ghostInfluence = getGhostInfluenceTotals(state);
@@ -551,10 +653,10 @@ export function getVeilRegenPerSecond(state: GameState): number {
 export function getVeilErosionPerSecond(state: GameState): number {
   if (state.era < 3) return 0;
   const belief = Math.max(1, state.stats.totalBeliefEarned);
-  const base = VEIL_EROSION_LOG_SCALE * Math.log10(belief);
-  if (state.prestige.remembrance.finalChoice === "remember") return base * 1.15;
-  if (state.prestige.remembrance.finalChoice === "forget") return base * 0.9;
-  return base;
+  let base = VEIL_EROSION_LOG_SCALE * Math.log10(belief);
+  if (state.prestige.remembrance.finalChoice === "remember") base *= 1.15;
+  if (state.prestige.remembrance.finalChoice === "forget") base *= 0.9;
+  return base * getDevotionPathModifiers(state).veilErosionMultiplier;
 }
 
 export function getVeilCollapseThreshold(state: GameState): number {
@@ -563,7 +665,8 @@ export function getVeilCollapseThreshold(state: GameState): number {
 
 export function getCultOutput(state: GameState): number {
   if (state.cults <= 0 || state.prophets <= 0 || state.resources.followers <= 0) return 0;
-  return state.prophets * state.resources.followers * CULT_OUTPUT_SCALE * getDomainSynergy(state);
+  const baseOutput = state.prophets * state.resources.followers * CULT_OUTPUT_SCALE * getDomainSynergy(state);
+  return baseOutput * getDevotionPathModifiers(state).cultOutputMultiplier;
 }
 
 function getFollowerBeliefTrickle(state: GameState): number {
@@ -572,7 +675,7 @@ function getFollowerBeliefTrickle(state: GameState): number {
 
 export function getBeliefGenerationBreakdown(state: GameState, nowMs: number): BeliefGenerationBreakdown {
   const totalDomainLevel = getTotalDomainLevel(state);
-  const prophetOutput = getProphetOutput(totalDomainLevel);
+  const prophetOutput = getProphetOutput(totalDomainLevel, state);
   const domainMultiplier = getDomainMultiplier(totalDomainLevel);
   const faithDecay = getFaithDecay(state, nowMs);
   const domainSynergy = getDomainSynergy(state);
@@ -880,7 +983,13 @@ export function getActRewardBelief(
   baseMultiplier: number
 ): number {
   const beliefMultiplier = getActBeliefMultiplier(state, baseMultiplier);
-  return beliefPerSecond * durationSeconds * beliefMultiplier * ACT_RETURN_FACTOR;
+  return (
+    beliefPerSecond *
+    durationSeconds *
+    beliefMultiplier *
+    ACT_RETURN_FACTOR *
+    getDevotionPathModifiers(state).actRewardMultiplier
+  );
 }
 
 export function getCivilizationStability(state: GameState): number {
@@ -929,7 +1038,7 @@ export function getMiracleBeliefGain(state: GameState, tier: MiracleTier): numbe
   const base = getMiracleBaseGain(tier);
   const civStability = getCivilizationStability(state);
   const domainBonus = getMiracleDomainBonus(state);
-  return base * civStability * (1 + domainBonus);
+  return base * civStability * (1 + domainBonus) * getDevotionPathModifiers(state).miracleBeliefMultiplier;
 }
 
 export function getRivalSpawnIntervalMs(state: GameState): number {

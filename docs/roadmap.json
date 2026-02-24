@@ -432,12 +432,12 @@
     {
       "id": "M21",
       "title": "Devotion Path System",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [
         "M13",
         "M20"
       ],
-      "notes": "Builds on Era I Devotion foundation. Implements path differentiation (Fervour, Accord, Reverence, Ardour) across Era II and Era III, and lineage Devotion memory for run 2+. Prioritized ahead of M14 tuning in the feature-first execution pass.",
+      "notes": "Completed path differentiation and lineage memory pass. Era II behavior now resolves Fervour/Accord emergence, Era III supports all four paths (Fervour/Accord/Reverence/Ardour), path shifts are omen-announced, run-to-run dominant-path memory seeds next-run momentum, and stats surface shows current path + stacks.",
       "design_docs": [
         "docs/DEVOTION_SYSTEM.md"
       ],
