@@ -16,8 +16,8 @@ When a milestone is complete, update `docs/roadmap.json`, commit, and push to `o
 ## Current Priority Order (Feature-First)
 
 1. `M21` Devotion path differentiation and lineage carryover.
-2. `M17` accessibility/mobile hardening on top of the new era shell.
-3. `M14` balance lock and pacing calibration (beginner vs ascended) with telemetry-driven tests.
+2. `M14` balance lock and pacing calibration (beginner vs ascended) with telemetry-driven tests.
+3. `M18` convergence mode once M14 timing is stable.
 4. `M19` documentation/wiki foundation sync once feature and pacing behavior are stable.
 
 ## Milestones
@@ -382,6 +382,7 @@ Notes:
 - The 45-minute floor run and offline check-in model imply intermittent mobile use.
 - This milestone ensures the game is completable on mobile without layout breakage or battery abuse.
 - Execute after M20 so accessibility hardening applies to the consolidated era shell.
+- Status: completed.
 
 Deliverables:
 - Responsive layout audit: all panels usable at 375px width without horizontal scroll.
