@@ -8,11 +8,15 @@ interface TabDockProps {
 
 export function TabDock({ availableTabs, activeTab, onSelectTab }: TabDockProps) {
   return (
-    <nav className="veil-tab-dock sticky top-2 z-20 rounded-xl border border-white/15 bg-black/40 p-1 backdrop-blur-sm">
+    <nav
+      aria-label="Era tabs"
+      className="veil-tab-dock sticky top-2 z-20 rounded-xl border border-white/15 bg-black/40 p-1 backdrop-blur-sm"
+    >
       <div className="flex flex-wrap gap-1">
         {availableTabs.map((tab) => (
           <button
             key={tab}
+            aria-pressed={activeTab === tab}
             type="button"
             onClick={() => onSelectTab(tab)}
             className={`rounded-lg px-3 py-1.5 text-xs uppercase tracking-[0.2em] transition ${

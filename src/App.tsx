@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   canAscend,
@@ -482,6 +482,7 @@ function withPreparedEraTwoGate(state: GameState, nowMs: number): GameState {
 }
 
 export default function App() {
+  const reducedMotion = useReducedMotion();
   const [initialLoad] = useState(() => loadGameStateWithOffline());
   const [gameState, setGameState] = useState<GameState>(initialLoad.state);
   const [offlineSummary, setOfflineSummary] = useState<OfflineProgressSummary | null>(
@@ -1969,9 +1970,9 @@ export default function App() {
       ) : null}
       {finalChoiceMaskVisible ? <div className="veil-final-choice-mask" aria-hidden="true" /> : null}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
+        initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+        animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={reducedMotion ? { duration: 0 } : { duration: 0.45 }}
         className="veil-content relative mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-24 pt-8 md:px-8"
       >
         <header className="veil-header space-y-2">

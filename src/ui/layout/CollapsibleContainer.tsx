@@ -78,6 +78,7 @@ export function CollapsibleContainer({
       <button
         type="button"
         onClick={onToggle}
+        aria-expanded={!collapsed}
         className="flex w-full items-center justify-between gap-3 rounded-lg text-left transition hover:text-veil"
       >
         <span className="text-sm uppercase tracking-[0.25em] text-veil/80">{title}</span>
@@ -99,4 +100,3 @@ export function CollapsibleContainer({
     </section>
   );
 }
-
