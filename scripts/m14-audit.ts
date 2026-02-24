@@ -436,8 +436,10 @@ function main(): void {
 
   const runSummaries = dedupeSummaries(allSummaries);
   if (runSummaries.length <= 0) {
-    console.log("No run summaries found in provided telemetry export files.");
-    process.exitCode = 1;
+    console.log("No ascended run summaries found in provided telemetry export files.");
+    console.log(
+      "Use non-ascended session compare instead: npm run compare:m14 -- <session-a.json> <session-b.json>"
+    );
     return;
   }
 
