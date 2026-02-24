@@ -864,13 +864,22 @@ export default function App() {
     const resolved = resolveActiveDoubtChoice(doubtSessionRef.current, choice, actionAt);
     if (!resolved) return;
 
-    let applied = false;
-    setGameState((prev) => {
-      const influenceCost = resolved.resolution.influenceCost;
-      if (influenceCost > 0 && prev.resources.influence < influenceCost) {
-        return prev;
-      }
+    const influenceCost = resolved.resolution.influenceCost;
+    if (influenceCost > 0 && gameStateRef.current.resources.influence < influenceCost) {
+      return;
+    }
 
+    // Clear the active card immediately on successful resolution.
+    doubtSessionRef.current = resolved.nextSession;
+    setActiveDoubtEvent(getActiveDoubtEventView(resolved.nextSession));
+    clearPendingDoubtResolution();
+
+    if (resolved.resolution.nextWhisperCostDelta !== null) {
+      setNextWhisperCostDelta(resolved.resolution.nextWhisperCostDelta);
+      nextWhisperCostDeltaRef.current = resolved.resolution.nextWhisperCostDelta;
+    }
+
+    setGameState((prev) => {
       const nextFollowers = Math.max(
         0,
         prev.resources.followers + resolved.resolution.immediateFollowersDelta
@@ -884,7 +893,7 @@ export default function App() {
         ...prev,
         resources: {
           ...prev.resources,
-          influence: prev.resources.influence - influenceCost,
+          influence: Math.max(0, prev.resources.influence - influenceCost),
           followers: nextFollowers
         },
         devotionStacks: nextDevotion,
@@ -898,20 +907,8 @@ export default function App() {
         next = appendDoubtOutcomeOmen(next, actionAt, resolved.resolution.immediateOmenText);
       }
 
-      applied = true;
       return next;
     });
-
-    if (!applied) return;
-
-    doubtSessionRef.current = resolved.nextSession;
-    setActiveDoubtEvent(getActiveDoubtEventView(resolved.nextSession));
-    clearPendingDoubtResolution();
-
-    if (resolved.resolution.nextWhisperCostDelta !== null) {
-      setNextWhisperCostDelta(resolved.resolution.nextWhisperCostDelta);
-      nextWhisperCostDeltaRef.current = resolved.resolution.nextWhisperCostDelta;
-    }
   };
 
   const onInvestDomain = (domainId: DomainId, investments: number) => {
