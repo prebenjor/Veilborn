@@ -143,6 +143,20 @@ Path differentiation:
 - Not active in runtime yet
 - Tracked under `M21` (Fervour/Accord/Reverence/Ardour)
 
+### Era I Moments of Doubt
+
+Runtime behavior:
+- Era I-only binary-choice event cards in the `Murmurs` panel.
+- First event fires at a randomized `3-5m` window, then every `4-7m` after resolution.
+- At most one active event at a time; active events auto-resolve after `3m` as narrative-only `let it pass` outcomes.
+- Event firing is suppressed while total Belief is below `50` and stops once Era II is entered.
+
+Resolution model:
+- Two choices per event; some `B` choices consume Influence (`<= 25`).
+- Outcomes apply lightweight follower/devotion/next-whisper-cost effects per event definition.
+- Delayed probabilistic outcomes roll at choice time and reveal by omen line when due.
+- If a tab closes with an unresolved event, the next load applies narrative-only timeout resolution (no mechanical change).
+
 ### Prophet and Cult Economy
 
 Prophet threshold:

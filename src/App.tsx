@@ -18,7 +18,6 @@ import {
   ensureGhostInitialized,
   exportGhostSignatures,
   getActSlotCap,
-  canWhisper,
   canRecruit,
   getRecruitPreview,
   getWhisperPreview,
@@ -98,6 +97,19 @@ import {
   getUiRevealState,
   veilMaskText
 } from "./core/engine/uiReveal";
+import {
+  clearDoubtSessionForEraTransition,
+  createInitialDoubtSession,
+  drainDuePendingDoubtOutcomes,
+  fireNextDoubtEvent,
+  getActiveDoubtEventView,
+  hasActiveDoubtTimedOut,
+  resolveActiveDoubtChoice,
+  resolveActiveDoubtTimeout,
+  type DoubtChoiceId,
+  type DoubtEventView,
+  type DoubtSessionState
+} from "./core/engine/doubtEvents";
 import { useVeilAudio } from "./core/audio/useVeilAudio";
 import {
   DOMAIN_LABELS,
@@ -163,6 +175,7 @@ import { formatDurationCompact } from "./core/ui/timeFormat";
 import { getVeilStabilityView } from "./core/ui/veilPresentation";
 
 const UI_TAB_KEY = "veilborn.ui.active_tab.v1";
+const DOUBT_PENDING_KEY = "veilborn.session.doubt.pending.v1";
 
 type UiTab = "active" | "growth" | "meta";
 type EraValue = 1 | 2 | 3;
@@ -265,6 +278,77 @@ function formatSnapshotLabel(snapshotMeta: SnapshotMeta | null): string | null {
   return `${reasonLabel} at ${new Date(snapshotMeta.savedAt).toLocaleString()}`;
 }
 
+function toOmenFingerprint(text: string): string {
+  const normalized = text
+    .toLowerCase()
+    .replace(/\d+/g, "#")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sentenceParts = normalized
+    .split(/[.!?]/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return sentenceParts[sentenceParts.length - 1] ?? normalized;
+}
+
+function appendDoubtOutcomeOmen(state: GameState, nowMs: number, text: string): GameState {
+  const recentEntries = state.omenLog.slice(0, 8);
+  const recentTexts = new Set(recentEntries.map((entry) => entry.text));
+  const recentFingerprints = new Set(recentEntries.map((entry) => toOmenFingerprint(entry.text)));
+  const nextFingerprint = toOmenFingerprint(text);
+  if (recentTexts.has(text) || recentFingerprints.has(nextFingerprint)) return state;
+
+  return {
+    ...state,
+    omenLog: [
+      {
+        id: `evt-${state.nextEventId}`,
+        at: nowMs,
+        text
+      },
+      ...state.omenLog
+    ].slice(0, 140),
+    nextEventId: state.nextEventId + 1
+  };
+}
+
+function loadPendingDoubtResolution(runId: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DOUBT_PENDING_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { runId?: string; omenText?: string };
+    if (parsed.runId !== runId) return null;
+    return typeof parsed.omenText === "string" ? parsed.omenText : null;
+  } catch {
+    return null;
+  }
+}
+
+function savePendingDoubtResolution(runId: string, omenText: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      DOUBT_PENDING_KEY,
+      JSON.stringify({
+        runId,
+        omenText
+      })
+    );
+  } catch {
+    // Ignore localStorage write failures.
+  }
+}
+
+function clearPendingDoubtResolution(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(DOUBT_PENDING_KEY);
+  } catch {
+    // Ignore localStorage write failures.
+  }
+}
+
 export default function App() {
   const [initialLoad] = useState(() => loadGameStateWithOffline());
   const [gameState, setGameState] = useState<GameState>(initialLoad.state);
@@ -282,6 +366,14 @@ export default function App() {
     getRecoverySnapshotMeta()
   );
   const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
+  const doubtSessionRef = useRef<DoubtSessionState>(
+    createInitialDoubtSession(initialLoad.state.meta.runId, initialLoad.state.meta.createdAt)
+  );
+  const [activeDoubtEvent, setActiveDoubtEvent] = useState<DoubtEventView | null>(() =>
+    getActiveDoubtEventView(doubtSessionRef.current)
+  );
+  const [nextWhisperCostDelta, setNextWhisperCostDelta] = useState<number | null>(null);
+  const nextWhisperCostDeltaRef = useRef<number | null>(nextWhisperCostDelta);
   const [transitionKind, setTransitionKind] = useState<TransitionKind | null>(null);
   const [transitionHint, setTransitionHint] = useState<string | null>(null);
   const [finalChoiceMaskVisible, setFinalChoiceMaskVisible] = useState(false);
@@ -298,6 +390,10 @@ export default function App() {
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+
+  useEffect(() => {
+    nextWhisperCostDeltaRef.current = nextWhisperCostDelta;
+  }, [nextWhisperCostDelta]);
 
   useEffect(() => {
     const tickTimer = window.setInterval(() => {
@@ -318,6 +414,12 @@ export default function App() {
   useEffect(() => {
     const onBeforeUnload = () => {
       saveGameState(gameStateRef.current);
+      const timeoutResolution = resolveActiveDoubtTimeout(doubtSessionRef.current, Date.now());
+      if (timeoutResolution) {
+        savePendingDoubtResolution(gameStateRef.current.meta.runId, timeoutResolution.omenText);
+      } else {
+        clearPendingDoubtResolution();
+      }
     };
 
     window.addEventListener("beforeunload", onBeforeUnload);
@@ -331,6 +433,81 @@ export default function App() {
   useEffect(() => {
     setGameState((prev) => ensureGhostInitialized(prev, Date.now()));
   }, [gameState.meta.runId, gameState.ghost.localSignatures.length, gameState.ghost.importedSignatures.length]);
+
+  useEffect(() => {
+    const nextSession = createInitialDoubtSession(gameState.meta.runId, gameState.meta.createdAt);
+    doubtSessionRef.current = nextSession;
+    setActiveDoubtEvent(getActiveDoubtEventView(nextSession));
+    setNextWhisperCostDelta(null);
+    nextWhisperCostDeltaRef.current = null;
+
+    const pendingOmenText = loadPendingDoubtResolution(gameState.meta.runId);
+    if (pendingOmenText) {
+      const nowMs = Date.now();
+      setGameState((prev) => appendDoubtOutcomeOmen(prev, nowMs, pendingOmenText));
+    }
+    clearPendingDoubtResolution();
+  }, [gameState.meta.runId, gameState.meta.createdAt]);
+
+  useEffect(() => {
+    const now = gameState.meta.updatedAt;
+    let session = doubtSessionRef.current;
+    let sessionChanged = false;
+
+    if (gameState.era !== 1) {
+      const cleared = clearDoubtSessionForEraTransition(session);
+      if (cleared !== session) {
+        session = cleared;
+        sessionChanged = true;
+      }
+      if (session.activeDoubtEvent.eventId) {
+        clearPendingDoubtResolution();
+      }
+    } else {
+      const drained = drainDuePendingDoubtOutcomes(session, now);
+      if (drained.dueOutcomes.length > 0) {
+        setGameState((prev) => {
+          let next = prev;
+          for (const outcome of drained.dueOutcomes) {
+            next = {
+              ...next,
+              resources: {
+                ...next.resources,
+                followers: Math.max(0, next.resources.followers + outcome.followersDelta)
+              }
+            };
+            next = appendDoubtOutcomeOmen(next, now, outcome.omenText);
+          }
+          return next;
+        });
+      }
+      if (drained.nextSession !== session) {
+        session = drained.nextSession;
+        sessionChanged = true;
+      }
+
+      if (hasActiveDoubtTimedOut(session, now)) {
+        const timeoutResolution = resolveActiveDoubtTimeout(session, now);
+        if (timeoutResolution) {
+          setGameState((prev) => appendDoubtOutcomeOmen(prev, now, timeoutResolution.omenText));
+          session = timeoutResolution.nextSession;
+          sessionChanged = true;
+          clearPendingDoubtResolution();
+        }
+      }
+
+      const fireResult = fireNextDoubtEvent(session, now, gameState.era, gameState.stats.totalBeliefEarned);
+      if (fireResult.firedEvent) {
+        session = fireResult.nextSession;
+        sessionChanged = true;
+      }
+    }
+
+    if (sessionChanged) {
+      doubtSessionRef.current = session;
+      setActiveDoubtEvent(getActiveDoubtEventView(session));
+    }
+  }, [gameState.era, gameState.meta.updatedAt, gameState.stats.totalBeliefEarned]);
 
   useEffect(() => {
     const available = getAvailableTabs(gameState.era);
@@ -406,7 +583,8 @@ export default function App() {
   const influenceCap = getInfluenceCap(gameState);
   const influenceRegenBreakdown = getInfluenceRegenBreakdown(gameState);
   const passiveFollowerRate = getPassiveFollowerRate(gameState, nowMs);
-  const whisperCost = getWhisperCost(gameState, nowMs);
+  const baseWhisperCost = getWhisperCost(gameState, nowMs);
+  const whisperCost = Math.max(1, baseWhisperCost + (nextWhisperCostDelta ?? 0));
   const whisperPreview = getWhisperPreview(gameState);
   const recruitPreview = getRecruitPreview(gameState);
   const devotionStacks = getDevotionStacks(gameState);
@@ -434,7 +612,7 @@ export default function App() {
   }));
   const ghostInfluenceTotals = getGhostInfluenceTotals(gameState);
 
-  const canUseWhisper = canWhisper(gameState, nowMs);
+  const canUseWhisper = gameState.resources.influence >= whisperCost;
   const canUseRecruit = canRecruit(gameState);
   const canCreateProphet = canAnointProphet(gameState);
   const canCreateCult = canFormCult(gameState);
@@ -598,6 +776,16 @@ export default function App() {
   const safeActiveTab = getSafeTab(activeTab, availableTabs);
   const omenPreviewCount = era === 1 ? 3 : 2;
   const visibleOmens = gameState.omenLog.slice(0, omenPreviewCount);
+  const activeDoubtEventCard =
+    era === 1 && activeDoubtEvent
+      ? {
+          scene: activeDoubtEvent.scene,
+          choiceALabel: activeDoubtEvent.choiceA.label,
+          choiceBLabel: activeDoubtEvent.choiceB.label,
+          choiceBCost: activeDoubtEvent.choiceB.influenceCost,
+          canChooseB: gameState.resources.influence >= activeDoubtEvent.choiceB.influenceCost
+        }
+      : null;
   const showPersistentOmenSurface = era >= 2;
   const showStatsDrawer = true;
   const statusLine =
@@ -645,12 +833,20 @@ export default function App() {
 
   const onWhisper = () => {
     const actionAt = Date.now();
+    let consumedCostModifier = false;
     setGameState((prev) => {
-      const next = performWhisper(prev, actionAt);
+      const costModifier = nextWhisperCostDeltaRef.current ?? 0;
+      const effectiveCost = Math.max(1, getWhisperCost(prev, actionAt) + costModifier);
+      const next = performWhisper(prev, actionAt, effectiveCost);
       if (next === prev) return prev;
+      consumedCostModifier = costModifier !== 0;
       recordTelemetryAction(next, "whisper", actionAt);
       return next;
     });
+    if (consumedCostModifier) {
+      setNextWhisperCostDelta(null);
+      nextWhisperCostDeltaRef.current = null;
+    }
   };
 
   const onRecruit = () => {
@@ -661,6 +857,61 @@ export default function App() {
       recordTelemetryAction(next, "recruit", actionAt);
       return next;
     });
+  };
+
+  const onResolveDoubtChoice = (choice: DoubtChoiceId) => {
+    const actionAt = Date.now();
+    const resolved = resolveActiveDoubtChoice(doubtSessionRef.current, choice, actionAt);
+    if (!resolved) return;
+
+    let applied = false;
+    setGameState((prev) => {
+      const influenceCost = resolved.resolution.influenceCost;
+      if (influenceCost > 0 && prev.resources.influence < influenceCost) {
+        return prev;
+      }
+
+      const nextFollowers = Math.max(
+        0,
+        prev.resources.followers + resolved.resolution.immediateFollowersDelta
+      );
+      const nextDevotion = Math.max(
+        0,
+        Math.min(3, Math.floor(prev.devotionStacks + resolved.resolution.devotionDelta))
+      );
+
+      let next: GameState = {
+        ...prev,
+        resources: {
+          ...prev.resources,
+          influence: prev.resources.influence - influenceCost,
+          followers: nextFollowers
+        },
+        devotionStacks: nextDevotion,
+        meta: {
+          ...prev.meta,
+          updatedAt: actionAt
+        }
+      };
+
+      if (resolved.resolution.immediateOmenText) {
+        next = appendDoubtOutcomeOmen(next, actionAt, resolved.resolution.immediateOmenText);
+      }
+
+      applied = true;
+      return next;
+    });
+
+    if (!applied) return;
+
+    doubtSessionRef.current = resolved.nextSession;
+    setActiveDoubtEvent(getActiveDoubtEventView(resolved.nextSession));
+    clearPendingDoubtResolution();
+
+    if (resolved.resolution.nextWhisperCostDelta !== null) {
+      setNextWhisperCostDelta(resolved.resolution.nextWhisperCostDelta);
+      nextWhisperCostDeltaRef.current = resolved.resolution.nextWhisperCostDelta;
+    }
   };
 
   const onInvestDomain = (domainId: DomainId, investments: number) => {
@@ -1260,10 +1511,12 @@ export default function App() {
       canCreateProphet={canCreateProphet}
       omenTitle={uiReveal.omenTitle}
       visibleOmens={visibleOmens}
+      activeDoubtEvent={activeDoubtEventCard}
       eraGatePanel={eraGatePanel}
       onWhisper={onWhisper}
       onRecruit={onRecruit}
       onAnointProphet={onAnointProphet}
+      onResolveDoubtChoice={onResolveDoubtChoice}
     />
   );
 

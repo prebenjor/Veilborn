@@ -1191,13 +1191,14 @@ function appendOmen(state: GameState, nowMs: number, kind: OmenKind, detail?: st
   };
 }
 
-export function canWhisper(state: GameState, nowMs: number): boolean {
-  return state.resources.influence >= getWhisperCost(state, nowMs);
+export function canWhisper(state: GameState, nowMs: number, costOverride?: number): boolean {
+  const targetCost = costOverride ?? getWhisperCost(state, nowMs);
+  return state.resources.influence >= targetCost;
 }
 
-export function performWhisper(state: GameState, nowMs: number): GameState {
+export function performWhisper(state: GameState, nowMs: number, costOverride?: number): GameState {
   const normalizedCycle = normalizeWhisperCycle(state.activity, nowMs);
-  const cost = getWhisperCost(state, nowMs);
+  const cost = costOverride ?? getWhisperCost(state, nowMs);
   if (state.resources.influence < cost) return state;
 
   const cadence = getCadenceBonus(state);
