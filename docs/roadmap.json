@@ -458,6 +458,37 @@
         "Devotion never decays and does not punish inactivity",
         "All four Era III paths are viable builds"
       ]
+    },
+    {
+      "id": "M22",
+      "title": "Rival Identity and Faith Competition System",
+      "status": "pending",
+      "dependencies": [
+        "M14",
+        "M21"
+      ],
+      "notes": "Rivals in current runtime are a passive drain with a single suppress action. They have no identity, no strategic depth, and no reason to engage with beyond paying 200 Influence. This milestone replaces the current rival system with a competing-faith model that has narrative identity and meaningful player decisions. Rivals should feel like actual threats with character, not resource timers. Full design reference: docs/RIVAL_IDENTITY.md (to be written).",
+      "deliverables": [
+        "Each rival spawns with a procedurally generated name, a dominant domain, and one in-world sentence describing their doctrine - drawn from the same domain and lineage systems the player uses",
+        "Rival strength scales with their dominant domain level relative to the player's - rivals adapt to the player's current power rather than scaling purely from B/s",
+        "Three response options replace the single suppress button: Suppress (Influence cost, eliminates rival), Ignore (rival grows over time, higher drain but eventual collapse), Engage (Belief cost, chance to convert rival's followers to player cult)",
+        "Engage outcome is probabilistic based on player Devotion state and lineage - Fervour path gets better Engage odds, Accord path gets better Suppress cost",
+        "Rival identity persists in omen log: named rivals reference their prior appearance if suppressed and re-spawning",
+        "Rivals visible in Era II and III following existing era gate; Era II rivals feel like local competition, Era III rivals feel like organized opposition",
+        "Rival panel UI updated: shows rival name, dominant domain, current strength as relative threat level (not raw number), estimated follower drain rate, and three response buttons",
+        "First rival appearance in a run gets a one-line in-world introduction omen: the rival is introduced by what they teach, not by system label",
+        "MANIFESTO.md and GAME_REFERENCE.md updated with rival identity model and response option formulas"
+      ],
+      "validation": [
+        "Each rival has a distinct name and doctrine sentence on spawn",
+        "All three response options are viable with distinct tradeoffs",
+        "Engage outcome correctly applies Devotion path modifier",
+        "Rival strength display is relative threat level, not raw number",
+        "Named rival re-spawn is referenced in omen log if prior suppression exists this run",
+        "Rival system remains absent in Era I",
+        "Suppress cost and Engage cost are clearly shown before committing",
+        "Rivals never cause game-over or unrecoverable state - they are pressure, not punishment"
+      ]
     }
   ],
   "post_final_improvements": [
@@ -707,6 +738,66 @@
         "Completed conditions visually distinct; uncompleted ones show progress where quantifiable (e.g., 3/5 civ rebuilds)",
         "Panel hidden until at least one condition has been completed or the player has completed run 1",
         "Conditions that require specific runs or Pantheon actions flagged as requiring preparation, without spoiling exact mechanic"
+      ]
+    },
+    {
+      "id": "PF-21",
+      "title": "Miracle Naming - Replace Tier Labels",
+      "status": "queued",
+      "execute_after": "M14",
+      "notes": "Miracle T1/T2/T3/T4 are developer labels, not in-world names. All four tiers need names that fit the escalating weight and consequence of each miracle. Names must appear everywhere the tier is referenced: Cataclysm panel, omen log, stats page.",
+      "scope": [
+        "Replace Miracle T1 with an in-world name reflecting subtle, low-cost divine touch (e.g. Whisper of Providence)",
+        "Replace Miracle T2 with an in-world name reflecting ritualistic, meaningful intervention (e.g. The Anointing)",
+        "Replace Miracle T3 with an in-world name reflecting violent, costly world-shaping (e.g. The Rending)",
+        "Replace Miracle T4 with an in-world name reflecting catastrophic, near-unraveling force (e.g. Unraveling - echoes the gate name intentionally)",
+        "Names applied everywhere tier is referenced: Cataclysm panel buttons, omen log entries, stats page miracle count line",
+        "Cost, return, Veil cost, and Civ damage values unchanged"
+      ]
+    },
+    {
+      "id": "PF-22",
+      "title": "Influence Cap Scaling - Era III Late Game",
+      "status": "queued",
+      "execute_after": "M14",
+      "notes": "Current formula: influenceCap = 100 + (20 * prophets) + 50 if startInf. At 18 prophets this yields 460 - demonstrably insufficient at 52B Belief / 1d 18h runtime with 26 cults and 240 shrines. The cap must scale with late Era III infrastructure. Requires manifesto revision.",
+      "scope": [
+        "Add a cult-count term to the Influence cap formula for Era III: +5 per cult above 3",
+        "Add an optional domain-level term: +2 per point of average domain level above 5",
+        "Reference target: player with 18 prophets, 26 cults, domain avg level 6 should have cap ~700-800",
+        "Cap scaling must not trivialize Miracle costs - cap growth should trail regen growth so spend-before-cap behavior remains relevant",
+        "Update influenceCap formula in MANIFESTO.md and GAME_REFERENCE.md in same change",
+        "Validate that fill time from 0 remains meaningful (target: 10-20 seconds at Era III regen rates)"
+      ]
+    },
+    {
+      "id": "PF-23",
+      "title": "Active Act Visual State - Running vs Available",
+      "status": "queued",
+      "execute_after": "M14",
+      "notes": "Currently active/running acts are not visually distinct from available acts. When an act is in progress it should be immediately identifiable with a countdown and visual differentiation. Slot count header updates correctly but the cards themselves do not communicate state.",
+      "scope": [
+        "Running act cards render with a countdown timer showing time remaining",
+        "Running act cards are visually differentiated from available ones: dimmed or shifted background, progress bar underlay, or equivalent",
+        "Available act cards remain full opacity and interactive",
+        "Completed act resolution fires an omen line as currently specified",
+        "Slot count header (e.g. '6 of 26 slots active') correctly reflects running count at all times",
+        "No changes to act formulas, costs, or return calculations"
+      ]
+    },
+    {
+      "id": "PF-24",
+      "title": "Era III UI Consistency Pass",
+      "status": "queued",
+      "execute_after": "M14",
+      "notes": "Several small inconsistencies visible in Era III runtime that conflict with the UI restructure spec and string replacement doc. Collect here to be addressed in one pass.",
+      "scope": [
+        "Unraveling Gate label appears twice (section header and inner bar header) - inner bar label should read 'Ready to Unravel' when conditions unmet, 'Cross the Threshold' when all met",
+        "Suppress Rival button when no rivals are present should be hidden entirely, not greyed or visible",
+        "Veil Stability descriptor (Calm/Thinning/Fraying/Critical/Unraveling) must appear in stat bar in Era III - confirm implementation matches UI_RESTRUCTURE.md spec",
+        "Bottom status line must be hidden in Era III per era vocabulary progression spec",
+        "Cataclysm panel must appear at top of ACTIVE tab in Era III above Rivals and Whispers - confirm correct order per GAME_REFERENCE.md Era III active order",
+        "META tab label must read 'Meta' with no suffix in all eras"
       ]
     }
   ]
