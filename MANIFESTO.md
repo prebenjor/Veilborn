@@ -364,7 +364,7 @@ Era I -> Era II:
 - `followers >= 500`
 
 Era II -> Era III:
-- `totalBeliefEarned >= 250000 * (0.75 with era2_gate Echo else 1.0)`
+- `totalBeliefEarned >= 275000 * (0.75 with era2_gate Echo else 1.0)`
 - `cults >= 3`
 - Survived at least one rival event
 

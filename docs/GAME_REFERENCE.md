@@ -349,7 +349,7 @@ Era I -> II:
 - `500` followers
 
 Era II -> III:
-- belief earned target (`250000`, or x`0.75` with `era2Gate`)
+- belief earned target (`275000`, or x`0.75` with `era2Gate`)
 - `3` cults
 - survived rival event
 

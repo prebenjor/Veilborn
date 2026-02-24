@@ -331,14 +331,14 @@ function printRecommendations(grouped: GroupedRunStats[], runSummaries: Telemetr
   if (run2?.medianDeltaPct !== null && run2?.medianDeltaPct !== undefined) {
     if (run2.medianDeltaPct < -15) {
       recommendations.push(
-        "Run 2 is too fast: increase ERA_TWO_BELIEF_GATE_BASE by 10-20% (250000 -> 275000-300000)."
+        "Run 2 is too fast: increase ERA_TWO_BELIEF_GATE_BASE by 10-20% (275000 -> 302500-330000)."
       );
       recommendations.push(
         "If Run 2 remains too fast after gate tuning, raise CULT_COST_SCALAR by +0.03 to +0.08 (2.00 -> 2.03-2.08)."
       );
     } else if (run2.medianDeltaPct > 15) {
       recommendations.push(
-        "Run 2 is too slow: decrease ERA_TWO_BELIEF_GATE_BASE by 10-15% (250000 -> 225000-212500)."
+        "Run 2 is too slow: decrease ERA_TWO_BELIEF_GATE_BASE by 10-15% (275000 -> 247500-233750)."
       );
     }
   }
