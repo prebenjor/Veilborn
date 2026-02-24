@@ -8,6 +8,7 @@ const TELEMETRY_RUN_SUMMARIES_KEY = "veilborn.telemetry.run_summaries.v1";
 const TELEMETRY_PEAK_BELIEF_KEY = "veilborn.telemetry.peak_belief_per_second.v1";
 const TELEMETRY_ACTION_CADENCE_KEY = "veilborn.telemetry.action_cadence.v1";
 const TELEMETRY_ACTION_INTERVAL_SAMPLE_MAX = 720;
+const TELEMETRY_ACTION_INTERVAL_MIN_MS = 1000;
 
 type TelemetryScalar = string | number | boolean | null;
 export type TelemetryEventDetails = Record<string, TelemetryScalar>;
@@ -547,9 +548,11 @@ export function recordTelemetryAction(
   const intervalSamplesMs = [...current.intervalSamplesMs];
   if (current.lastActionAt !== null) {
     const intervalMs = Math.max(0, Math.floor(nowMs - current.lastActionAt));
-    intervalSamplesMs.push(intervalMs);
-    if (intervalSamplesMs.length > TELEMETRY_ACTION_INTERVAL_SAMPLE_MAX) {
-      intervalSamplesMs.splice(0, intervalSamplesMs.length - TELEMETRY_ACTION_INTERVAL_SAMPLE_MAX);
+    if (intervalMs >= TELEMETRY_ACTION_INTERVAL_MIN_MS) {
+      intervalSamplesMs.push(intervalMs);
+      if (intervalSamplesMs.length > TELEMETRY_ACTION_INTERVAL_SAMPLE_MAX) {
+        intervalSamplesMs.splice(0, intervalSamplesMs.length - TELEMETRY_ACTION_INTERVAL_SAMPLE_MAX);
+      }
     }
   }
 
@@ -611,7 +614,9 @@ function buildActionCadenceSummary(
     };
   }
 
-  const sortedSamplesMs = [...buffer.intervalSamplesMs].sort((a, b) => a - b);
+  const sortedSamplesMs = buffer.intervalSamplesMs
+    .filter((sample) => sample >= TELEMETRY_ACTION_INTERVAL_MIN_MS)
+    .sort((a, b) => a - b);
   if (sortedSamplesMs.length <= 0) {
     return {
       totalActions: buffer.totalActions,

@@ -50,6 +50,8 @@ interface SessionSummary {
   civilizationCollapses: number;
 }
 
+const ACTION_INTERVAL_MIN_MS = 1000;
+
 function usage(): void {
   console.log(
     "Usage: npm run compare:m14 -- <telemetry-export-session-a.json> <telemetry-export-session-b.json>"
@@ -127,7 +129,7 @@ function summarizeCadence(buffer: ActionCadenceBuffer | undefined): {
   const samples = Array.isArray(buffer?.intervalSamplesMs)
     ? buffer.intervalSamplesMs
         .map((sample) => Math.max(0, Math.floor(toFiniteNumber(sample) ?? -1)))
-        .filter((sample) => sample >= 0)
+        .filter((sample) => sample >= ACTION_INTERVAL_MIN_MS)
     : [];
   if (samples.length <= 0) {
     return {
