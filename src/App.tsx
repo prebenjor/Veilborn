@@ -178,10 +178,27 @@ import { getVeilStabilityView } from "./core/ui/veilPresentation";
 const UI_TAB_KEY = "veilborn.ui.active_tab.v1";
 const DOUBT_PENDING_KEY = "veilborn.session.doubt.pending.v1";
 const DEV_TOOLS_KEY = "veilborn.ui.dev_tools.enabled.v1";
+const BACKGROUND_TICK_MS = 1000;
+const LOW_POWER_TICK_MS = 500;
+const LOW_BATTERY_LEVEL = 0.2;
 
 type UiTab = "active" | "growth" | "meta";
 type EraValue = 1 | 2 | 3;
 type TransitionKind = "fade" | "vignette";
+
+interface BatteryStateLike {
+  level: number;
+  charging: boolean;
+  addEventListener?: (type: "levelchange" | "chargingchange", listener: () => void) => void;
+  removeEventListener?: (type: "levelchange" | "chargingchange", listener: () => void) => void;
+}
+
+interface NavigatorWithPowerHints extends Navigator {
+  connection?: {
+    saveData?: boolean;
+  };
+  getBattery?: () => Promise<BatteryStateLike>;
+}
 
 const ECHO_TREE_META: Array<{
   id: EchoTreeId;
@@ -482,6 +499,8 @@ export default function App() {
   );
   const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
   const [devToolsEnabled, setDevToolsEnabled] = useState<boolean>(() => loadDevToolsEnabled());
+  const [lowPowerHint, setLowPowerHint] = useState(false);
+  const [tickIntervalMs, setTickIntervalMs] = useState<number>(WORLD_TICK_MS);
   const [devToolsStatus, setDevToolsStatus] = useState<string | null>(null);
   const doubtSessionRef = useRef<DoubtSessionState>(
     createInitialDoubtSession(initialLoad.state.meta.runId, initialLoad.state.meta.createdAt)
@@ -494,6 +513,7 @@ export default function App() {
   const [transitionKind, setTransitionKind] = useState<TransitionKind | null>(null);
   const [transitionHint, setTransitionHint] = useState<string | null>(null);
   const [finalChoiceMaskVisible, setFinalChoiceMaskVisible] = useState(false);
+  const eraHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const gameStateRef = useRef(gameState);
   const previousEraRef = useRef<EraValue>(gameState.era);
   const previousVeilCollapseRef = useRef<{ runId: string; count: number }>({
@@ -515,10 +535,64 @@ export default function App() {
   useEffect(() => {
     const tickTimer = window.setInterval(() => {
       setGameState((prev) => advanceWorld(prev, Date.now()));
-    }, WORLD_TICK_MS);
+    }, tickIntervalMs);
 
     return () => window.clearInterval(tickTimer);
+  }, [tickIntervalMs]);
+
+  useEffect(() => {
+    const navigatorWithHints = navigator as NavigatorWithPowerHints;
+    const saveDataEnabled = navigatorWithHints.connection?.saveData === true;
+    let disposed = false;
+    let battery: BatteryStateLike | null = null;
+
+    const syncPowerHint = () => {
+      const lowBattery = battery ? !battery.charging && battery.level <= LOW_BATTERY_LEVEL : false;
+      const nextValue = saveDataEnabled || lowBattery;
+      setLowPowerHint((previous) => (previous === nextValue ? previous : nextValue));
+    };
+
+    syncPowerHint();
+
+    if (typeof navigatorWithHints.getBattery === "function") {
+      void navigatorWithHints
+        .getBattery()
+        .then((resolvedBattery) => {
+          if (disposed) return;
+          battery = resolvedBattery;
+          battery.addEventListener?.("levelchange", syncPowerHint);
+          battery.addEventListener?.("chargingchange", syncPowerHint);
+          syncPowerHint();
+        })
+        .catch(() => {
+          syncPowerHint();
+        });
+    }
+
+    return () => {
+      disposed = true;
+      battery?.removeEventListener?.("levelchange", syncPowerHint);
+      battery?.removeEventListener?.("chargingchange", syncPowerHint);
+    };
   }, []);
+
+  useEffect(() => {
+    const applyTickInterval = () => {
+      const isHidden = document.visibilityState !== "visible";
+      const nextInterval = isHidden
+        ? BACKGROUND_TICK_MS
+        : lowPowerHint
+          ? LOW_POWER_TICK_MS
+          : WORLD_TICK_MS;
+      setTickIntervalMs((previous) => (previous === nextInterval ? previous : nextInterval));
+    };
+
+    applyTickInterval();
+    document.addEventListener("visibilitychange", applyTickInterval);
+    return () => {
+      document.removeEventListener("visibilitychange", applyTickInterval);
+    };
+  }, [lowPowerHint]);
 
   useEffect(() => {
     const autosaveTimer = window.setInterval(() => {
@@ -651,6 +725,11 @@ export default function App() {
     const previousEra = previousEraRef.current;
     if (previousEra === gameState.era) return;
     previousEraRef.current = gameState.era;
+    const focusEraHeading = () => {
+      window.requestAnimationFrame(() => {
+        eraHeadingRef.current?.focus();
+      });
+    };
 
     setActiveTab("active");
     if (transitionTimerRef.current !== null) {
@@ -664,6 +743,7 @@ export default function App() {
       transitionTimerRef.current = window.setTimeout(() => {
         setTransitionKind(null);
       }, 300);
+      focusEraHeading();
       return;
     }
 
@@ -673,11 +753,13 @@ export default function App() {
       transitionTimerRef.current = window.setTimeout(() => {
         setTransitionKind(null);
       }, 900);
+      focusEraHeading();
       return;
     }
 
     setTransitionKind(null);
     setTransitionHint(null);
+    focusEraHeading();
   }, [gameState.era]);
 
   useEffect(() => {
@@ -1894,7 +1976,11 @@ export default function App() {
       >
         <header className="veil-header space-y-2">
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
-          <h1 className="text-2xl font-semibold text-veil md:text-4xl">
+          <h1
+            ref={eraHeadingRef}
+            tabIndex={-1}
+            className="text-2xl font-semibold text-veil outline-none md:text-4xl"
+          >
             {veilMaskText("Someone is listening.", uiReveal.legibility)}
           </h1>
           {uiReveal.showHeaderSubtext ? (

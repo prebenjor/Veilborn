@@ -40,6 +40,11 @@ body {
   min-height: 100vh;
 }
 
+:where(button, [role="button"], summary, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(131, 169, 220, 0.85);
+  outline-offset: 2px;
+}
+
 .veil-shell {
   background: linear-gradient(180deg, var(--vb-bg), var(--vb-bg-secondary));
   color: var(--vb-text);
@@ -308,6 +313,13 @@ body {
   .veil-omen-surface {
     max-height: 42vh;
     overflow: auto;
+  }
+}
+
+@media (pointer: coarse) {
+  :where(button, [role="button"], summary, a[href], input[type="button"], input[type="submit"]) {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
