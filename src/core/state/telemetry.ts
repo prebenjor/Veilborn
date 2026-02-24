@@ -572,6 +572,28 @@ export function recordTelemetryAction(
   saveActionCadenceByRun(allBuffers);
 }
 
+export function ensureTelemetryActionCadenceBuffer(
+  runId: string,
+  startedAtMs: number
+): void {
+  if (!runId) return;
+  const allBuffers = loadActionCadenceByRun();
+  const existing = allBuffers[runId];
+  const safeStartedAt = Math.max(0, Math.floor(startedAtMs));
+  if (existing) {
+    if (existing.startedAt > 0) return;
+    allBuffers[runId] = {
+      ...existing,
+      startedAt: safeStartedAt
+    };
+    saveActionCadenceByRun(allBuffers);
+    return;
+  }
+
+  allBuffers[runId] = createCadenceBufferForRun(runId, safeStartedAt);
+  saveActionCadenceByRun(allBuffers);
+}
+
 function countMiraclesByTier(
   events: TelemetryEvent[],
   runId: string

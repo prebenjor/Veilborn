@@ -506,6 +506,8 @@ Telemetry:
   - total actions
   - average / median / p90 interval seconds
   - `%` of action intervals in `30-60s` target window
+  - sub-1s intervals filtered from cadence metrics to avoid burst-noise skew
+  - cadence buffer initialized at run start so phase timing can be measured even in low-action sessions
 - per-run era milestones in run summary:
   - Era I -> II seconds
   - Era II -> III seconds

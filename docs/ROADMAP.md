@@ -241,6 +241,7 @@ Notes:
   - `npm run regression:m14`
   - `npm run compare:m14 -- <beginner-session.json> <ascended-session.json>`
   - `npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]`
+- `compare:m14` now emits explicit pace-lock checks (`PASS/WARN/FAIL`) and returns exit code `2` on ratio failures.
 - Pace lock target bands:
   - Ascended/Beginner Era I speed ratio should be `< 1.00` and `>= 0.45`.
   - Ascended/Beginner Era II speed ratio should be `< 1.00` and `>= 0.45`.

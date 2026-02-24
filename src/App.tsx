@@ -147,6 +147,7 @@ import {
   appendTelemetryEvent,
   appendTelemetryRunSummary,
   createTelemetryExportPayload,
+  ensureTelemetryActionCadenceBuffer,
   loadTelemetryRunSummaries,
   recordTelemetryAction,
   readTelemetryForTests,
@@ -1027,6 +1028,10 @@ export default function App() {
   const metaPantheonSummary = pantheonUnlocked
     ? `${formatResource(pantheonAllies.filter((ally) => ally.disposition === "allied").length)} allied \u00b7 ${formatResource(gameState.prestige.pantheon.betrayalsLifetime)} betrayals`
     : "Pantheon remains out of reach.";
+
+  useEffect(() => {
+    ensureTelemetryActionCadenceBuffer(gameState.meta.runId, gameState.meta.createdAt);
+  }, [gameState.meta.createdAt, gameState.meta.runId]);
 
   useEffect(() => {
     updateTelemetryPeakBeliefPerSecond(gameState.meta.runId, beliefPerSecond);
