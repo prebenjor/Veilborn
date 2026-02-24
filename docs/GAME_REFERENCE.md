@@ -438,7 +438,7 @@ Stats drawer:
 - follower flow lines
 - devotion stack line
 - influence source breakdown
-- run history
+- run history (includes cadence summary and era pacing durations for ascended runs)
 - audio controls
 - content scales by era without spoiling future systems
 
@@ -455,8 +455,24 @@ Telemetry:
   - ascension
   - rival suppression
   - miracle use
+- per-run action cadence capture on successful player actions:
+  - total actions
+  - average / median / p90 interval seconds
+  - `%` of action intervals in `30-60s` target window
+- per-run era milestones in run summary:
+  - Era I -> II seconds
+  - Era II -> III seconds
+  - Era III -> ascension seconds
 - run summaries capped to last `20`
 - JSON export + console dump helpers
+- M14 regression harness: `npm run regression:m14` (formula + offline simulation assertions)
+- M14 timing/cadence audit: `npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]`
+- M14 non-ascended session comparison: `npm run compare:m14 -- <session-a.json> <session-b.json>` (includes Era I and Era II phase duration/belief checks when transition data exists)
+- Export-driven tuning loop:
+  - collect 2-3 telemetry exports from ascended runs
+  - run `audit:m14` across all exports
+  - apply one small constant adjustment (5-10% gate delta or +0.03 to +0.08 scalar delta)
+  - repeat until run timing/cadence reports stabilize
 
 ### Save Integrity and Recovery
 

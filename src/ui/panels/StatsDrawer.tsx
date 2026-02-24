@@ -40,6 +40,18 @@ interface StatsDrawerProps {
     veilCollapseCount: number;
     civilizationCollapseCount: number;
     miracleCountByTier: Record<1 | 2 | 3 | 4, number>;
+    actionCadence: {
+      totalActions: number;
+      averageIntervalSeconds: number | null;
+      medianIntervalSeconds: number | null;
+      p90IntervalSeconds: number | null;
+      targetWindowHitRate: number | null;
+    };
+    eraMilestones: {
+      eraOneToTwoSeconds: number | null;
+      eraTwoToThreeSeconds: number | null;
+      eraThreeToAscensionSeconds: number | null;
+    };
   }>;
   telemetryStatus: string | null;
   audioControls: {
@@ -227,6 +239,25 @@ export function StatsDrawer({
                     Collapses V:{formatResource(run.veilCollapseCount)} C:
                     {formatResource(run.civilizationCollapseCount)} | Miracles {formatResource(miracleTotal)}
                   </p>
+                  <p className="text-[10px] text-veil/65">
+                    {run.actionCadence.averageIntervalSeconds === null
+                      ? "Cadence n/a"
+                      : `Cadence ~${formatDurationCompact(run.actionCadence.averageIntervalSeconds)} · ${Math.round(
+                          (run.actionCadence.targetWindowHitRate ?? 0) * 100
+                        )}% in target`}
+                  </p>
+                  {(run.eraMilestones.eraOneToTwoSeconds !== null ||
+                    run.eraMilestones.eraTwoToThreeSeconds !== null) ? (
+                    <p className="text-[10px] text-veil/65">
+                      {run.eraMilestones.eraOneToTwoSeconds !== null
+                        ? `Era I ${formatDurationCompact(run.eraMilestones.eraOneToTwoSeconds)}`
+                        : "Era I n/a"}
+                      {" · "}
+                      {run.eraMilestones.eraTwoToThreeSeconds !== null
+                        ? `Era II ${formatDurationCompact(run.eraMilestones.eraTwoToThreeSeconds)}`
+                        : "Era II n/a"}
+                    </p>
+                  ) : null}
                 </li>
               );
             })}

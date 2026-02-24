@@ -226,6 +226,13 @@ Definition of Done:
 
 Objective: Hit cadence and compression targets from Revision B.
 
+Notes:
+- Regression harness for formula/offline checks is available via `npm run regression:m14`.
+- Telemetry timing audit is available via `npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]`.
+- Non-ascended session comparison (including Era I and Era II phase checks) is available via `npm run compare:m14 -- <session-a.json> <session-b.json>`.
+- Export-driven M14 loop: gather 2-3 ascended-run telemetry exports, run `audit:m14`, apply one small constant delta, and re-audit.
+- Remaining M14 scope is economy constant calibration against target run durations.
+
 Deliverables:
 - Economy tuning against run targets:
   - Run 1: ~6.5h
@@ -234,6 +241,7 @@ Deliverables:
   - Run 5: ~1.2h
   - Run 8+: ~45m floor
 - 30-60 second active decision cadence checks.
+- Per-run action cadence summary in telemetry (`avg/median/p90` action interval + in-window hit rate).
 - Era pacing audit within runs: Era II acceleration should be noticeable but not abrupt relative to Era I progression.
 - 20-40 minute milestone cadence checks.
 - Regression tests for core formulas and offline simulation.

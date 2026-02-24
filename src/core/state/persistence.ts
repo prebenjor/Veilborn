@@ -986,6 +986,13 @@ function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameState
   };
 }
 
+export function runOfflineSimulationForRegression(
+  state: GameState,
+  nowMs: number
+): LoadGameStateResult {
+  return simulateOfflineProgress(state, nowMs);
+}
+
 function toSaveEnvelope(state: GameState): SaveEnvelope {
   return {
     schemaVersion: GAME_STATE_SCHEMA_VERSION,

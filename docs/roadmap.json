@@ -271,14 +271,15 @@
       ],
       "deliverables": [
         "Timing and economy tuning for Revision B targets",
-        "Decision and milestone cadence instrumentation",
+        "Decision and milestone cadence instrumentation (per-run action cadence summary with avg/median/p90 interval and target-window hit rate)",
         "Era pacing audit inside runs: Era II speed-up is tangible but not abrupt versus Era I",
         "Regression tests for formulas and offline sim"
       ],
       "validation": [
         "Run timing approximates 6.5h, 4h, 2.5h, 1.2h, 45m floor",
         "No high-severity simulation regressions"
-      ]
+      ],
+      "notes": "Regression harness for formulas/offline simulation is available via npm run regression:m14. Telemetry timing/cadence audit is available via npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]. Non-ascended session comparison (including Era I and Era II phase checks) is available via npm run compare:m14 -- <session-a.json> <session-b.json>. Recommended loop: collect 2-3 ascended-run exports, run audit, apply one small constant delta, then re-audit. Remaining scope: economy constant calibration to target run durations."
     },
     {
       "id": "M20",

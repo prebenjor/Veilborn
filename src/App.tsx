@@ -134,6 +134,7 @@ import {
   appendTelemetryRunSummary,
   createTelemetryExportPayload,
   loadTelemetryRunSummaries,
+  recordTelemetryAction,
   readTelemetryForTests,
   updateTelemetryPeakBeliefPerSecond,
   type TelemetryRunSummary
@@ -626,35 +627,82 @@ export default function App() {
   }, [gameState, gameState.cataclysm.totalVeilCollapses, gameState.meta.runId, gameState.meta.updatedAt]);
 
   const onWhisper = () => {
-    setGameState((prev) => performWhisper(prev, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performWhisper(prev, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "whisper", actionAt);
+      return next;
+    });
   };
 
   const onRecruit = () => {
-    setGameState((prev) => performRecruit(prev, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performRecruit(prev, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "recruit", actionAt);
+      return next;
+    });
   };
 
   const onInvestDomain = (domainId: DomainId, investments: number) => {
+    const actionAt = Date.now();
     if (investments <= 1) {
-      setGameState((prev) => performDomainInvestment(prev, domainId, Date.now()));
+      setGameState((prev) => {
+        const next = performDomainInvestment(prev, domainId, actionAt);
+        if (next === prev) return prev;
+        recordTelemetryAction(next, "invest_domain", actionAt);
+        return next;
+      });
       return;
     }
-    setGameState((prev) => performDomainInvestments(prev, domainId, investments, Date.now()));
+    setGameState((prev) => {
+      const next = performDomainInvestments(prev, domainId, investments, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "invest_domain", actionAt);
+      return next;
+    });
   };
 
   const onAnointProphet = () => {
-    setGameState((prev) => performProphetAnoint(prev, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performProphetAnoint(prev, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "anoint_prophet", actionAt);
+      return next;
+    });
   };
 
   const onFormCult = () => {
-    setGameState((prev) => performCultFormation(prev, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performCultFormation(prev, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "found_cult", actionAt);
+      return next;
+    });
   };
 
   const onStartAct = (type: ActType) => {
-    setGameState((prev) => performStartAct(prev, type, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performStartAct(prev, type, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "start_act", actionAt);
+      return next;
+    });
   };
 
   const onPerformFollowerRite = (type: FollowerRiteType) => {
-    setGameState((prev) => performFollowerRite(prev, type, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performFollowerRite(prev, type, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "perform_follower_rite", actionAt);
+      return next;
+    });
   };
 
   const onSuppressRival = () => {
@@ -662,6 +710,7 @@ export default function App() {
     setGameState((prev) => {
       const next = performSuppressRival(prev, actionAt);
       if (next === prev) return prev;
+      recordTelemetryAction(next, "suppress_rival", actionAt);
       appendTelemetryEvent(next, "rival_suppressed", actionAt, {
         rivalsBefore: prev.doctrine.rivals.length,
         rivalsAfter: next.doctrine.rivals.length
@@ -675,6 +724,7 @@ export default function App() {
     setGameState((prev) => {
       const next = performCastMiracle(prev, tier, actionAt);
       if (next === prev) return prev;
+      recordTelemetryAction(next, "cast_miracle", actionAt);
 
       appendTelemetryEvent(next, "miracle_use", actionAt, {
         tier,
@@ -695,24 +745,54 @@ export default function App() {
   };
 
   const onPurchaseEchoTreeRank = (treeId: EchoTreeId) => {
-    setGameState((prev) => performPurchaseEchoTreeRank(prev, treeId, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performPurchaseEchoTreeRank(prev, treeId, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "buy_echo_rank", actionAt);
+      return next;
+    });
   };
 
   const onSetArchitectureBeliefRule = (rule: ArchitectureBeliefRule) => {
-    setGameState((prev) => performSetArchitectureBeliefRule(prev, rule, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performSetArchitectureBeliefRule(prev, rule, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "set_architecture_rule", actionAt);
+      return next;
+    });
   };
 
   const onSetArchitectureCivilizationRule = (rule: ArchitectureCivilizationRule) => {
-    setGameState((prev) => performSetArchitectureCivilizationRule(prev, rule, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performSetArchitectureCivilizationRule(prev, rule, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "set_architecture_rule", actionAt);
+      return next;
+    });
   };
 
   const onSetArchitectureDomainRule = (rule: ArchitectureDomainRule) => {
-    setGameState((prev) => performSetArchitectureDomainRule(prev, rule, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performSetArchitectureDomainRule(prev, rule, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "set_architecture_rule", actionAt);
+      return next;
+    });
   };
 
   const onInvokeFinalChoice = (choice: Exclude<FinalChoice, "none">) => {
     if (!canUseFinalChoice) return;
-    setGameState((prev) => performInvokeFinalChoice(prev, choice, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performInvokeFinalChoice(prev, choice, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "invoke_final_choice", actionAt);
+      return next;
+    });
     setFinalChoiceMaskVisible(true);
     if (finalChoiceMaskTimerRef.current !== null) {
       window.clearTimeout(finalChoiceMaskTimerRef.current);
@@ -831,6 +911,7 @@ export default function App() {
     setGameState((prev) => {
       if (!canAscend(prev)) return prev;
       const echoesGained = getAscensionEchoGain(prev.stats.totalBeliefEarned);
+      recordTelemetryAction(prev, "ascend", actionAt);
       appendTelemetryEvent(prev, "ascension", actionAt, {
         echoesGained,
         completedRunsBefore: prev.prestige.completedRuns
@@ -844,11 +925,23 @@ export default function App() {
   };
 
   const onFormPantheonAlliance = (allyId: string) => {
-    setGameState((prev) => performFormPantheonAlliance(prev, allyId, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performFormPantheonAlliance(prev, allyId, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "form_pantheon_alliance", actionAt);
+      return next;
+    });
   };
 
   const onBetrayPantheonAlly = (allyId: string) => {
-    setGameState((prev) => performBetrayPantheonAlly(prev, allyId, Date.now()));
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performBetrayPantheonAlly(prev, allyId, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "betray_pantheon_ally", actionAt);
+      return next;
+    });
   };
 
   const onAdvanceEraOne = () => {
@@ -858,6 +951,7 @@ export default function App() {
       saveRecoverySnapshot(prev, "era_transition");
       const next = performAdvanceEraOneToTwo(prev, actionAt);
       if (next !== prev && next.era !== prev.era) {
+        recordTelemetryAction(next, "advance_era", actionAt);
         appendTelemetryEvent(next, "era_transition", actionAt, {
           fromEra: prev.era,
           toEra: next.era
@@ -875,6 +969,7 @@ export default function App() {
       saveRecoverySnapshot(prev, "era_transition");
       const next = performAdvanceEraTwoToThree(prev, actionAt);
       if (next !== prev && next.era !== prev.era) {
+        recordTelemetryAction(next, "advance_era", actionAt);
         appendTelemetryEvent(next, "era_transition", actionAt, {
           fromEra: prev.era,
           toEra: next.era
