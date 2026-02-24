@@ -293,11 +293,13 @@
       "deliverables": [
         "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+constrained META content), Era III full ACTIVE/GROWTH/META",
         "Era II tab contract: ACTIVE order is Whispers -> Influence meter -> Doctrine -> Doctrine Seeds; GROWTH order is Doctrine (merged) -> Domains -> Rivals -> Threshold",
+        "Era II ACTIVE containers are collapsible with persisted localStorage state",
         "Doctrine and Doctrine Seeds merge into one collapsible Doctrine container in GROWTH with Prophets/Cults + Lineage above Acts",
         "All GROWTH containers are collapsible with persisted localStorage state",
         "Era II rivals collapse to one-line status when inactive and expand to full controls when active",
         "Era II threshold sits at the bottom of GROWTH (not ACTIVE) and defaults to collapsed",
         "Era III GROWTH order is Doctrine (merged) -> Domains -> Rivals; Threshold remains in persistent Unraveling strip",
+        "Era II+ META containers are collapsible with persisted localStorage state",
         "ACTIVE tab prioritizes Cataclysm, rivals, whispers, and influence pressure in Era III",
         "Unraveling gate as persistent strip in Era III",
         "Echo trees constrained to META view; between-run systems removed from active flow",

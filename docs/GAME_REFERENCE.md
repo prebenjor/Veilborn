@@ -419,10 +419,12 @@ Era II+:
 - sticky tab dock
 - app shell orchestration in `src/App.tsx`; era-specific composition extracted to `src/ui/eras/*`
 - shared shell surfaces extracted to `src/ui/layout/*` (stat bar, tab dock, persistent omen surface)
+- tab containers in `active`, `growth`, and `meta` are collapsible with persisted localStorage state
 
 Era II:
 - `active` order: Whisper/Recruit -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds
 - era-II whisper surface keeps controls/cadence only (no additional subtitle text)
+- `active` containers persist collapse state (`active_whispers_collapsed`, `active_influence_collapsed`, `active_doctrine_collapsed`, `active_progress_collapsed`)
 - `growth` order: Doctrine (merged) -> Domains -> Rivals -> Threshold
 - doctrine and doctrine-seeds content merge into one collapsible `Doctrine` container in `growth` with internal order:
   - Prophets/Cults
@@ -439,7 +441,10 @@ Era II:
 
 Era III:
 - cataclysm in active flow
+- `active` order: Cataclysm -> Rivals -> Whispers (collapsible containers)
+- `active` containers persist collapse state (`active_cataclysm_collapsed`, `active_rivals_collapsed`, `active_whispers_collapsed`)
 - `growth` order: Doctrine (merged) -> Domains -> Rivals
+- `meta` containers persist collapse state (`meta_overview_collapsed`, `meta_ascension_collapsed`, `meta_remembrance_collapsed`, `meta_pantheon_collapsed`)
 - unraveling gate strip always visible
 - event log header: `Omens`
 - gate label: `Unraveling Gate`

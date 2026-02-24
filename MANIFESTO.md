@@ -497,6 +497,7 @@ Rules:
 - Density budget: prioritize single-screen decision-making. Move long-form details to compact drawers, tabs, or a dedicated stats page.
 - Era II tab split is strict: `ACTIVE` contains Whisper/Recruit, Influence pressure, Doctrine (Acts), and Doctrine Seeds; `GROWTH` contains a merged Doctrine container plus Domains, Rivals, and Threshold progress surfaces.
 - In `GROWTH`, Doctrine + Doctrine Seeds are consolidated under one collapsible `Doctrine` container with Prophets/Cults and Lineage above Acts.
+- In Era II+, `ACTIVE`, `GROWTH`, and `META` use collapsible containers with persisted collapsed/expanded state.
 - `GROWTH` containers persist collapsed/expanded state between sessions.
 - Era II rivals may collapse to a one-line status when inactive; expand to full controls only when active.
 - Era II threshold tracking belongs in `GROWTH`, not `ACTIVE`, and should default to collapsed.

@@ -49,6 +49,7 @@ Stats visibility rule:
 - Era II tab contract:
   - `ACTIVE` order: Whispers -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds.
   - Whispers in Era II keep the familiar Era I interaction style (no subtitle); cadence prompt and optional rival-drain nudge line may appear.
+  - `ACTIVE` containers are collapsible with persisted state.
   - `GROWTH` order: Doctrine (merged container) -> Domains -> Rivals -> Threshold.
   - Doctrine and Doctrine Seeds content are merged into one `DOCTRINE` container in `GROWTH`, ordered as Prophets/Cults, Lineage, then Acts.
   - All `GROWTH` containers are collapsible with persisted state.
@@ -57,6 +58,7 @@ Stats visibility rule:
   - Meta tab label is always `Meta` (no `Meta (Lite)` suffix).
 - Era III: full `ACTIVE`, `GROWTH`, `META`.
 - Era III `GROWTH` order: Doctrine (merged) -> Domains -> Rivals (Threshold remains in the persistent Unraveling strip).
+- Era II+ `META` containers are collapsible with persisted state.
 - Era III critical actions must be reachable without long scroll.
 
 ## Implementation Notes

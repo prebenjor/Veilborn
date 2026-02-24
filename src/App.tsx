@@ -167,6 +167,7 @@ import { EraTwoActiveLayout } from "./ui/eras/EraTwoActiveLayout";
 import { EraTwoGrowthLayout } from "./ui/eras/EraTwoGrowthLayout";
 import { EraThreeActiveLayout } from "./ui/eras/EraThreeActiveLayout";
 import { EraThreeGrowthLayout } from "./ui/eras/EraThreeGrowthLayout";
+import { EraMetaLayout } from "./ui/eras/EraMetaLayout";
 import { StatBar } from "./ui/layout/StatBar";
 import { TabDock } from "./ui/layout/TabDock";
 import { OmenSurface } from "./ui/layout/OmenSurface";
@@ -807,6 +808,22 @@ export default function App() {
   const totalNameLetters = getRemembranceLetterDefinitions().length;
   const unlockedNameLetters = getUnlockedNameLetterCount(gameState.prestige.remembrance.letters);
   const canUseFinalChoice = canInvokeFinalChoice(gameState);
+  const activeWhispersSummary =
+    canUseWhisper || canUseRecruit
+      ? `Whisper ${formatResource(whisperCost)} \u00b7 Recruit ${formatResource(RECRUIT_INFLUENCE_COST)}`
+      : "Influence is recovering.";
+  const activeInfluenceSummary = `${formatResource(gameState.resources.influence)} / ${formatResource(influenceCap)}`;
+  const activeDoctrineSummary = `${formatResource(activeActs.length)} of ${formatResource(actSlotCap)} acts active \u00b7 synergy x${formatResource(domainSynergy, 2)}`;
+  const activeProgressSummary = `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults`;
+  const activeCataclysmSummary = `${formatResource(gameState.resources.veil)} \u00b7 ${veilStability.label} \u00b7 civ ${formatResource(gameState.cataclysm.civilizationHealth)}`;
+  const metaOverviewSummary = `Era ${formatResource(era)} \u00b7 ${formatResource(gameState.prestige.completedRuns)} completed runs`;
+  const metaAscensionSummary = uiReveal.showAscensionPanel
+    ? `${formatResource(gameState.prestige.echoes)} Echoes \u00b7 +${formatResource(ascensionEchoGain)} this run`
+    : "Echo structures dormant in this cycle.";
+  const metaRemembranceSummary = `${formatResource(unlockedNameLetters)} / ${formatResource(totalNameLetters)} letters unlocked`;
+  const metaPantheonSummary = pantheonUnlocked
+    ? `${formatResource(pantheonAllies.filter((ally) => ally.disposition === "allied").length)} allied \u00b7 ${formatResource(gameState.prestige.pantheon.betrayalsLifetime)} betrayals`
+    : "Pantheon remains out of reach.";
 
   useEffect(() => {
     updateTelemetryPeakBeliefPerSecond(gameState.meta.runId, beliefPerSecond);
@@ -1453,6 +1470,10 @@ export default function App() {
       influenceMeter={eraTwoInfluenceMeter}
       doctrinePanel={doctrineGrowthPanel}
       progressPanel={progressPanel}
+      whisperSummary={activeWhispersSummary}
+      influenceSummary={activeInfluenceSummary}
+      doctrineSummary={activeDoctrineSummary}
+      progressSummary={activeProgressSummary}
     />
   );
 
@@ -1477,6 +1498,10 @@ export default function App() {
       cataclysmPanel={eraThreeCataclysmPanel}
       rivalsPanel={era >= 3 ? doctrineRivalsPanel : null}
       whisperPanel={whisperPanel}
+      cataclysmSummary={activeCataclysmSummary}
+      rivalsSummary={rivalsGrowthSummary}
+      whisperSummary={activeWhispersSummary}
+      hasActiveRivals={hasActiveRivals}
     />
   );
 
@@ -1519,73 +1544,89 @@ export default function App() {
 
   const activeTabContent = era === 2 ? eraTwoActiveContent : eraThreeActiveContent;
   const growthTabContent = era === 2 ? eraTwoGrowthContent : eraThreeGrowthContent;
+  const metaOverviewPanel = (
+    <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
+      <p>
+        Cycle overview: Era {formatResource(era)} &middot; Completed runs{" "}
+        {formatResource(gameState.prestige.completedRuns)}.
+      </p>
+    </section>
+  );
+
+  const metaAscensionPanel = uiReveal.showAscensionPanel ? (
+    <AscensionPanel
+      era={gameState.era}
+      echoes={gameState.prestige.echoes}
+      lifetimeEchoes={gameState.prestige.lifetimeEchoes}
+      completedRuns={gameState.prestige.completedRuns}
+      ascensionEchoGain={ascensionEchoGain}
+      canAscend={canUseAscend}
+      treeViews={echoTreeViews}
+      ghostLocalCount={gameState.ghost.localSignatures.length}
+      ghostImportedCount={gameState.ghost.importedSignatures.length}
+      ghostImportStatus={ghostImportStatus}
+      saveImportStatus={saveImportStatus}
+      saveImportWarnings={saveImportWarnings}
+      snapshotLabel={formatSnapshotLabel(snapshotMeta)}
+      ghostInfluenceTotals={ghostInfluenceTotals}
+      ghostInfluences={gameState.ghost.activeInfluences}
+      onPurchaseTree={onPurchaseEchoTreeRank}
+      onAscend={onAscend}
+      onExportGhostSignatures={onExportGhostSignatures}
+      onImportGhostSignatures={onImportGhostSignatures}
+      onExportSave={onExportSave}
+      onImportSave={onImportSave}
+      onRestoreSnapshot={onRestoreSnapshot}
+    />
+  ) : (
+    <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
+      Echo structures remain dormant in this cycle.
+    </section>
+  );
+
+  const metaRemembrancePanel = (
+    <RemembrancePanel
+      architectureUnlocked={architectureUnlocked}
+      beliefRule={gameState.prestige.architecture.beliefRule}
+      civilizationRule={gameState.prestige.architecture.civilizationRule}
+      domainRule={gameState.prestige.architecture.domainRule}
+      unlockedLetters={unlockedNameLetters}
+      totalLetters={totalNameLetters}
+      conditions={remembranceConditions}
+      finalChoice={gameState.prestige.remembrance.finalChoice}
+      canInvokeFinalChoice={canUseFinalChoice}
+      onSetBeliefRule={onSetArchitectureBeliefRule}
+      onSetCivilizationRule={onSetArchitectureCivilizationRule}
+      onSetDomainRule={onSetArchitectureDomainRule}
+      onInvokeFinalChoice={onInvokeFinalChoice}
+    />
+  );
+
+  const metaPantheonPanel = uiReveal.showPantheonPanel ? (
+    <PantheonPanel
+      unlocked={pantheonUnlocked}
+      allies={pantheonAllies}
+      allianceTotalModifier={pantheonAllianceFactors.totalModifier}
+      allianceSharePenalty={pantheonAllianceFactors.sharePenalty}
+      allianceDomainBonus={pantheonAllianceFactors.domainBonus}
+      betrayalsLifetime={gameState.prestige.pantheon.betrayalsLifetime}
+      betrayedHookUnlocked={betrayedHookUnlocked}
+      onFormAlliance={onFormPantheonAlliance}
+      onBetray={onBetrayPantheonAlly}
+    />
+  ) : null;
+
   const metaTabContent = (
-    <>
-      <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
-        <p>
-          Cycle overview: Era {formatResource(era)} &middot; Completed runs{" "}
-          {formatResource(gameState.prestige.completedRuns)}.
-        </p>
-      </section>
-      {uiReveal.showAscensionPanel ? (
-        <AscensionPanel
-          era={gameState.era}
-          echoes={gameState.prestige.echoes}
-          lifetimeEchoes={gameState.prestige.lifetimeEchoes}
-          completedRuns={gameState.prestige.completedRuns}
-          ascensionEchoGain={ascensionEchoGain}
-          canAscend={canUseAscend}
-          treeViews={echoTreeViews}
-          ghostLocalCount={gameState.ghost.localSignatures.length}
-          ghostImportedCount={gameState.ghost.importedSignatures.length}
-          ghostImportStatus={ghostImportStatus}
-          saveImportStatus={saveImportStatus}
-          saveImportWarnings={saveImportWarnings}
-          snapshotLabel={formatSnapshotLabel(snapshotMeta)}
-          ghostInfluenceTotals={ghostInfluenceTotals}
-          ghostInfluences={gameState.ghost.activeInfluences}
-          onPurchaseTree={onPurchaseEchoTreeRank}
-          onAscend={onAscend}
-          onExportGhostSignatures={onExportGhostSignatures}
-          onImportGhostSignatures={onImportGhostSignatures}
-          onExportSave={onExportSave}
-          onImportSave={onImportSave}
-          onRestoreSnapshot={onRestoreSnapshot}
-        />
-      ) : (
-        <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
-          Echo structures remain dormant in this cycle.
-        </section>
-      )}
-      <RemembrancePanel
-        architectureUnlocked={architectureUnlocked}
-        beliefRule={gameState.prestige.architecture.beliefRule}
-        civilizationRule={gameState.prestige.architecture.civilizationRule}
-        domainRule={gameState.prestige.architecture.domainRule}
-        unlockedLetters={unlockedNameLetters}
-        totalLetters={totalNameLetters}
-        conditions={remembranceConditions}
-        finalChoice={gameState.prestige.remembrance.finalChoice}
-        canInvokeFinalChoice={canUseFinalChoice}
-        onSetBeliefRule={onSetArchitectureBeliefRule}
-        onSetCivilizationRule={onSetArchitectureCivilizationRule}
-        onSetDomainRule={onSetArchitectureDomainRule}
-        onInvokeFinalChoice={onInvokeFinalChoice}
-      />
-      {uiReveal.showPantheonPanel ? (
-        <PantheonPanel
-          unlocked={pantheonUnlocked}
-          allies={pantheonAllies}
-          allianceTotalModifier={pantheonAllianceFactors.totalModifier}
-          allianceSharePenalty={pantheonAllianceFactors.sharePenalty}
-          allianceDomainBonus={pantheonAllianceFactors.domainBonus}
-          betrayalsLifetime={gameState.prestige.pantheon.betrayalsLifetime}
-          betrayedHookUnlocked={betrayedHookUnlocked}
-          onFormAlliance={onFormPantheonAlliance}
-          onBetray={onBetrayPantheonAlly}
-        />
-      ) : null}
-    </>
+    <EraMetaLayout
+      overviewPanel={metaOverviewPanel}
+      ascensionPanel={metaAscensionPanel}
+      remembrancePanel={metaRemembrancePanel}
+      pantheonPanel={metaPantheonPanel}
+      overviewSummary={metaOverviewSummary}
+      ascensionSummary={metaAscensionSummary}
+      remembranceSummary={metaRemembranceSummary}
+      pantheonSummary={metaPantheonSummary}
+    />
   );
 
   return (
