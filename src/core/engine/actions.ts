@@ -26,6 +26,7 @@ import {
   CADENCE_ACTION_BELIEF_BONUS,
   CADENCE_ACTION_FOLLOWER_BONUS,
   DOMAIN_LABELS,
+  MIRACLE_NAMES,
   RECRUIT_BASE_FOLLOWERS,
   RECRUIT_DOMAIN_FOLLOWER_DIVISOR,
   RECRUIT_INFLUENCE_COST,
@@ -1924,10 +1925,10 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     : withMiracle;
 
   const miracleDetailByTier: Record<MiracleTier, string> = {
-    1: "A small district changed its prayers before dawn.",
-    2: "Merchants and magistrates rewrote tomorrow's plans around the sign.",
-    3: "Whole provinces bent their calendars to your intervention.",
-    4: "An age-defining wound opened in history and would not close."
+    1: `${MIRACLE_NAMES[1]} touched a small district before dawn.`,
+    2: `${MIRACLE_NAMES[2]} reordered merchants and magistrates alike.`,
+    3: `${MIRACLE_NAMES[3]} forced whole provinces to rewrite their calendars.`,
+    4: `${MIRACLE_NAMES[4]} opened an age-defining wound in history.`
   };
   const miracleDetail = miracleDetailByTier[tier];
   const withDevotionPath = withDevotionMomentumDelta(withLineageImpact, nowMs, { fervour: 2 });

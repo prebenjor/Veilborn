@@ -99,9 +99,11 @@ import {
   VEIL_COLLAPSE_THRESHOLD_ECHO,
   VEIL_BONUS_SCALE,
   VEIL_EROSION_LOG_SCALE,
+  VEIL_EROSION_PER_SHRINE_SCALE,
   VEIL_REGEN_BASE_SECONDS,
   VEIL_REGEN_ECHO_SECONDS,
   VEIL_REGEN_PER_SHRINE_SECONDS,
+  VEIL_REGEN_SHRINE_DIMINISHING_SCALE,
   WHISPER_BASE_COST,
   WHISPER_COST_SCALAR,
   WHISPER_WINDOW_MS,
@@ -646,14 +648,23 @@ export function getFollowerRiteFollowerGain(
 export function getVeilRegenPerSecond(state: GameState): number {
   const baseSeconds = state.echoBonuses.veilRegen ? VEIL_REGEN_ECHO_SECONDS : VEIL_REGEN_BASE_SECONDS;
   const baseRegen = 1 / baseSeconds;
-  const shrineRegen = state.doctrine.shrinesBuilt > 0 ? state.doctrine.shrinesBuilt / VEIL_REGEN_PER_SHRINE_SECONDS : 0;
+  const shrineCount = state.doctrine.shrinesBuilt;
+  const shrineBaseSeconds = state.echoBonuses.veilRegen
+    ? VEIL_REGEN_ECHO_SECONDS
+    : VEIL_REGEN_PER_SHRINE_SECONDS;
+  const shrineBaseRate = 1 / shrineBaseSeconds;
+  const shrineRegen =
+    shrineCount > 0
+      ? (shrineCount * shrineBaseRate) / (1 + shrineCount * VEIL_REGEN_SHRINE_DIMINISHING_SCALE)
+      : 0;
   return baseRegen + shrineRegen;
 }
 
 export function getVeilErosionPerSecond(state: GameState): number {
   if (state.era < 3) return 0;
   const belief = Math.max(1, state.stats.totalBeliefEarned);
-  let base = VEIL_EROSION_LOG_SCALE * Math.log10(belief);
+  const shrineTerm = state.doctrine.shrinesBuilt * VEIL_EROSION_PER_SHRINE_SCALE;
+  let base = VEIL_EROSION_LOG_SCALE * Math.log10(belief) + shrineTerm;
   if (state.prestige.remembrance.finalChoice === "remember") base *= 1.15;
   if (state.prestige.remembrance.finalChoice === "forget") base *= 0.9;
   return base * getDevotionPathModifiers(state).veilErosionMultiplier;

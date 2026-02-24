@@ -1,4 +1,4 @@
-import type { MiracleTier } from "../../core/state/gameState";
+import { MIRACLE_NAMES, type MiracleTier } from "../../core/state/gameState";
 import { formatResource } from "../../core/ui/numberFormat";
 import { formatDurationCompact } from "../../core/ui/timeFormat";
 import { getVeilStabilityView } from "../../core/ui/veilPresentation";
@@ -78,7 +78,7 @@ export function CataclysmPanel({
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {miracleOptions.map((miracle) => (
           <article key={miracle.tier} className="rounded-xl border border-white/10 bg-black/20 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Miracle T{miracle.tier}</p>
+            <p className="text-xs tracking-[0.08em] text-veil/70">{MIRACLE_NAMES[miracle.tier]}</p>
             <p className="mt-1 text-xs text-veil/65">
               Cost {formatResource(miracle.influenceCost)} Influence
             </p>

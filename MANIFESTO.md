@@ -156,7 +156,11 @@ Costs:
 - Whisper: `10 * 1.4^(whispers_today)` (resets every 4 real minutes).
 - Recruit: `25` flat.
 - Act: `20-150` by tier, with Echo discount factor `0.85`.
-- Miracle tiers: `500 / 1600 / 4100 / 10000`.
+- Miracle costs (Influence):
+  - Whisper of Providence: `500`
+  - The Anointing: `1600`
+  - The Rending: `4100`
+  - Unraveling: `10000`
 
 The 4-minute whisper reset defines the short-cycle cadence and supports periodic check-ins.
 
@@ -283,8 +287,13 @@ Rivals are pressure valves, not pure combat encounters.
 
 Base regen:
 - `+1 Veil / 120s`
-- Shrine tier 1: `+1 / 90s` per shrine
+- Shrine Veil regen (diminishing returns):
+  - `shrine_regen_per_second = (shrine_count * base_shrine_rate) / (1 + shrine_count * 0.015)`
+  - `base_shrine_rate = 1/90s` (or `1/80s` with Echo `veilRegen`)
 - Echo regen upgrade: base improves to `+1 / 80s`
+
+Natural erosion (Era III):
+- `erosion_per_second = 0.001 * log10(totalBeliefEarned) + 0.0002 * shrine_count`
 
 Miracle Veil costs:
 - Tier 1: `-8`, or `-5` with Echo veil discount
@@ -325,10 +334,10 @@ Miracle return:
 `domain_bonus = domain_level * 0.1`
 
 Tier constants:
-- Tier 1: cost 500, base gain 8000, Veil cost 8, civ damage 4
-- Tier 2: cost 1600, base gain 30000, Veil cost 15, civ damage 8
-- Tier 3: cost 4100, base gain 90000, Veil cost 25, civ damage 14
-- Tier 4: cost 10000, base gain 300000, Veil cost 40, civ damage 24
+- Whisper of Providence: cost 500, base gain 8000, Veil cost 8, civ damage 4
+- The Anointing: cost 1600, base gain 30000, Veil cost 15, civ damage 8
+- The Rending: cost 4100, base gain 90000, Veil cost 25, civ damage 14
+- Unraveling: cost 10000, base gain 300000, Veil cost 40, civ damage 24
 
 Civilization health:
 - Starts at 100 each run.
@@ -378,6 +387,11 @@ Era III -> Unraveling:
 Revision note (Era I gate):
 - Domain condition removed. Domains are not accessible in Era I and cannot be a gate requirement for leaving it.
 - Replaced with `followers >= 500`, which tests active Era I engagement using systems the player can see and interact with.
+
+Revision note (Veil regen, PF-25):
+- Shrine regen now uses diminishing returns to prevent late-game shrine counts from trivializing Veil pressure.
+- Shrine-count erosion term added: more infrastructure now pushes harder against the Veil.
+- Early Era III (around 10 shrines) remains broadly stable between miracles.
 
 Gate design rule:
 - All gates are multi-condition.
@@ -455,11 +469,11 @@ Reference:
 - Fracture moves 30% of that cult's followers to neutral pool unless stabilized by act activity.
 
 3. Natural Veil Erosion (Era III)
-- `erosion_per_second = 0.001 * log10(totalBeliefEarned)`
+- `erosion_per_second = 0.001 * log10(totalBeliefEarned) + 0.0002 * shrine_count`
 - Reference:
-  - At 1M total Belief: -0.006/s
-  - At 10M: -0.007/s
-  - At 100M: -0.008/s
+  - At 1M total Belief with 10 shrines: -0.008/s
+  - At 10M with 60 shrines: -0.019/s
+  - At 100M with 120 shrines: -0.032/s
 
 Implementation note:
 - Natural Veil erosion is active.

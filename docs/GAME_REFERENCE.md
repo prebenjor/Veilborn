@@ -300,11 +300,13 @@ Follower gain multiplier includes:
 Regen:
 - base `1 / 120s`
 - base `1 / 80s` with `veilRegen`
-- shrine regen: `+1 / 90s` per shrine
+- shrine regen: `(shrines * baseShrineRate) / (1 + shrines * 0.015)`
+  - baseShrineRate: `1/90`
+  - with `veilRegen` echo: baseShrineRate `1/80`
 
 Erosion in era III:
 
-`erosion = 0.001 * log10(totalBeliefEarned)` (with final-choice adjustment)
+`erosion = 0.001 * log10(totalBeliefEarned) + 0.0002 * shrines` (with final-choice adjustment)
 
 Collapse threshold:
 - base `15`
@@ -318,17 +320,28 @@ On veil collapse:
 ### Miracles and Civilization
 
 Miracle influence costs:
-- `500`, `1600`, `4100`, `10000`
+- Whisper of Providence: `500`
+- The Anointing: `1600`
+- The Rending: `4100`
+- Unraveling: `10000`
 
 Miracle base gains:
-- `8000`, `30000`, `90000`, `300000`
+- Whisper of Providence: `8000`
+- The Anointing: `30000`
+- The Rending: `90000`
+- Unraveling: `300000`
 
 Miracle veil costs:
-- `8`, `15`, `25`, `40`
-- tier 1 reduced to `5` with `miracleVeilDiscount`
+- Whisper of Providence: `8` (`5` with `miracleVeilDiscount`)
+- The Anointing: `15`
+- The Rending: `25`
+- Unraveling: `40`
 
 Civilization damage:
-- `4`, `8`, `14`, `24`
+- Whisper of Providence: `4`
+- The Anointing: `8`
+- The Rending: `14`
+- Unraveling: `24`
 
 Miracle belief gain:
 

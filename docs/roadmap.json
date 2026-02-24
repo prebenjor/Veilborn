@@ -743,9 +743,9 @@
     {
       "id": "PF-21",
       "title": "Miracle Naming - Replace Tier Labels",
-      "status": "queued",
+      "status": "superseded",
       "execute_after": "M14",
-      "notes": "Miracle T1/T2/T3/T4 are developer labels, not in-world names. All four tiers need names that fit the escalating weight and consequence of each miracle. Names must appear everywhere the tier is referenced: Cataclysm panel, omen log, stats page.",
+      "notes": "Miracle naming scope absorbed into PF-25, which combines it with the Veil pressure rebalance. Do not implement PF-21 separately.",
       "scope": [
         "Replace Miracle T1 with an in-world name reflecting subtle, low-cost divine touch (e.g. Whisper of Providence)",
         "Replace Miracle T2 with an in-world name reflecting ritualistic, meaningful intervention (e.g. The Anointing)",
@@ -802,6 +802,32 @@
     },
     {
       "id": "PF-25",
+      "title": "Veil Pressure Rebalance and Miracle Naming",
+      "status": "queued",
+      "execute_after": "M14",
+      "notes": "Two interconnected Era III balance issues addressed together. Shrine regen is so strong at late Era III scale that Veil danger-zone pressure collapses. Miracle labels also still use developer tier names. Scope of PF-21 is absorbed into this task.",
+      "scope": [
+        "Apply diminishing returns to shrine Veil regen: shrine_regen_per_second = (shrine_count * base_shrine_rate) / (1 + shrine_count * 0.015)",
+        "Set base_shrine_rate to 1/90, or 1/80 with veilRegen echo bonus",
+        "Add shrine-count erosion term: erosion = 0.001 * log10(totalBeliefEarned) + 0.0002 * shrine_count",
+        "Replace Miracle T1 with Whisper of Providence",
+        "Replace Miracle T2 with The Anointing",
+        "Replace Miracle T3 with The Rending",
+        "Replace Miracle T4 with Unraveling",
+        "Apply miracle names everywhere tier labels appear: Cataclysm panel, omen log, stats surfaces, and any tier-referenced tooltip/projection text",
+        "Update MANIFESTO.md and docs/GAME_REFERENCE.md in the same change with revised Veil formulas and miracle names",
+        "Do not change miracle costs, returns, Veil costs, or civilization damage values"
+      ],
+      "validation": [
+        "At high shrine counts, Veil pressure requires active management and does not trivially stay in safe zone",
+        "At low shrine counts, early Era III remains meaningfully recoverable between miracles",
+        "All four miracle tiers display in-world names everywhere tier labels were shown",
+        "Miracle numeric costs/returns/penalties are unchanged",
+        "MANIFESTO.md and docs/GAME_REFERENCE.md match runtime formulas"
+      ]
+    },
+    {
+      "id": "PF-26",
       "title": "M14 Pace Benchmark Session Pack",
       "status": "queued",
       "execute_after": "M14",

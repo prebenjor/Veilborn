@@ -154,7 +154,9 @@ export const VEIL_MAX = 100;
 export const VEIL_REGEN_BASE_SECONDS = 120;
 export const VEIL_REGEN_ECHO_SECONDS = 80;
 export const VEIL_REGEN_PER_SHRINE_SECONDS = 90;
+export const VEIL_REGEN_SHRINE_DIMINISHING_SCALE = 0.015;
 export const VEIL_EROSION_LOG_SCALE = 0.001;
+export const VEIL_EROSION_PER_SHRINE_SCALE = 0.0002;
 export const VEIL_COLLAPSE_THRESHOLD_BASE = 15;
 export const VEIL_COLLAPSE_THRESHOLD_ECHO = 8;
 export const VEIL_COLLAPSE_FOLLOWER_RETENTION = 0.4;
@@ -163,6 +165,12 @@ export const VEIL_COLLAPSE_IMMUNITY_SECONDS = 30;
 
 export type MiracleTier = 1 | 2 | 3 | 4;
 export const MIRACLE_TIERS: MiracleTier[] = [1, 2, 3, 4];
+export const MIRACLE_NAMES: Record<MiracleTier, string> = {
+  1: "Whisper of Providence",
+  2: "The Anointing",
+  3: "The Rending",
+  4: "Unraveling"
+};
 export const MIRACLE_INFLUENCE_COST: Record<MiracleTier, number> = {
   1: 500,
   2: 1600,

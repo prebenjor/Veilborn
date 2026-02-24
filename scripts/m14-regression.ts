@@ -3,7 +3,12 @@ import {
   DEVOTION_STACK_MAX,
   OFFLINE_INFLUENCE_RETURN_RATIO,
   OFFLINE_MAX_SECONDS,
-  OFFLINE_VEIL_FLOOR
+  OFFLINE_VEIL_FLOOR,
+  VEIL_EROSION_LOG_SCALE,
+  VEIL_EROSION_PER_SHRINE_SCALE,
+  VEIL_REGEN_ECHO_SECONDS,
+  VEIL_REGEN_PER_SHRINE_SECONDS,
+  VEIL_REGEN_SHRINE_DIMINISHING_SCALE
 } from "../src/core/state/gameState";
 import {
   performAscension,
@@ -23,6 +28,7 @@ import {
   getInfluenceCap,
   getInfluenceRegenBreakdown,
   getPassiveFollowerRate,
+  getVeilRegenPerSecond,
   getVeilErosionPerSecond
 } from "../src/core/engine/formulas";
 
@@ -302,6 +308,47 @@ function testDevotionPathEffects(): void {
   assert(fervourMiracle > baselineMiracle, "Fervour should amplify miracle belief gain.");
 }
 
+function testVeilRegenDiminishingReturns(): void {
+  const nowMs = 70_000_000;
+  const state = createInitialGameState(nowMs);
+  state.era = 3;
+  state.doctrine.shrinesBuilt = 240;
+
+  const regen = getVeilRegenPerSecond(state);
+  const expected =
+    1 / 120 +
+    (240 * (1 / VEIL_REGEN_PER_SHRINE_SECONDS)) /
+      (1 + 240 * VEIL_REGEN_SHRINE_DIMINISHING_SCALE);
+  assertApprox(regen, expected, 1e-9, "Veil regen should use diminishing returns per shrine.");
+
+  state.echoBonuses.veilRegen = true;
+  const regenWithEcho = getVeilRegenPerSecond(state);
+  const expectedWithEcho =
+    1 / VEIL_REGEN_ECHO_SECONDS +
+    (240 * (1 / VEIL_REGEN_ECHO_SECONDS)) /
+      (1 + 240 * VEIL_REGEN_SHRINE_DIMINISHING_SCALE);
+  assertApprox(
+    regenWithEcho,
+    expectedWithEcho,
+    1e-9,
+    "Veil regen echo should shift shrine base rate to 1/80 within diminishing formula."
+  );
+}
+
+function testVeilErosionShrineTerm(): void {
+  const nowMs = 80_000_000;
+  const state = createInitialGameState(nowMs);
+  state.era = 3;
+  state.stats.totalBeliefEarned = 52_000_000_000;
+  state.doctrine.shrinesBuilt = 240;
+
+  const expected =
+    VEIL_EROSION_LOG_SCALE * Math.log10(state.stats.totalBeliefEarned) +
+    VEIL_EROSION_PER_SHRINE_SCALE * state.doctrine.shrinesBuilt;
+  const erosion = getVeilErosionPerSecond(state);
+  assertApprox(erosion, expected, 1e-9, "Veil erosion should include shrine-count pressure term.");
+}
+
 function testDevotionLineageMemoryOnAscension(): void {
   const nowMs = 60_000_000;
   let state = createInitialGameState(nowMs);
@@ -336,6 +383,8 @@ function main(): void {
     { name: "Follower trickle belief floor", run: testFollowerTrickleBeliefFloor },
     { name: "Devotion path emergence and switching", run: testDevotionPathEmergenceAndSwitching },
     { name: "Devotion path effect modifiers", run: testDevotionPathEffects },
+    { name: "Veil regen diminishing-returns curve", run: testVeilRegenDiminishingReturns },
+    { name: "Veil erosion includes shrine pressure", run: testVeilErosionShrineTerm },
     { name: "Devotion lineage memory on ascension", run: testDevotionLineageMemoryOnAscension },
     { name: "Offline cap + influence reset", run: testOfflineSimulationCapAndInfluenceReset },
     { name: "Offline no-collapse + Veil floor clamp", run: testOfflineNoVeilCollapseAndFloorClamp },

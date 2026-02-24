@@ -1,5 +1,6 @@
 import { formatDurationCompact } from "../../core/ui/timeFormat";
 import { formatResource } from "../../core/ui/numberFormat";
+import { MIRACLE_NAMES } from "../../core/state/gameState";
 
 interface StatsDrawerProps {
   era: 1 | 2 | 3;
@@ -249,6 +250,13 @@ export function StatsDrawer({
                 run.miracleCountByTier[2] +
                 run.miracleCountByTier[3] +
                 run.miracleCountByTier[4];
+              const namedMiracleCounts = ([1, 2, 3, 4] as const)
+                .filter((tier) => run.miracleCountByTier[tier] > 0)
+                .map(
+                  (tier) =>
+                    `${MIRACLE_NAMES[tier]} · ${formatResource(run.miracleCountByTier[tier])} this run`
+                )
+                .join(" · ");
               return (
                 <li key={run.id} className="rounded border border-white/10 bg-black/20 px-2 py-1">
                   <p>
@@ -263,6 +271,9 @@ export function StatsDrawer({
                     Collapses V:{formatResource(run.veilCollapseCount)} C:
                     {formatResource(run.civilizationCollapseCount)} | Miracles {formatResource(miracleTotal)}
                   </p>
+                  {namedMiracleCounts ? (
+                    <p className="text-[10px] text-veil/65">{namedMiracleCounts}</p>
+                  ) : null}
                   <p className="text-[10px] text-veil/65">
                     {run.actionCadence.averageIntervalSeconds === null
                       ? "Cadence n/a"
