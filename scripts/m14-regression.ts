@@ -5,15 +5,25 @@ import {
   OFFLINE_MAX_SECONDS,
   OFFLINE_VEIL_FLOOR
 } from "../src/core/state/gameState";
+import {
+  performAscension,
+  performCastMiracle,
+  performCultFormation,
+  performStartAct
+} from "../src/core/engine/actions";
 import { runOfflineSimulationForRegression } from "../src/core/state/persistence";
 import {
+  getActRewardBelief,
   getBeliefGenerationBreakdown,
+  getCultOutput,
+  getDevotionPath,
   getDevotionRecruitMultiplier,
   getEraOneGateStatus,
   getFaithDecay,
   getInfluenceCap,
   getInfluenceRegenBreakdown,
-  getPassiveFollowerRate
+  getPassiveFollowerRate,
+  getVeilErosionPerSecond
 } from "../src/core/engine/formulas";
 
 function assert(condition: boolean, message: string): void {
@@ -211,6 +221,112 @@ function testOfflinePassiveFollowerGainApplied(): void {
   );
 }
 
+function testDevotionPathEmergenceAndSwitching(): void {
+  const nowMs = 40_000_000;
+  let state = createInitialGameState(nowMs);
+  state.era = 2;
+  state.cults = 2;
+  state.resources.influence = 5_000;
+  state.resources.belief = 500_000;
+
+  state = performStartAct(state, "shrine", nowMs + 1_000);
+  state = performStartAct(state, "ritual", nowMs + 2_000);
+  assert(getDevotionPath(state) === "fervour", "Era II should emerge Fervour from act-heavy play.");
+
+  state = performCultFormation(state, nowMs + 3_000);
+  state = performCultFormation(state, nowMs + 4_000);
+  state = performCultFormation(state, nowMs + 5_000);
+  state = performCultFormation(state, nowMs + 6_000);
+  assert(getDevotionPath(state) === "accord", "Devotion path should switch to Accord after sustained cult-heavy play.");
+}
+
+function testDevotionPathEffects(): void {
+  const nowMs = 50_000_000;
+  const base = createInitialGameState(nowMs);
+  base.era = 3;
+  base.prophets = 12;
+  base.cults = 8;
+  base.resources.followers = 20_000;
+  base.resources.veil = 35;
+  base.activity.lastEventAt = nowMs - 7 * 60_000;
+  base.stats.totalBeliefEarned = 8_000_000;
+  base.doctrine.shrinesBuilt = 8;
+  base.resources.influence = 20_000;
+  base.resources.belief = 100_000_000;
+  base.devotionStacks = 3;
+
+  const noPath = { ...base, devotionPath: "none" as const };
+  const fervour = {
+    ...base,
+    devotionPath: "fervour" as const,
+    devotionMomentum: { ...base.devotionMomentum, fervour: 10 }
+  };
+  const accord = {
+    ...base,
+    devotionPath: "accord" as const,
+    devotionMomentum: { ...base.devotionMomentum, accord: 10 }
+  };
+  const reverence = {
+    ...base,
+    devotionPath: "reverence" as const,
+    devotionMomentum: { ...base.devotionMomentum, reverence: 10 }
+  };
+  const ardour = {
+    ...base,
+    devotionPath: "ardour" as const,
+    devotionMomentum: { ...base.devotionMomentum, ardour: 10 }
+  };
+
+  const baselineActReward = getActRewardBelief(noPath, 10_000, 45, 4);
+  const fervourActReward = getActRewardBelief(fervour, 10_000, 45, 4);
+  assert(fervourActReward > baselineActReward, "Fervour should increase act rewards.");
+
+  const baselineCultOutput = getCultOutput(noPath);
+  const accordCultOutput = getCultOutput(accord);
+  assert(accordCultOutput > baselineCultOutput, "Accord should increase cult output.");
+
+  const baselineErosion = getVeilErosionPerSecond(noPath);
+  const reverenceErosion = getVeilErosionPerSecond(reverence);
+  assert(reverenceErosion < baselineErosion, "Reverence should reduce Veil erosion.");
+
+  const baselineFaithDecay = getFaithDecay(noPath, nowMs);
+  const ardourFaithDecay = getFaithDecay(ardour, nowMs);
+  assert(ardourFaithDecay >= baselineFaithDecay, "Ardour should resist faith decay pressure.");
+
+  const baselineBelief = getBeliefGenerationBreakdown(noPath, nowMs).prophetPerSecond;
+  const ardourBelief = getBeliefGenerationBreakdown(ardour, nowMs).prophetPerSecond;
+  assert(ardourBelief > baselineBelief, "Ardour should improve prophet output contribution.");
+
+  const baselineMiracle = performCastMiracle(noPath, 2, nowMs + 1_000).resources.belief;
+  const fervourMiracle = performCastMiracle(fervour, 2, nowMs + 1_000).resources.belief;
+  assert(fervourMiracle > baselineMiracle, "Fervour should amplify miracle belief gain.");
+}
+
+function testDevotionLineageMemoryOnAscension(): void {
+  const nowMs = 60_000_000;
+  let state = createInitialGameState(nowMs);
+  state.era = 3;
+  state.stats.totalBeliefEarned = 5_000_000;
+  state.resources.veil = 20;
+  state.cataclysm.miraclesThisRun = 2;
+  state.simulation.totalElapsedMs = 240 * 60 * 1000;
+  state.devotionPath = "fervour";
+  state.devotionMomentum = { ...state.devotionMomentum, fervour: 8 };
+
+  state = performAscension(state, nowMs + 1_000);
+  assert(state.prestige.completedRuns === 1, "Ascension should complete one run.");
+  assert(
+    state.prestige.dominantDevotionPath === "fervour",
+    "Ascension should persist dominant devotion path to prestige memory."
+  );
+  assert(
+    state.devotionMomentum.fervour === 1,
+    "Next run should start with one momentum point toward prior dominant path."
+  );
+  assert(state.devotionPath === "none", "New run should start with no active path.");
+  assert(state.devotionStacks === 0, "Ascension should still reset devotion stacks.");
+}
+
 function main(): void {
   const checks: Array<{ name: string; run: () => void }> = [
     { name: "Era I gate uses follower threshold", run: testEraOneGateFollowerCondition },
@@ -218,6 +334,9 @@ function main(): void {
     { name: "Influence regen breakdown formula", run: testInfluenceBreakdownFormula },
     { name: "Passive follower rate formula", run: testPassiveFollowerRateFormula },
     { name: "Follower trickle belief floor", run: testFollowerTrickleBeliefFloor },
+    { name: "Devotion path emergence and switching", run: testDevotionPathEmergenceAndSwitching },
+    { name: "Devotion path effect modifiers", run: testDevotionPathEffects },
+    { name: "Devotion lineage memory on ascension", run: testDevotionLineageMemoryOnAscension },
     { name: "Offline cap + influence reset", run: testOfflineSimulationCapAndInfluenceReset },
     { name: "Offline no-collapse + Veil floor clamp", run: testOfflineNoVeilCollapseAndFloorClamp },
     { name: "Offline passive follower gain", run: testOfflinePassiveFollowerGainApplied }
