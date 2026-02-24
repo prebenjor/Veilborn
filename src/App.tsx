@@ -174,6 +174,7 @@ import { EraMetaLayout } from "./ui/eras/EraMetaLayout";
 import { StatBar } from "./ui/layout/StatBar";
 import { TabDock } from "./ui/layout/TabDock";
 import { OmenSurface } from "./ui/layout/OmenSurface";
+import { PersistentRightPanel } from "./ui/layout/PersistentRightPanel";
 import { formatResource } from "./core/ui/numberFormat";
 import { formatDurationCompact } from "./core/ui/timeFormat";
 import { getVeilStabilityView } from "./core/ui/veilPresentation";
@@ -1007,6 +1008,7 @@ export default function App() {
   const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
   const surfaceOmenPreview = gameState.omenLog.slice(0, surfaceOmenPreviewCount);
   const surfaceOmenExpanded = gameState.omenLog.slice(surfaceOmenPreviewCount, era >= 3 ? 6 : 4);
+  const rightPanelOmens = gameState.omenLog.slice(0, 80);
   const architectureUnlocked = isArchitectureUnlocked(gameState);
   const remembranceConditions = getRemembranceConditionViews(gameState);
   const totalNameLetters = getRemembranceLetterDefinitions().length;
@@ -1958,13 +1960,47 @@ export default function App() {
       pantheonSummary={metaPantheonSummary}
     />
   );
+  const statsDrawerProps = {
+    era: gameState.era,
+    runSeconds: elapsedSeconds,
+    totalTicks: gameState.simulation.totalTicks,
+    totalBeliefEarned: gameState.stats.totalBeliefEarned,
+    secondsSinceLastEvent,
+    whispersInWindow: gameState.activity.whispersInWindow,
+    whisperResetInSeconds,
+    beliefBreakdown,
+    influenceBreakdown: influenceRegenBreakdown,
+    shrinesBuilt: gameState.doctrine.shrinesBuilt,
+    currentFollowers: gameState.resources.followers,
+    devotionStacks,
+    devotionPathLabel,
+    passiveFollowerRate,
+    rivalFollowerDrainPerSecond: rivalDrainPerSecond,
+    runHistory: telemetryRunSummaries,
+    telemetryStatus,
+    audioControls,
+    onEnableAudio: enableAudio,
+    onDisableAudio: disableAudio,
+    onToggleAudioMute: toggleMute,
+    onUseAudioFallback: useSilentFallback,
+    onExportTelemetry,
+    onDumpTelemetryToConsole,
+    devToolsEnabled,
+    devToolsStatus,
+    onToggleDevTools,
+    onDevBoostResources,
+    onDevPrimeEraOneGate,
+    onDevPrimeEraTwoGate,
+    onDevJumpToEraTwo,
+    onDevJumpToEraThree
+  };
 
   return (
     <main
       data-era={gameState.era}
       className={`veil-shell relative min-h-screen overflow-hidden text-slate-100 ${
-        gameState.era >= 3 ? "md:pr-[21.5rem]" : ""
-      } ${gameState.era >= 3 ? `veil-zone-${veilStability.backgroundZone}` : ""} ${
+        gameState.era >= 3 ? `veil-zone-${veilStability.backgroundZone}` : ""
+      } ${
         gameState.era >= 3 && (veilStability.id === "critical" || veilStability.id === "unraveling")
           ? "veil-zone-critical"
           : ""
@@ -2016,63 +2052,46 @@ export default function App() {
           veilStability={veilStability}
         />
         {unravelingGateStrip}
-        {era >= 2 ? (
-          <TabDock availableTabs={availableTabs} activeTab={safeActiveTab} onSelectTab={setActiveTab} />
-        ) : null}
-        {era === 1 ? (
-          <>{eraOneContent}</>
-        ) : safeActiveTab === "active" ? (
-          <>{activeTabContent}</>
-        ) : safeActiveTab === "growth" ? (
-          <>{growthTabContent}</>
-        ) : (
-          <>{metaTabContent}</>
-        )}
-        {statusLine ? <p className="text-xs text-veil/60">{statusLine}</p> : null}
-        {showStatsDrawer ? (
-          <StatsDrawer
-            era={gameState.era}
-            runSeconds={elapsedSeconds}
-            totalTicks={gameState.simulation.totalTicks}
-            totalBeliefEarned={gameState.stats.totalBeliefEarned}
-            secondsSinceLastEvent={secondsSinceLastEvent}
-            whispersInWindow={gameState.activity.whispersInWindow}
-            whisperResetInSeconds={whisperResetInSeconds}
-            beliefBreakdown={beliefBreakdown}
-            influenceBreakdown={influenceRegenBreakdown}
-            shrinesBuilt={gameState.doctrine.shrinesBuilt}
-            currentFollowers={gameState.resources.followers}
-            devotionStacks={devotionStacks}
-            devotionPathLabel={devotionPathLabel}
-            passiveFollowerRate={passiveFollowerRate}
-            rivalFollowerDrainPerSecond={rivalDrainPerSecond}
-            runHistory={telemetryRunSummaries}
-            telemetryStatus={telemetryStatus}
-            audioControls={audioControls}
-            onEnableAudio={enableAudio}
-            onDisableAudio={disableAudio}
-            onToggleAudioMute={toggleMute}
-            onUseAudioFallback={useSilentFallback}
-            onExportTelemetry={onExportTelemetry}
-            onDumpTelemetryToConsole={onDumpTelemetryToConsole}
-            devToolsEnabled={devToolsEnabled}
-            devToolsStatus={devToolsStatus}
-            onToggleDevTools={onToggleDevTools}
-            onDevBoostResources={onDevBoostResources}
-            onDevPrimeEraOneGate={onDevPrimeEraOneGate}
-            onDevPrimeEraTwoGate={onDevPrimeEraTwoGate}
-            onDevJumpToEraTwo={onDevJumpToEraTwo}
-            onDevJumpToEraThree={onDevJumpToEraThree}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
+          <div className="min-w-0 flex-1 space-y-4">
+            {era >= 2 ? (
+              <TabDock availableTabs={availableTabs} activeTab={safeActiveTab} onSelectTab={setActiveTab} />
+            ) : null}
+            {era === 1 ? (
+              <>{eraOneContent}</>
+            ) : safeActiveTab === "active" ? (
+              <>{activeTabContent}</>
+            ) : safeActiveTab === "growth" ? (
+              <>{growthTabContent}</>
+            ) : (
+              <>{metaTabContent}</>
+            )}
+            {statusLine ? <p className="text-xs text-veil/60">{statusLine}</p> : null}
+          </div>
+          <PersistentRightPanel
+            era={era}
+            omenTitle={uiReveal.omenTitle}
+            omenEntries={rightPanelOmens}
+            activeDoubtEvent={activeDoubtEventCard}
+            onResolveDoubtChoice={onResolveDoubtChoice}
+            statsContent={<StatsDrawer presentation="embedded" {...statsDrawerProps} />}
           />
+        </div>
+        {showStatsDrawer ? (
+          <div className="lg:hidden">
+            <StatsDrawer presentation="floating" {...statsDrawerProps} />
+          </div>
         ) : null}
       </motion.div>
       {showPersistentOmenSurface ? (
-        <OmenSurface
-          era={era}
-          title={uiReveal.omenTitle}
-          previewEntries={surfaceOmenPreview}
-          expandedEntries={surfaceOmenExpanded}
-        />
+        <div className="lg:hidden">
+          <OmenSurface
+            era={era}
+            title={uiReveal.omenTitle}
+            previewEntries={surfaceOmenPreview}
+            expandedEntries={surfaceOmenExpanded}
+          />
+        </div>
       ) : null}
     </main>
   );

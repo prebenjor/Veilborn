@@ -828,16 +828,30 @@
     },
     {
       "id": "PF-26",
-      "title": "M14 Pace Benchmark Session Pack",
-      "status": "queued",
-      "execute_after": "M14",
-      "notes": "Track a repeatable benchmark pass after each pacing constant change. This is the manual evidence loop for Era I -> II and Era II -> III speed control.",
+      "title": "Persistent Right Panel - Omens and Stats",
+      "status": "completed",
+      "execute_after": "M20",
+      "notes": "Wide-viewport shell now presents OMENS and STATS as a single persistent right panel in all eras. Mobile keeps existing behavior (bottom omen strip + floating stats button). This is layout-only and does not alter omen/stat content.",
       "scope": [
-        "Collect fresh telemetry exports from at least 2 beginner runs (no ascension bonuses) and at least 2 ascended runs after a tuning change",
-        "Run compare checks per pair: npm run compare:m14 -- <beginner-session.json> <ascended-session.json>",
-        "Run aggregate audit: npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]",
-        "Record speed-ratio outcomes for Era I and Era II and note PASS/WARN/FAIL status from compare output",
-        "Do not apply further tuning until the benchmark pack is captured and reviewed"
+        "On viewports >= 1024px, render a persistent right sidebar (280px) in all eras",
+        "Move OMENS/MURMURS/WHISPERS log surface into the right panel on wide viewports",
+        "Move STATS into the right panel on wide viewports with always-visible embedded presentation",
+        "Hide floating STATS button on wide viewports; keep it on mobile",
+        "Keep Stat Bar and Era III Unraveling Gate strip full width above the split",
+        "Constrain left content column (Era I single-column and Era II/III tab content) to accommodate sidebar",
+        "Give right panel subtle background differentiation while preserving era token styling",
+        "Maintain independent scroll regions for OMENS and STATS inside the panel",
+        "Preserve existing mobile behavior unchanged for viewports < 1024px",
+        "No changes to omen content, stats content, formulas, strings, or game state"
+      ],
+      "validation": [
+        "On >= 1024px, right panel is visible in Era I, Era II, and Era III",
+        "Era header label in panel follows vocabulary progression: MURMURS (I), WHISPERS (II), OMENS (III)",
+        "Floating STATS button is hidden on >= 1024px and visible on < 1024px",
+        "On < 1024px, existing omen strip and floating stats behavior remain unchanged",
+        "Tab/era content in the left column remains readable with no horizontal overflow",
+        "Stat Bar and Era III Unraveling strip remain full width",
+        "OMENS and STATS sections in right panel scroll independently"
       ]
     }
   ]

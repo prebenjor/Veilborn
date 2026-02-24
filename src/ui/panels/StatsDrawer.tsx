@@ -3,6 +3,7 @@ import { formatResource } from "../../core/ui/numberFormat";
 import { MIRACLE_NAMES } from "../../core/state/gameState";
 
 interface StatsDrawerProps {
+  presentation?: "floating" | "embedded";
   era: 1 | 2 | 3;
   runSeconds: number;
   totalTicks: number;
@@ -79,6 +80,7 @@ interface StatsDrawerProps {
 }
 
 export function StatsDrawer({
+  presentation = "floating",
   era,
   runSeconds,
   totalTicks,
@@ -127,10 +129,23 @@ export function StatsDrawer({
           ? "Error"
           : "Idle";
   const recentRuns = [...runHistory].reverse().slice(0, 5);
+  const isEmbedded = presentation === "embedded";
 
   return (
-    <details className="group fixed bottom-3 right-3 z-40 w-52 rounded-xl border border-white/20 bg-black/55 p-2 text-xs text-veil/80 backdrop-blur-sm md:w-64">
-      <summary className="cursor-pointer list-none select-none font-medium tracking-[0.2em] text-veil/90">
+    <details
+      open={isEmbedded ? true : undefined}
+      className={
+        isEmbedded
+          ? "group w-full text-xs text-veil/80"
+          : "group fixed bottom-3 right-3 z-40 w-52 rounded-xl border border-white/20 bg-black/55 p-2 text-xs text-veil/80 backdrop-blur-sm md:w-64"
+      }
+    >
+      <summary
+        onClick={isEmbedded ? (event) => event.preventDefault() : undefined}
+        className={`list-none select-none font-medium tracking-[0.2em] text-veil/90 ${
+          isEmbedded ? "cursor-default" : "cursor-pointer"
+        }`}
+      >
         STATS
       </summary>
       <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-[11px] text-veil/70">
