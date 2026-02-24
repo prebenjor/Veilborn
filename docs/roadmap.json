@@ -799,6 +799,20 @@
         "Cataclysm panel must appear at top of ACTIVE tab in Era III above Rivals and Whispers - confirm correct order per GAME_REFERENCE.md Era III active order",
         "META tab label must read 'Meta' with no suffix in all eras"
       ]
+    },
+    {
+      "id": "PF-25",
+      "title": "M14 Pace Benchmark Session Pack",
+      "status": "queued",
+      "execute_after": "M14",
+      "notes": "Track a repeatable benchmark pass after each pacing constant change. This is the manual evidence loop for Era I -> II and Era II -> III speed control.",
+      "scope": [
+        "Collect fresh telemetry exports from at least 2 beginner runs (no ascension bonuses) and at least 2 ascended runs after a tuning change",
+        "Run compare checks per pair: npm run compare:m14 -- <beginner-session.json> <ascended-session.json>",
+        "Run aggregate audit: npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]",
+        "Record speed-ratio outcomes for Era I and Era II and note PASS/WARN/FAIL status from compare output",
+        "Do not apply further tuning until the benchmark pack is captured and reviewed"
+      ]
     }
   ]
 }

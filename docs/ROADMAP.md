@@ -246,6 +246,7 @@ Notes:
   - Ascended/Beginner Era I speed ratio should be `< 1.00` and `>= 0.45`.
   - Ascended/Beginner Era II speed ratio should be `< 1.00` and `>= 0.45`.
 - Export-driven M14 loop: gather 2-3 beginner + 2-3 ascended telemetry exports, run compare/audit, apply one small constant delta, then re-run.
+- Trackable follow-up task: `PF-25` ("M14 Pace Benchmark Session Pack") in `docs/roadmap.json`.
 - Remaining M14 scope is economy constant calibration against target run durations.
 
 Deliverables:
