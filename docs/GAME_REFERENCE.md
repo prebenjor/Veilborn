@@ -31,12 +31,12 @@ Completed milestones in code:
 - `M0` through `M13`
 - `M15`
 - `M16`
+- `M20`
 
 Pending milestones:
-- `M14` balance/runtime targets
-- `M20` era UI restructure/disclosure consolidation
 - `M21` devotion path system
 - `M17` accessibility/mobile resilience
+- `M14` balance/runtime targets (feature-first ordering: after M21 + M17)
 - `M18` convergence mode
 
 Completed PFs currently reflected in runtime:
@@ -465,6 +465,11 @@ Stats drawer:
 - influence source breakdown
 - run history (includes cadence summary and era pacing durations for ascended runs)
 - audio controls
+- optional unlockable Dev Tools section for local pacing tests:
+  - gate priming (Era I / Era II)
+  - jump to Era II / Era III
+  - temporary resource boost
+  - unlock state persists via localStorage key `veilborn.ui.dev_tools.enabled.v1`
 - content scales by era without spoiling future systems
 
 Stats content by era:

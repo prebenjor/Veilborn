@@ -66,6 +66,14 @@ interface StatsDrawerProps {
   onUseAudioFallback: () => void;
   onExportTelemetry: () => void;
   onDumpTelemetryToConsole: () => void;
+  devToolsEnabled: boolean;
+  devToolsStatus: string | null;
+  onToggleDevTools: () => void;
+  onDevBoostResources: () => void;
+  onDevPrimeEraOneGate: () => void;
+  onDevPrimeEraTwoGate: () => void;
+  onDevJumpToEraTwo: () => void;
+  onDevJumpToEraThree: () => void;
 }
 
 export function StatsDrawer({
@@ -91,7 +99,15 @@ export function StatsDrawer({
   onToggleAudioMute,
   onUseAudioFallback,
   onExportTelemetry,
-  onDumpTelemetryToConsole
+  onDumpTelemetryToConsole,
+  devToolsEnabled,
+  devToolsStatus,
+  onToggleDevTools,
+  onDevBoostResources,
+  onDevPrimeEraOneGate,
+  onDevPrimeEraTwoGate,
+  onDevJumpToEraTwo,
+  onDevJumpToEraThree
 }: StatsDrawerProps) {
   const isEraTwoPlus = era >= 2;
   const isEraThree = era >= 3;
@@ -282,6 +298,68 @@ export function StatsDrawer({
           </button>
         </div>
         {telemetryStatus ? <p className="mt-1 text-[10px] text-veil/65">{telemetryStatus}</p> : null}
+      </div>
+
+      <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+        <p className="uppercase tracking-[0.16em] text-veil/80">Dev Tools</p>
+        <p className="mt-1 text-[10px] text-veil/65">{devToolsEnabled ? "Unlocked" : "Locked"}</p>
+        <div className="mt-2 flex flex-wrap gap-1">
+          <button
+            type="button"
+            onClick={onToggleDevTools}
+            className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+          >
+            {devToolsEnabled ? "Lock" : "Unlock"}
+          </button>
+          {devToolsEnabled ? (
+            <>
+              <button
+                type="button"
+                onClick={onDevBoostResources}
+                className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+              >
+                Boost
+              </button>
+              {era === 1 ? (
+                <button
+                  type="button"
+                  onClick={onDevPrimeEraOneGate}
+                  className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+                >
+                  Prime Era I
+                </button>
+              ) : null}
+              {era === 2 ? (
+                <button
+                  type="button"
+                  onClick={onDevPrimeEraTwoGate}
+                  className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+                >
+                  Prime Era II
+                </button>
+              ) : null}
+              {era < 2 ? (
+                <button
+                  type="button"
+                  onClick={onDevJumpToEraTwo}
+                  className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+                >
+                  Jump Era II
+                </button>
+              ) : null}
+              {era < 3 ? (
+                <button
+                  type="button"
+                  onClick={onDevJumpToEraThree}
+                  className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+                >
+                  Jump Era III
+                </button>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+        {devToolsStatus ? <p className="mt-1 text-[10px] text-veil/65">{devToolsStatus}</p> : null}
       </div>
 
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">

@@ -177,6 +177,7 @@ import { getVeilStabilityView } from "./core/ui/veilPresentation";
 
 const UI_TAB_KEY = "veilborn.ui.active_tab.v1";
 const DOUBT_PENDING_KEY = "veilborn.session.doubt.pending.v1";
+const DEV_TOOLS_KEY = "veilborn.ui.dev_tools.enabled.v1";
 
 type UiTab = "active" | "growth" | "meta";
 type EraValue = 1 | 2 | 3;
@@ -350,6 +351,119 @@ function clearPendingDoubtResolution(): void {
   }
 }
 
+function loadDevToolsEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(DEV_TOOLS_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveDevToolsEnabled(enabled: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DEV_TOOLS_KEY, enabled ? "1" : "0");
+  } catch {
+    // Ignore localStorage write failures.
+  }
+}
+
+function withPreparedEraOneGate(state: GameState, nowMs: number): GameState {
+  if (state.era !== 1) return state;
+  const gate = getEraOneGateStatus(state);
+  const nextBeliefTarget = Math.max(state.stats.totalBeliefEarned, gate.beliefTarget);
+  const beliefDelta = nextBeliefTarget - state.stats.totalBeliefEarned;
+  const nextFollowers = Math.max(state.resources.followers, gate.followersTarget);
+  const nextProphets = Math.max(state.prophets, gate.prophetsTarget);
+
+  if (
+    beliefDelta <= 0 &&
+    nextFollowers === state.resources.followers &&
+    nextProphets === state.prophets
+  ) {
+    return state;
+  }
+
+  const prepared = {
+    ...state,
+    prophets: nextProphets,
+    resources: {
+      ...state.resources,
+      belief: state.resources.belief + beliefDelta,
+      followers: nextFollowers
+    },
+    stats: {
+      ...state.stats,
+      totalBeliefEarned: nextBeliefTarget
+    },
+    cataclysm: {
+      ...state.cataclysm,
+      peakFollowers: Math.max(state.cataclysm.peakFollowers, nextFollowers)
+    },
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  const nextInfluenceCap = getInfluenceCap(prepared);
+  return {
+    ...prepared,
+    resources: {
+      ...prepared.resources,
+      influence: Math.max(prepared.resources.influence, nextInfluenceCap)
+    }
+  };
+}
+
+function withPreparedEraTwoGate(state: GameState, nowMs: number): GameState {
+  if (state.era < 2) return state;
+  const gate = getEraTwoGateStatus(state);
+  const nextBeliefTarget = Math.max(state.stats.totalBeliefEarned, gate.beliefTarget);
+  const beliefDelta = nextBeliefTarget - state.stats.totalBeliefEarned;
+  const nextCults = Math.max(state.cults, gate.cultsTarget);
+  const survivedRivalEvent = true;
+
+  if (
+    beliefDelta <= 0 &&
+    nextCults === state.cults &&
+    state.doctrine.survivedRivalEvent === survivedRivalEvent
+  ) {
+    return state;
+  }
+
+  const prepared = {
+    ...state,
+    cults: nextCults,
+    resources: {
+      ...state.resources,
+      belief: state.resources.belief + beliefDelta
+    },
+    stats: {
+      ...state.stats,
+      totalBeliefEarned: nextBeliefTarget
+    },
+    doctrine: {
+      ...state.doctrine,
+      survivedRivalEvent
+    },
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  const nextInfluenceCap = getInfluenceCap(prepared);
+  return {
+    ...prepared,
+    resources: {
+      ...prepared.resources,
+      influence: Math.max(prepared.resources.influence, nextInfluenceCap)
+    }
+  };
+}
+
 export default function App() {
   const [initialLoad] = useState(() => loadGameStateWithOffline());
   const [gameState, setGameState] = useState<GameState>(initialLoad.state);
@@ -367,6 +481,8 @@ export default function App() {
     getRecoverySnapshotMeta()
   );
   const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
+  const [devToolsEnabled, setDevToolsEnabled] = useState<boolean>(() => loadDevToolsEnabled());
+  const [devToolsStatus, setDevToolsStatus] = useState<string | null>(null);
   const doubtSessionRef = useRef<DoubtSessionState>(
     createInitialDoubtSession(initialLoad.state.meta.runId, initialLoad.state.meta.createdAt)
   );
@@ -440,6 +556,7 @@ export default function App() {
     doubtSessionRef.current = nextSession;
     setActiveDoubtEvent(getActiveDoubtEventView(nextSession));
     setNextWhisperCostDelta(null);
+    setDevToolsStatus(null);
     nextWhisperCostDeltaRef.current = null;
 
     const pendingOmenText = loadPendingDoubtResolution(gameState.meta.runId);
@@ -1188,6 +1305,128 @@ export default function App() {
     setTelemetryStatus("Telemetry snapshot written to browser console.");
   };
 
+  const onToggleDevTools = () => {
+    setDevToolsEnabled((current) => {
+      const next = !current;
+      saveDevToolsEnabled(next);
+      return next;
+    });
+    setDevToolsStatus(null);
+  };
+
+  const onDevBoostResources = () => {
+    if (!devToolsEnabled) return;
+    const actionAt = Date.now();
+    const beliefBoost = 1_000_000;
+    const followerBoost = 5_000;
+    setGameState((prev) => {
+      const nextFollowers = prev.resources.followers + followerBoost;
+      const influenceCapForState = getInfluenceCap(prev);
+      return {
+        ...prev,
+        resources: {
+          ...prev.resources,
+          belief: prev.resources.belief + beliefBoost,
+          influence: Math.max(prev.resources.influence, influenceCapForState),
+          followers: nextFollowers
+        },
+        stats: {
+          ...prev.stats,
+          totalBeliefEarned: prev.stats.totalBeliefEarned + beliefBoost
+        },
+        cataclysm: {
+          ...prev.cataclysm,
+          peakFollowers: Math.max(prev.cataclysm.peakFollowers, nextFollowers)
+        },
+        meta: {
+          ...prev.meta,
+          updatedAt: actionAt
+        }
+      };
+    });
+    setDevToolsStatus("Dev: boosted Belief, Followers, and Influence.");
+  };
+
+  const onDevPrimeEraOneGate = () => {
+    if (!devToolsEnabled) return;
+    const actionAt = Date.now();
+    setGameState((prev) => withPreparedEraOneGate(prev, actionAt));
+    setDevToolsStatus("Dev: Era I threshold primed.");
+  };
+
+  const onDevPrimeEraTwoGate = () => {
+    if (!devToolsEnabled) return;
+    const actionAt = Date.now();
+    setGameState((prev) => withPreparedEraTwoGate(prev, actionAt));
+    setDevToolsStatus("Dev: Era II threshold primed.");
+  };
+
+  const onDevJumpToEraTwo = () => {
+    if (!devToolsEnabled) return;
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      let next = prev;
+      if (next.era >= 2) return next;
+
+      next = withPreparedEraOneGate(next, actionAt);
+      if (!canAdvanceEraOneToTwo(next)) return next;
+
+      saveRecoverySnapshot(next, "era_transition");
+      const advanced = performAdvanceEraOneToTwo(next, actionAt);
+      if (advanced !== next && advanced.era !== next.era) {
+        recordTelemetryAction(advanced, "advance_era", actionAt);
+        appendTelemetryEvent(advanced, "era_transition", actionAt, {
+          fromEra: next.era,
+          toEra: advanced.era
+        });
+      }
+      return advanced;
+    });
+    setSnapshotMeta(getRecoverySnapshotMeta());
+    setDevToolsStatus("Dev: jump-to-Era-II applied.");
+  };
+
+  const onDevJumpToEraThree = () => {
+    if (!devToolsEnabled) return;
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      let next = prev;
+
+      if (next.era < 2) {
+        next = withPreparedEraOneGate(next, actionAt);
+        if (canAdvanceEraOneToTwo(next)) {
+          saveRecoverySnapshot(next, "era_transition");
+          const advancedToEraTwo = performAdvanceEraOneToTwo(next, actionAt);
+          if (advancedToEraTwo !== next && advancedToEraTwo.era !== next.era) {
+            recordTelemetryAction(advancedToEraTwo, "advance_era", actionAt);
+            appendTelemetryEvent(advancedToEraTwo, "era_transition", actionAt, {
+              fromEra: next.era,
+              toEra: advancedToEraTwo.era
+            });
+          }
+          next = advancedToEraTwo;
+        }
+      }
+
+      if (next.era >= 3) return next;
+      next = withPreparedEraTwoGate(next, actionAt);
+      if (!canAdvanceEraTwoToThree(next)) return next;
+
+      saveRecoverySnapshot(next, "era_transition");
+      const advancedToEraThree = performAdvanceEraTwoToThree(next, actionAt);
+      if (advancedToEraThree !== next && advancedToEraThree.era !== next.era) {
+        recordTelemetryAction(advancedToEraThree, "advance_era", actionAt);
+        appendTelemetryEvent(advancedToEraThree, "era_transition", actionAt, {
+          fromEra: next.era,
+          toEra: advancedToEraThree.era
+        });
+      }
+      return advancedToEraThree;
+    });
+    setSnapshotMeta(getRecoverySnapshotMeta());
+    setDevToolsStatus("Dev: jump-to-Era-III applied.");
+  };
+
   const onAscend = () => {
     const actionAt = Date.now();
     setGameState((prev) => {
@@ -1720,6 +1959,14 @@ export default function App() {
             onUseAudioFallback={useSilentFallback}
             onExportTelemetry={onExportTelemetry}
             onDumpTelemetryToConsole={onDumpTelemetryToConsole}
+            devToolsEnabled={devToolsEnabled}
+            devToolsStatus={devToolsStatus}
+            onToggleDevTools={onToggleDevTools}
+            onDevBoostResources={onDevBoostResources}
+            onDevPrimeEraOneGate={onDevPrimeEraOneGate}
+            onDevPrimeEraTwoGate={onDevPrimeEraTwoGate}
+            onDevJumpToEraTwo={onDevJumpToEraTwo}
+            onDevJumpToEraThree={onDevJumpToEraThree}
           />
         ) : null}
       </motion.div>

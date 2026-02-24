@@ -267,29 +267,31 @@
       "title": "Balance and Runtime Targets",
       "status": "pending",
       "dependencies": [
-        "M13"
+        "M13",
+        "M17",
+        "M21"
       ],
       "deliverables": [
         "Timing and economy tuning for Revision B targets",
         "Decision and milestone cadence instrumentation (per-run action cadence summary with avg/median/p90 interval and target-window hit rate)",
-        "Era pacing audit inside runs: Era II speed-up is tangible but not abrupt versus Era I",
+        "Era pacing lock across beginner and ascended runs: Era I->II and Era II->III speed-up should be noticeable but not abrupt",
         "Regression tests for formulas and offline sim"
       ],
       "validation": [
         "Run timing approximates 6.5h, 4h, 2.5h, 1.2h, 45m floor",
+        "Ascended-vs-beginner session compare shows controlled acceleration (not flat, not abrupt)",
         "No high-severity simulation regressions"
       ],
-      "notes": "Regression harness for formulas/offline simulation is available via npm run regression:m14. Telemetry timing/cadence audit is available via npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]. Non-ascended session comparison (including Era I and Era II phase checks) is available via npm run compare:m14 -- <session-a.json> <session-b.json>. Recommended loop: collect 2-3 ascended-run exports, run audit, apply one small constant delta, then re-audit. Remaining scope: economy constant calibration to target run durations."
+      "notes": "Feature-first ordering: execute M14 after M21 + M17 are complete. Test loop: (1) npm run regression:m14, (2) npm run compare:m14 -- <beginner-session.json> <ascended-session.json>, (3) npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]. Pace lock targets: compare output should show ascended speed ratios lower than 1.00 but not below 0.45 for Era I and Era II. Recommended loop: gather 2-3 beginner and 2-3 ascended exports, apply one small constant delta, then re-run compare + audit."
     },
     {
       "id": "M20",
       "title": "Era UI Restructure and Disclosure Consolidation",
-      "status": "pending",
+      "status": "completed",
       "dependencies": [
-        "M14",
         "M10"
       ],
-      "notes": "Consolidates PF-02 and PF-03 scope into a dedicated milestone for era shell structure, anti-clutter flow, and strict reveal behavior.",
+      "notes": "Completed. Consolidated PF-02 and PF-03 scope into the era shell structure, anti-clutter flow, and strict reveal behavior.",
       "deliverables": [
         "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+constrained META content), Era III full ACTIVE/GROWTH/META",
         "Era II tab contract: ACTIVE order is Whispers -> Influence meter -> Doctrine -> Doctrine Seeds; GROWTH order is Doctrine (merged) -> Domains -> Rivals -> Threshold",
@@ -432,10 +434,10 @@
       "title": "Devotion Path System",
       "status": "pending",
       "dependencies": [
-        "M14",
+        "M13",
         "M20"
       ],
-      "notes": "Builds on Era I Devotion foundation. Implements path differentiation (Fervour, Accord, Reverence, Ardour) across Era II and Era III, and lineage Devotion memory for run 2+.",
+      "notes": "Builds on Era I Devotion foundation. Implements path differentiation (Fervour, Accord, Reverence, Ardour) across Era II and Era III, and lineage Devotion memory for run 2+. Prioritized ahead of M14 tuning in the feature-first execution pass.",
       "design_docs": [
         "docs/DEVOTION_SYSTEM.md"
       ],

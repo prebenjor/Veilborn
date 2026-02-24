@@ -13,6 +13,13 @@ When a milestone is complete, update `docs/roadmap.json`, commit, and push to `o
 4. Commit with message prefix `M#:` and push to `origin/main`.
 5. Update milestone status in `docs/roadmap.json`.
 
+## Current Priority Order (Feature-First)
+
+1. `M21` Devotion path differentiation and lineage carryover.
+2. `M17` accessibility/mobile hardening on top of the new era shell.
+3. `M14` balance lock and pacing calibration (beginner vs ascended) with telemetry-driven tests.
+4. `M19` documentation/wiki foundation sync once feature and pacing behavior are stable.
+
 ## Milestones
 
 ## M0 - Foundation and Deployment
@@ -227,10 +234,18 @@ Definition of Done:
 Objective: Hit cadence and compression targets from Revision B.
 
 Notes:
+- Execute after `M21` and `M17` (feature-first ordering).
 - Regression harness for formula/offline checks is available via `npm run regression:m14`.
 - Telemetry timing audit is available via `npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]`.
-- Non-ascended session comparison (including Era I and Era II phase checks) is available via `npm run compare:m14 -- <session-a.json> <session-b.json>`.
-- Export-driven M14 loop: gather 2-3 ascended-run telemetry exports, run `audit:m14`, apply one small constant delta, and re-audit.
+- Beginner-vs-ascended comparison (including Era I and Era II phase checks) is available via `npm run compare:m14 -- <beginner-session.json> <ascended-session.json>`.
+- Pace lock loop:
+  - `npm run regression:m14`
+  - `npm run compare:m14 -- <beginner-session.json> <ascended-session.json>`
+  - `npm run audit:m14 -- <telemetry-export-1.json> [telemetry-export-2.json ...]`
+- Pace lock target bands:
+  - Ascended/Beginner Era I speed ratio should be `< 1.00` and `>= 0.45`.
+  - Ascended/Beginner Era II speed ratio should be `< 1.00` and `>= 0.45`.
+- Export-driven M14 loop: gather 2-3 beginner + 2-3 ascended telemetry exports, run compare/audit, apply one small constant delta, then re-run.
 - Remaining M14 scope is economy constant calibration against target run durations.
 
 Deliverables:
@@ -257,7 +272,7 @@ Objective: Resolve late-era clutter and decision-latency by formalizing the era-
 
 Notes:
 - This milestone consolidates scope previously split across PF-02 and PF-03.
-- Must execute after M14 and before M17 completion work.
+- Completed and now serving as the baseline layout shell for M17/M21/M14 work.
 
 Deliverables:
 - Era-locked shell behavior:
@@ -295,6 +310,7 @@ Notes:
 - Era I foundation (stacks, recruit amplification, omen milestones, persistence/reset rules) is implemented.
 - This milestone covers only path differentiation and lineage carryover behavior.
 - Full architecture reference: `docs/DEVOTION_SYSTEM.md`.
+- Prioritized before M14 so pace tuning calibrates against final Devotion-era mechanics.
 
 Deliverables:
 - Era II path emergence from play pattern:
