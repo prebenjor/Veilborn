@@ -266,9 +266,12 @@ Deliverables:
   - Era III: full ACTIVE/GROWTH/META flow with low-scroll decision surfaces
 - Era II tab contract:
   - ACTIVE order: Whispers, Influence meter, Doctrine (Acts), Doctrine Seeds
-  - GROWTH order: Domains, Rivals, Threshold
+  - GROWTH order: Doctrine (merged), Domains, Rivals, Threshold
+  - Doctrine + Doctrine Seeds are merged into one collapsible Doctrine container in GROWTH
+  - All GROWTH containers are collapsible with persisted state
   - Rivals collapse to one-line summary when inactive and expand only when active
   - Threshold sits at bottom of GROWTH (not ACTIVE) and defaults to collapsed
+- Era III GROWTH order: Doctrine (merged), Domains, Rivals (Threshold remains in persistent Unraveling strip)
 - ACTIVE tab prioritizes time-sensitive systems (Cataclysm, rivals, whispers, Influence pressure).
 - Unraveling gate as persistent strip in Era III.
 - Echo trees and other between-run systems constrained to META view.

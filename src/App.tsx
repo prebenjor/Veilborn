@@ -552,6 +552,23 @@ export default function App() {
       : 0;
   const hasActiveRivals = gameState.doctrine.rivals.length > 0;
   const canUseSuppressRival = canSuppressRival(gameState);
+  const doctrineGrowthSummary = `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults \u00b7 ${formatResource(activeActs.length)} of ${formatResource(actSlotCap)} acts active`;
+  const domainsGrowthSummary = `Active synergy x${formatResource(domainSynergy, 2)} \u00b7 ${formatResource(gameState.matchingDomainPairs)} matched pairs`;
+  const rivalsGrowthSummary = hasActiveRivals
+    ? `${formatResource(gameState.doctrine.rivals.length)} active \u00b7 strength ${formatResource(rivalStrength)}`
+    : gameState.cults <= 0
+      ? "No rivals present"
+      : nextRivalInSeconds <= 0
+        ? "No rivals present \u00b7 next spawn imminent"
+        : `No rivals present \u00b7 next in ~${formatDurationCompact(nextRivalInSeconds)}`;
+  const eraTwoThresholdMetCount =
+    (gameState.stats.totalBeliefEarned >= eraTwoGate.beliefTarget ? 1 : 0) +
+    (gameState.cults >= eraTwoGate.cultsTarget ? 1 : 0) +
+    (eraTwoGate.rivalEventReady ? 1 : 0);
+  const eraTwoThresholdTotalCount = 3;
+  const eraTwoThresholdSummary = `${formatResource(eraTwoThresholdMetCount)} / ${formatResource(eraTwoThresholdTotalCount)} conditions met`;
+  const eraTwoThresholdRatio =
+    eraTwoThresholdTotalCount <= 0 ? 0 : eraTwoThresholdMetCount / eraTwoThresholdTotalCount;
 
   const veilBonus = getVeilBonus(gameState.resources.veil);
   const veilRegenPerSecond = getVeilRegenPerSecond(gameState);
@@ -1164,26 +1181,6 @@ export default function App() {
       </div>
     ) : null;
 
-  const eraTwoRivalsContent =
-    era === 2 ? (
-      hasActiveRivals ? (
-        doctrineRivalsPanel
-      ) : (
-        <section className="px-1 py-1">
-          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
-            RIVALS{" "}
-            <span className="normal-case tracking-normal text-veil/75">
-              {gameState.cults <= 0
-                ? "No rivals present"
-                : nextRivalInSeconds <= 0
-                  ? "No rivals present \u00b7 next spawn imminent"
-                  : `No rivals present \u00b7 next in ~${formatDurationCompact(nextRivalInSeconds)}`}
-            </span>
-          </p>
-        </section>
-      )
-    ) : null;
-
   const eraThreeCataclysmPanel =
     era >= 3 ? (
       <CataclysmPanel
@@ -1213,9 +1210,17 @@ export default function App() {
 
   const eraTwoGrowthContent = (
     <EraTwoGrowthLayout
+      doctrinePanel={doctrineGrowthPanel}
+      progressPanel={progressPanel}
       domainPanel={domainPanel}
-      rivalsPanel={eraTwoRivalsContent}
+      rivalsPanel={doctrineRivalsPanel}
       thresholdPanel={eraGatePanel}
+      doctrineSummary={doctrineGrowthSummary}
+      domainsSummary={domainsGrowthSummary}
+      rivalsSummary={rivalsGrowthSummary}
+      thresholdSummary={eraTwoThresholdSummary}
+      thresholdProgressRatio={eraTwoThresholdRatio}
+      hasActiveRivals={hasActiveRivals}
     />
   );
 
@@ -1229,9 +1234,14 @@ export default function App() {
 
   const eraThreeGrowthContent = (
     <EraThreeGrowthLayout
-      domainPanel={domainPanel}
       doctrinePanel={era >= 3 ? doctrineGrowthPanel : null}
       progressPanel={era >= 3 ? progressPanel : null}
+      domainPanel={domainPanel}
+      rivalsPanel={era >= 3 ? doctrineRivalsPanel : null}
+      doctrineSummary={doctrineGrowthSummary}
+      domainsSummary={domainsGrowthSummary}
+      rivalsSummary={rivalsGrowthSummary}
+      hasActiveRivals={hasActiveRivals}
     />
   );
 

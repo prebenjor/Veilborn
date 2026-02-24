@@ -49,11 +49,14 @@ Stats visibility rule:
 - Era II tab contract:
   - `ACTIVE` order: Whispers -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds.
   - Whispers in Era II keep the familiar Era I interaction style (no subtitle); cadence prompt and optional rival-drain nudge line may appear.
-  - `GROWTH` order: Domains -> Rivals -> Threshold.
-  - Rivals collapse to a single line when inactive and expand to full panel only when active.
+  - `GROWTH` order: Doctrine (merged container) -> Domains -> Rivals -> Threshold.
+  - Doctrine and Doctrine Seeds content are merged into one `DOCTRINE` container in `GROWTH`, ordered as Prophets/Cults, Lineage, then Acts.
+  - All `GROWTH` containers are collapsible with persisted state.
+  - Rivals collapse to a single-line summary when inactive and auto-expand when active.
   - Threshold is not rendered in `ACTIVE`; it sits at the bottom of `GROWTH`, collapsed by default.
   - Meta tab label is always `Meta` (no `Meta (Lite)` suffix).
 - Era III: full `ACTIVE`, `GROWTH`, `META`.
+- Era III `GROWTH` order: Doctrine (merged) -> Domains -> Rivals (Threshold remains in the persistent Unraveling strip).
 - Era III critical actions must be reachable without long scroll.
 
 ## Implementation Notes

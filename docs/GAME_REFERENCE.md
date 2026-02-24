@@ -409,8 +409,13 @@ Era II+:
 Era II:
 - `active` order: Whisper/Recruit -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds
 - era-II whisper surface keeps controls/cadence only (no additional subtitle text)
-- `growth` order: Domains -> Rivals -> Threshold
-- rivals render as a single-line summary when inactive and expand to full panel when active
+- `growth` order: Doctrine (merged) -> Domains -> Rivals -> Threshold
+- doctrine and doctrine-seeds content merge into one collapsible `Doctrine` container in `growth` with internal order:
+  - Prophets/Cults
+  - Lineage Memory
+  - Acts (+Follower Rites when available)
+- all `growth` containers are collapsible and persist collapse state (`growth_doctrine_collapsed`, `growth_domains_collapsed`, `growth_rivals_collapsed`, `growth_threshold_collapsed`)
+- rivals render as a single-line summary when inactive and auto-expand when active
 - threshold renders at the bottom of `growth` (not in `active`)
 - threshold defaults to collapsed in Era II
 - meta tab label is `Meta` (no lite suffix)
@@ -420,6 +425,7 @@ Era II:
 
 Era III:
 - cataclysm in active flow
+- `growth` order: Doctrine (merged) -> Domains -> Rivals
 - unraveling gate strip always visible
 - event log header: `Omens`
 - gate label: `Unraveling Gate`
