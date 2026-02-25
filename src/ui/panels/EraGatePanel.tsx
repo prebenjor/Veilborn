@@ -25,8 +25,10 @@ interface EraGatePanelProps {
   unravelingBeliefTarget: number;
   unravelingVeilProgress: number;
   unravelingVeilTarget: number;
-  unravelingMiraclesProgress: number;
-  unravelingMiraclesTarget: number;
+  unravelingRitesProgress: number;
+  unravelingRitesTarget: number;
+  unravelingRiteVeilStrainProgress: number;
+  unravelingRiteVeilStrainTarget: number;
   unravelingRunTimeProgressSeconds: number;
   unravelingRunTimeTargetSeconds: number;
   unravelingReady: boolean;
@@ -158,8 +160,10 @@ export function EraGatePanel({
   unravelingBeliefTarget,
   unravelingVeilProgress,
   unravelingVeilTarget,
-  unravelingMiraclesProgress,
-  unravelingMiraclesTarget,
+  unravelingRitesProgress,
+  unravelingRitesTarget,
+  unravelingRiteVeilStrainProgress,
+  unravelingRiteVeilStrainTarget,
   unravelingRunTimeProgressSeconds,
   unravelingRunTimeTargetSeconds,
   unravelingReady,
@@ -186,7 +190,13 @@ export function EraGatePanel({
       const conditionViews: GateConditionView[] = [
         buildGteCondition("belief", "Total Belief Earned", unravelingBeliefProgress, unravelingBeliefTarget),
         buildLteCondition("veil", "Veil at or below", unravelingVeilProgress, unravelingVeilTarget, 100),
-        buildGteCondition("miracles", "Miracles This Run", unravelingMiraclesProgress, unravelingMiraclesTarget),
+        buildGteCondition("rites", "Gate Rites This Run", unravelingRitesProgress, unravelingRitesTarget),
+        buildGteCondition(
+          "riteStrain",
+          "Veil Strain from Rites",
+          unravelingRiteVeilStrainProgress,
+          unravelingRiteVeilStrainTarget
+        ),
         {
           id: "runtime",
           label: "Run Time",
@@ -209,7 +219,7 @@ export function EraGatePanel({
         crossLabel: "",
         readyHint: unravelingReady
           ? "Gate conditions met. Ascend from the Echo Trees panel."
-          : "Pressure the world through miracles and Veil risk to unlock the gate."
+          : "Invoke Gate Rites and force the Veil to yield."
       };
     }
 
@@ -263,8 +273,10 @@ export function EraGatePanel({
     unravelingBeliefTarget,
     unravelingVeilProgress,
     unravelingVeilTarget,
-    unravelingMiraclesProgress,
-    unravelingMiraclesTarget,
+    unravelingRitesProgress,
+    unravelingRitesTarget,
+    unravelingRiteVeilStrainProgress,
+    unravelingRiteVeilStrainTarget,
     unravelingRunTimeProgressSeconds,
     unravelingRunTimeTargetSeconds,
     unravelingReady,

@@ -1,6 +1,5 @@
 import { MIRACLE_NAMES, type MiracleTier } from "../../core/state/gameState";
 import { formatResource } from "../../core/ui/numberFormat";
-import { formatDurationCompact } from "../../core/ui/timeFormat";
 import { getVeilStabilityView } from "../../core/ui/veilPresentation";
 
 interface MiracleOption {
@@ -8,7 +7,6 @@ interface MiracleOption {
   influenceCost: number;
   beliefGain: number;
   veilCost: number;
-  civDamage: number;
   canCast: boolean;
 }
 
@@ -23,10 +21,9 @@ interface CataclysmPanelProps {
   veilRegenPerSecond: number;
   veilErosionPerSecond: number;
   veilCollapseThreshold: number;
-  civilizationHealth: number;
-  civilizationCollapsed: boolean;
-  civilizationRebuildInSeconds: number;
   miraclesThisRun: number;
+  riteVeilStrain: number;
+  riteVeilStrainTarget: number;
   miracleOptions: MiracleOption[];
   onCastMiracle: (tier: MiracleTier) => void;
 }
@@ -42,10 +39,9 @@ export function CataclysmPanel({
   veilRegenPerSecond,
   veilErosionPerSecond,
   veilCollapseThreshold,
-  civilizationHealth,
-  civilizationCollapsed,
-  civilizationRebuildInSeconds,
   miraclesThisRun,
+  riteVeilStrain,
+  riteVeilStrainTarget,
   miracleOptions,
   onCastMiracle
 }: CataclysmPanelProps) {
@@ -55,34 +51,29 @@ export function CataclysmPanel({
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-      <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Cataclysm</h2>
+      <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Gate Rites</h2>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Veil Stability</p>
           <p className="mt-1 text-sm text-white">
-            {formatResource(veil)} <span className="text-veil/55">·</span>{" "}
+            {formatResource(veil)} <span className="text-veil/55">&middot;</span>{" "}
             <span className={stability.cssClass}>{stability.label}</span>
           </p>
           <p className="mt-1 text-xs text-veil/65">
-            Collapses at {formatResource(veilCollapseThreshold)} · Regen {formatResource(veilRegenPerSecond, 3)}/s
-            · Erosion {formatResource(veilErosionPerSecond, 3)}/s
+            Collapses at {formatResource(veilCollapseThreshold)} &middot; Regen {formatResource(veilRegenPerSecond, 3)}/s
+            &middot; Erosion {formatResource(veilErosionPerSecond, 3)}/s
           </p>
           <p className="mt-1 text-xs text-veil/65">Belief bonus x{formatResource(veilBonus, 2)}</p>
         </article>
 
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Civilization</p>
-          <p className="mt-1 text-sm text-white">Health {formatResource(civilizationHealth)} / 100</p>
-          {civilizationCollapsed ? (
-            <p className="mt-1 text-xs text-ember">
-              Civilization collapsed. Rebuild in ~{formatDurationCompact(civilizationRebuildInSeconds)}.
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-veil/65">Stable enough to sustain miracle returns.</p>
-          )}
-          <p className="mt-1 text-xs text-veil/65">Miracles this run: {formatResource(miraclesThisRun)}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Rite Pressure</p>
+          <p className="mt-1 text-sm text-white">Rites this run: {formatResource(miraclesThisRun)}</p>
           <p className="mt-1 text-xs text-veil/65">
-            Miracle power {formatResource(miraclePower)} (Influence {formatResource(influence)} /{" "}
+            Veil strain from rites: {formatResource(riteVeilStrain)} / {formatResource(riteVeilStrainTarget)}
+          </p>
+          <p className="mt-1 text-xs text-veil/65">
+            Rite power {formatResource(miraclePower)} (Influence {formatResource(influence)} /{" "}
             {formatResource(influenceCap)} + Reserve {formatResource(miracleReserve)} /{" "}
             {formatResource(miracleReserveCap)})
           </p>
@@ -93,12 +84,9 @@ export function CataclysmPanel({
         {miracleOptions.map((miracle) => (
           <article key={miracle.tier} className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs tracking-[0.08em] text-veil/70">{MIRACLE_NAMES[miracle.tier]}</p>
+            <p className="mt-1 text-xs text-veil/65">Cost {formatResource(miracle.influenceCost)} Power</p>
             <p className="mt-1 text-xs text-veil/65">
-              Cost {formatResource(miracle.influenceCost)} Power
-            </p>
-            <p className="mt-1 text-xs text-veil/65">Return {formatResource(miracle.beliefGain)} Belief</p>
-            <p className="mt-1 text-xs text-veil/65">
-              Veil -{formatResource(miracle.veilCost)}, Civ -{formatResource(miracle.civDamage)}
+              Veil strain +{formatResource(miracle.veilCost)} &middot; Return {formatResource(miracle.beliefGain)} Belief
             </p>
             <button
               type="button"
@@ -106,7 +94,7 @@ export function CataclysmPanel({
               onClick={() => onCastMiracle(miracle.tier)}
               className="mt-2 rounded-lg border border-ember/60 px-2 py-1 text-xs text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
             >
-              Invoke
+              Invoke Rite
             </button>
           </article>
         ))}

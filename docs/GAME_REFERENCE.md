@@ -141,7 +141,7 @@ Whisper cost by profile:
 
 Notes:
 - `oneTimeDelta` is used by temporary event effects (for example, next-whisper modifiers).
-- Doctrine echo overflow can reduce target surcharge (up to 10%).
+- Whisper echo overflow can reduce target surcharge (up to 10%).
 
 Whisper follower outcomes:
 
@@ -160,7 +160,7 @@ If strained, whisper still resolves but uses `strainedFollowers` instead of `suc
 Whisper cooldowns:
 - `Prophets` and `Cults` targets both have cooldowns.
 - Cooldown ends are stored per target in session state.
-- Doctrine echo overflow reduces target cooldown by `2s` per overflow rank (max `16s`).
+- Whisper echo overflow reduces target cooldown by `2s` per overflow rank (max `16s`).
 
 Recruit:
 - Cost: `25 Influence` (flat)
@@ -202,7 +202,7 @@ Path differentiation:
 
 Momentum sources:
 - `Fervour`: start act `+2`, cast miracle `+2` (Era III)
-- `Accord`: form cult `+2`, follower rite `+1` (Era III)
+- `Accord`: form cult `+2` (Era III)
 - `Reverence`: suppress rival `+2` (Era III)
 - `Ardour`: whisper/recruit/anoint prophet `+1` (Era III)
 
@@ -231,33 +231,37 @@ Resolution model:
 
 Acolyte threshold:
 
-`followersNeededForNextAcolyte = 18 * 1.45^acolytes`
+`followersNeededForNextAcolyte = 18 * 1.45^acolytes * conversionThresholdMult`
 
 Prophet threshold:
 
-`followersNeeded = base * 1.6^prophets`
+`followersNeeded = base * 1.6^prophets * conversionThresholdMult`
 
 - base `50`
 - base `20` with `prophetThreshold` echo bonus
 
 Prophet acolyte requirement:
 
-`acolytesNeeded = 2 + floor(prophets / 3)`
+`acolytesNeeded = ceil((2 + floor(prophets / 4)) * conversionThresholdMult)`
 
 Anointing a prophet consumes both follower and acolyte requirements.
 
 Cult formation cost:
 
-`cost = base * 2^cults`
+`cost = base * 2^cults * conversionThresholdMult`
 
 - base `500`
 - base `350` with `cultCostBase` echo bonus
 
 Cult prophet requirement:
 
-`prophetsNeeded = 1 + floor(cults / 2)`
+`prophetsNeeded = ceil((1 + floor(cults / 3)) * conversionThresholdMult)`
 
 Founding a cult consumes the required prophets.
+
+Conversion threshold multiplier:
+
+`conversionThresholdMult = max(0.7, 1 - (0.02 * conversionOverflowRank))`
 
 ### Domain Investment
 
@@ -285,13 +289,13 @@ XP needed:
 Doctrine resonance pairs (based on minimum level within each pair):
 - `Life-Death`: Tier I/II/III at min level `2/5/9`, bonus `+4%` prophet passive follower rate per tier
 - `Light-Void`: Tier I/II/III at min level `2/5/9`, bonus `-8%` whisper surcharge and `-4s` whisper cooldown per tier
-- `Tempest-Memory`: Tier I/II/III at min level `2/5/9`, bonus `+5%` cult rites and cult passive follower rate per tier
+- `Tempest-Memory`: Tier I/II/III at min level `2/5/9`, bonus `+5%` cult passive follower rate per tier
 
 Bulk investing:
 - `+1`, `+10%`, `+25%`, `+50%`, `Max`
 - Previewed spend and projected levels
 
-### Cult Rites (Era III Doctrine)
+### Doctrine Acts (Era III Doctrine)
 
 Act types:
 - `shrine`: cost `20`, duration `30s`, base mult `2.5`
@@ -315,8 +319,8 @@ Act slot cap:
 - `max(1, cults)`
 
 Availability:
-- Rite controls are unlocked in Era III only.
-- Era II doctrine surface does not expose rite actions.
+- Act controls are unlocked in Era III only.
+- Era II doctrine surface does not expose act controls.
 
 ### Rivals
 
@@ -342,11 +346,15 @@ Drain only applies if:
 Suppress:
 - Cost `200 Influence`
 
-### Era III Passive Follower Arrival
+### Passive Follower Arrival (Era II/III)
 
-Active in era `3` only, and disabled if civilization health `<= 0`.
+Era II:
 
-`rate = ((0.35*cults*(1+tempestMemoryBonus)) + 0.25*shrines + (0.05*prophets*(1+lifeDeathBonus))) * whisperTargetMult * (civHealth/100) * veilZoneMult`
+`rate = (0.015*acolytes + (0.03*prophets*(1+lifeDeathBonus))) * whisperTargetMult`
+
+Era III (disabled if civilization health `<= 0`):
+
+`rate = ((0.03*acolytes) + (0.06*prophets*(1+lifeDeathBonus)) + (0.45*cults*(1+tempestMemoryBonus)) + 0.25*shrines) * whisperTargetMult * (civHealth/100) * veilZoneMult`
 
 Veil zone multiplier:
 - veil `>55`: `0.8`
@@ -354,35 +362,6 @@ Veil zone multiplier:
 - veil `<30`: `1.25`
 
 Integrated in online and offline simulation.
-
-### Era III Doctrine Follower Rites
-
-Purpose:
-- high-cost active follower burst actions in Doctrine panel
-- scaling by usage count, no timer-based reset
-
-Rites:
-- `Pilgrim Procession`
-- `Convergence March`
-
-Base costs:
-- Procession: `220 Influence`, `12,000 Belief`
-- Convergence: `680 Influence`, `90,000 Belief`
-
-Cost scaling:
-- Procession x`1.28^uses`
-- Convergence x`1.35^uses`
-
-Follower gain base:
-- Procession: `180`
-- Convergence: `900`
-
-Follower gain multiplier includes:
-- cult count, shrine count, prophet count
-- matching domain pairs
-- total domain level
-- civilization health
-- veil zone
 
 ### Veil and Collapse
 
@@ -455,10 +434,11 @@ Era II -> III:
 - `3` cults
 - survived rival event
 
-Unraveling:
+Gate (Era III):
 - total belief earned `>= 5,000,000`
 - veil `<=20`
-- miracles this run `>=2`
+- gate rites this run `>=2`
+- veil strain from rites `>=50`
 - runtime gate `>=240m` (soft gate logic handled in formula checks)
 
 ### Prestige and Echo Trees
@@ -468,7 +448,7 @@ Ascension echo gain:
 `floor(sqrt(totalBeliefEarned / 750000))`
 
 Echo trees:
-- `whispers`, `doctrine`, `cataclysm`
+- `whispers`, `conversion`, `doctrine`, `stability`, `cataclysm`
 - max rank `12`
 - rank cost formula:
 
@@ -492,9 +472,11 @@ Reference next-rank costs:
 Overflow rank model:
 - Core branch unlocks remain concentrated in the first 5 ranks.
 - Overflow rank is `max(0, rank - 5)` and drives late-game sink bonuses:
-  - `whispers` overflow: whisper follower yield bonus (`+2%` per rank, max `+24%`) and fail chance reduction (`-1.5%` per rank, max `-24%`)
-  - `doctrine` overflow: whisper target surcharge reduction (`-1%` per rank, max `-10%`) and target cooldown reduction (`-2s` per rank, max `-16s`)
-  - `cataclysm` overflow: cult-target whisper fail reduction (`-1%` per rank, max `-10%`) and miracle reserve cap increase (`+60` per overflow rank)
+  - `whispers` overflow: targeted whisper fail reduction, follower-yield bonus, target surcharge reduction, and cooldown reduction
+  - `conversion` overflow: conversion threshold multiplier (`-2%` per rank, floor `0.70`) for acolyte/prophet/cult conversion thresholds and requirements
+  - `doctrine` overflow: additional act-cost reduction (`-1.5%` per rank, floor `x0.78`)
+  - `stability` overflow: veil-regen multiplier bonus (`+2%` per rank, cap `+20%`)
+  - `cataclysm` overflow: miracle reserve cap increase (`+60` per overflow rank)
 
 Domain carry:
 - `domain_carry` is currently a planned upgrade path and not active in runtime.
@@ -518,6 +500,7 @@ Implemented:
   - rival spawn interval
 
 Core game remains complete without imported signatures.
+Ghost controls are currently not exposed in the Ascension panel UI.
 
 ### Architecture and Remembrance
 
@@ -555,7 +538,7 @@ Era II:
 - `active` containers persist collapse state (`active_whispers_collapsed`, `active_doctrine_collapsed`)
 - doctrine and doctrine-seeds content merge into one collapsible `Doctrine` container in `active` with internal order:
   - Prophets/Cults
-  - Cult Rites and Follower Rites are Era III-only (not shown in Era II)
+  - Doctrine Acts are Era III-only (not shown in Era II)
 - `growth` order: Domains -> Rivals -> Threshold
 - all `growth` containers are collapsible and persist collapse state (`growth_domains_collapsed`, `growth_rivals_collapsed`, `growth_threshold_collapsed`)
 - rivals render as a single-line summary when inactive and auto-expand when active
@@ -567,11 +550,11 @@ Era II:
 - bottom status: one directive line
 
 Era III:
-- `active` order: Whispers -> Doctrine -> Cataclysm (collapsible containers)
-- `active` containers persist collapse state (`active_whispers_collapsed`, `active_doctrine_collapsed`, `active_cataclysm_collapsed`)
+- `active` order: Whispers -> Doctrine (collapsible containers)
+- `active` containers persist collapse state (`active_whispers_collapsed`, `active_doctrine_collapsed`)
 - rivals are moved out of active flow and live in `growth`
 - `growth` order: Domains -> Rivals
-- `gate` is a dedicated tab (separate from `meta`) for unraveling progression
+- `gate` is a dedicated tab (separate from `meta`) for gate rites + gate progression
 - `meta` containers persist collapse state (`meta_overview_collapsed`, `meta_ascension_collapsed`, `meta_remembrance_collapsed`, `meta_pantheon_collapsed`)
 - no persistent unraveling strip in Era III
 - event log header: `Omens`

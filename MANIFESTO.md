@@ -121,7 +121,7 @@ Era II+ implementation (current runtime):
 
 Momentum sources:
 - `Fervour`: start act `+2`, cast miracle `+2` (Era III)
-- `Accord`: form cult `+2`, perform follower rite `+1` (Era III)
+- `Accord`: form cult `+2` (Era III)
 - `Reverence`: suppress rival `+2` (Era III)
 - `Ardour`: whisper/recruit/anoint prophet `+1` (Era III)
 
@@ -225,7 +225,7 @@ Domain level effects:
 - Resonance pairs and doctrine hooks:
   - `Life-Death`: prophet passive follower-rate bonus `+4%` per resonance tier.
   - `Light-Void`: whisper surcharge reduction `8%` per tier and cooldown reduction `4s` per tier.
-  - `Tempest-Memory`: cult rite and cult passive follower-rate bonus `+5%` per tier.
+  - `Tempest-Memory`: cult passive follower-rate bonus `+5%` per tier.
 
 Resonance tier thresholds use the minimum level of each pair:
 - Tier I at min level `2`
@@ -239,29 +239,35 @@ Meta-progression anchor:
 
 Acolyte ordination:
 
-`followers_needed_for_next_acolyte = 18 * 1.45^acolytes`
+`followers_needed_for_next_acolyte = 18 * 1.45^acolytes * conversion_threshold_mult`
 
 Prophet anointing:
 
-`followers_needed_for_next_prophet = prophet_base * 1.6^prophets`
+`followers_needed_for_next_prophet = prophet_base * 1.6^prophets * conversion_threshold_mult`
 
 `prophet_base = 50`, or `20` with Echo upgrade.
 
-`acolytes_needed_for_next_prophet = 2 + floor(prophets / 3)`
+`acolytes_needed_for_next_prophet = ceil((2 + floor(prophets / 4)) * conversion_threshold_mult)`
 
 Anointing a prophet consumes both follower and acolyte requirements.
 
 Cult formation cost:
 
-`cult_cost = cult_cost_base * 2^(cults_owned)`
+`cult_cost = cult_cost_base * 2^(cults_owned) * conversion_threshold_mult`
 
 `cult_cost_base = 500`, or `350` with Echo upgrade.
 
 Cult leadership requirement:
 
-`prophets_needed_for_next_cult = 1 + floor(cults_owned / 2)`
+`prophets_needed_for_next_cult = ceil((1 + floor(cults_owned / 3)) * conversion_threshold_mult)`
 
 Founding a cult consumes the required prophets.
+
+Conversion overflow scaling:
+
+`conversion_overflow_rank = max(0, conversion_tree_rank - 5)`
+
+`conversion_threshold_mult = max(0.70, 1 - 0.02 * conversion_overflow_rank)`
 
 Reference values with base 500:
 - Cult 1: 500
@@ -282,53 +288,32 @@ Base multipliers by act type:
 
 Acts must reward engagement without invalidating passive systems.
 
+Doctrine overflow scaling:
+
+`act_cost = base_act_cost * act_discount_mult * doctrine_overflow_mult`
+
+`act_discount_mult = 0.85 if act_discount Echo is owned, else 1.0`
+
+`doctrine_overflow_mult = max(0.78, 1 - 0.015 * doctrine_overflow_rank)`
+
+`doctrine_overflow_rank = max(0, doctrine_tree_rank - 5)`
+
 ## Era III Follower Flow Additions (Implemented)
 
-Passive follower arrival (Era III only):
+Passive follower arrival:
 
-`passiveFollowerRate = ((0.35*cults*(1+tempest_memory_bonus)) + 0.25*shrines + (0.05*prophets*(1+life_death_bonus))) * whisper_target_mult * (civHealth/100) * veilZoneMult`
+Era II:
+
+`passiveFollowerRate = (0.015*acolytes + (0.03*prophets*(1+life_death_bonus))) * whisper_target_mult`
+
+Era III:
+
+`passiveFollowerRate = ((0.03*acolytes) + (0.06*prophets*(1+life_death_bonus)) + (0.45*cults*(1+tempest_memory_bonus)) + 0.25*shrines) * whisper_target_mult * (civHealth/100) * veilZoneMult`
 
 `veilZoneMult`:
 - Veil `>55`: `0.8`
 - Veil `30-55`: `1.1`
 - Veil `<30`: `1.25`
-
-Doctrine follower rites (Era III only):
-- Added high-cost rites for active follower bursts in Doctrine panel.
-- Costs scale per-rite by usage count and do not reset on short timers.
-- Rites consume both Belief and Influence and scale from cult/shrine/prophet/domain/veil/civ state.
-
-Rite cost formulas:
-
-`rite_influence_cost(type, uses) = base_influence[type] * cost_scalar[type]^uses`
-
-`rite_belief_cost(type, uses) = base_belief[type] * cost_scalar[type]^uses`
-
-Constants:
-- `base_influence[procession] = 220`
-- `base_influence[convergence] = 680`
-- `base_belief[procession] = 12000`
-- `base_belief[convergence] = 90000`
-- `cost_scalar[procession] = 1.28`
-- `cost_scalar[convergence] = 1.35`
-
-Rite follower gain:
-
-`rite_followers = base_followers[type] * infrastructure_mult * (civHealth/100) * rite_veil_mult`
-
-`base_followers[procession] = 180`
-
-`base_followers[convergence] = 900`
-
-`infrastructure_mult = 1 + (0.08*cults) + (0.06*shrines) + (0.04*prophets) + (0.07*matching_domain_pairs) + (0.01*total_domain_level)`
-
-`rite_veil_mult`:
-- Veil `>55`: `0.95`
-- Veil `30-55`: `1.10`
-- Veil `<30`: `1.20`
-
-Implementation note:
-- Rite use counters currently scale within a run (not a short timer reset) and reset on ascension/new run.
 
 ## Rival System
 
@@ -430,7 +415,7 @@ Revision note:
 - Divisor is `750000` to keep first-ascension yields from trivializing full Echo tree progression.
 
 Echo tree progression:
-- Trees: `whispers`, `doctrine`, `cataclysm`
+- Trees: `whispers`, `conversion`, `doctrine`, `stability`, `cataclysm`
 - Max rank per tree: `12`
 - Next-rank cost formula:
 
@@ -441,10 +426,13 @@ Reference next-rank costs:
 
 Overflow sink model:
 - Core branch unlocks remain concentrated in the first 5 ranks.
+- Each root is focused to a single system family (targeted whispers, conversion thresholds, doctrine acts, veil stability, cataclysm pressure).
 - Overflow rank is `max(0, rank - 5)` and drives late-game sinks:
-  - Whispers tree overflow: follower-yield bonus and fail-chance reduction
-  - Doctrine tree overflow: whisper surcharge reduction and target cooldown reduction
-  - Cataclysm tree overflow: cult-target whisper fail reduction and miracle reserve cap growth
+  - Whispers overflow: targeted whisper fail-chance reduction, follower-yield bonus, surcharge reduction, and cooldown reduction
+  - Conversion overflow: threshold/requirement/cost reductions for acolyte -> prophet -> cult progression
+  - Doctrine overflow: additional act-cost reduction
+  - Stability overflow: additive veil-regen multiplier (`+2%` per overflow rank, capped at `+20%`)
+  - Cataclysm overflow: miracle reserve cap growth (`+60` per overflow rank)
 
 ## Era Gates
 
@@ -612,14 +600,14 @@ Rules:
 - First-contact explanation: when a new meter appears, attach one concise in-world explanation so players know what changed and why it matters.
 - Density budget: prioritize single-screen decision-making. Move long-form details to compact drawers, tabs, or a dedicated stats page.
 - Era II tab split is strict: `ACTIVE` contains Whisper/Recruit, Influence pressure, and Doctrine progression surfaces (Prophets/Cults); `GROWTH` contains Domains, Rivals, and Threshold progress surfaces.
-- Era III doctrine expands to include cult rites as an active-control layer.
+- Era III doctrine remains progression-focused in `ACTIVE`; Gate Rites live in the dedicated `GATE` tab.
 - In Era II+, `ACTIVE`, `GROWTH`, and `META` use collapsible containers with persisted collapsed/expanded state.
 - `GROWTH` containers persist collapsed/expanded state between sessions.
 - Era II rivals may collapse to a one-line status when inactive; expand to full controls only when active.
 - Era II threshold tracking belongs in `GROWTH`, not `ACTIVE`, and should default to collapsed.
-- Era III `GROWTH` mirrors the same container hierarchy for Doctrine, Domains, and Rivals while Threshold remains in the persistent Unraveling strip.
+- Era III `GROWTH` contains Domains and Rivals; gate progression is handled in the dedicated `GATE` tab.
 - Vocabulary progression is era-locked: Era I uses `Murmurs`, Era II uses `Whispers`, Era III uses `Omens`.
-- Gate naming progression is era-locked: Era I and Era II use `Threshold`, Era III uses `Unraveling Gate`.
+- Gate naming progression is era-locked: Era I and Era II use `Threshold`, Era III uses `Gate`.
 - Bottom status line progression is era-locked: Era I one quiet atmospheric line, Era II one directive line, Era III hidden.
 - Stats page is exempt from era-lock visibility and must remain accessible in every era and tab.
 - Stats content still follows progressive disclosure: only show metrics for systems the player has already unlocked or experienced.

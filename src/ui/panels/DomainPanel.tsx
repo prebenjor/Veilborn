@@ -88,7 +88,7 @@ export function DomainPanel({
               ? `Doctrine effect: +${formatResource(pair.prophetPassiveBonus * 100)}% prophet follower rate`
               : pair.focus === "whispers"
                 ? `Doctrine effect: -${formatResource(pair.whisperSurchargeReduction * 100)}% whisper surcharge -${formatResource(pair.whisperCooldownReductionMs / 1000)}s cooldown`
-                : `Doctrine effect: +${formatResource(pair.cultRiteBonus * 100)}% cult rites and cult follower rate`;
+                : `Doctrine effect: +${formatResource(pair.cultPassiveBonus * 100)}% cult follower rate`;
 
           return (
             <article key={pair.id} className="rounded-lg border border-white/10 bg-black/20 p-2">

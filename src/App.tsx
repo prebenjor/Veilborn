@@ -10,7 +10,6 @@ import {
   canWhisper,
   canCastMiracle,
   canFormCult,
-  canPerformFollowerRite,
   canFormPantheonAlliance,
   canInvokeFinalChoice,
   canPurchaseEchoTreeRank,
@@ -18,7 +17,6 @@ import {
   canSuppressRival,
   ensurePantheonInitialized,
   ensureGhostInitialized,
-  exportGhostSignatures,
   getActSlotCap,
   canRecruit,
   getRecruitPreview,
@@ -31,8 +29,6 @@ import {
   performCultFormation,
   performDomainInvestment,
   performFormPantheonAlliance,
-  performFollowerRite,
-  performImportGhostSignatures,
   performDomainInvestments,
   performPurchaseEchoTreeRank,
   performProphetAnoint,
@@ -66,14 +62,11 @@ import {
   getEraOneGateStatus,
   getEraTwoGateStatus,
   getEchoTreeNextCost,
-  getFollowerRiteCost,
-  getFollowerRiteFollowerGain,
   getFollowersForNextAcolyte,
   getFollowersForNextProphet,
   getAcolytesForNextProphet,
   getInfluenceCap,
   getInfluenceRegenBreakdown,
-  getGhostInfluenceTotals,
   getDomainPoisonRunsRemaining,
   getMiracleBeliefGain,
   getMiracleCivDamage,
@@ -138,7 +131,6 @@ import {
   type DomainId,
   type EchoTreeId,
   type FinalChoice,
-  type FollowerRiteType,
   type GameState,
   type MiracleTier,
   type WhisperMagnitude,
@@ -240,73 +232,92 @@ const ECHO_TREE_META: Array<{
     label: "Whisper Roots",
     unlocks: [
       "Start each run with +50 Influence",
-      "Lower Prophet threshold: 50 -> 20 followers",
       "Resonant Word: +2.0 Influence/s",
-      "Era I Belief gate multiplier: x0.70",
-      "Rivals weakened by 20%",
       "Steady Voice I: targeted whisper fail chance -1.5%",
       "Steady Voice II: targeted whisper fail chance -1.5%",
       "Steady Voice III: targeted whisper fail chance -1.5%",
       "Resonant Delivery I: targeted whisper yield +2%",
       "Resonant Delivery II: targeted whisper yield +2%",
       "Resonant Delivery III: targeted whisper yield +2%",
-      "Resonant Delivery IV: targeted whisper yield +2%"
+      "Narrow Channel I: target surcharges -1%",
+      "Narrow Channel II: target surcharges -1%",
+      "Doctrine Relay I: target cooldown -2s",
+      "Doctrine Relay II: target cooldown -2s"
+    ]
+  },
+  {
+    id: "conversion",
+    label: "Conversion Roots",
+    unlocks: [
+      "Lower Prophet threshold: 50 -> 20 followers",
+      "Lower Cult base cost: 500 -> 350",
+      "Era I Belief gate multiplier: x0.70",
+      "Era II Belief gate multiplier: x0.75",
+      "Ordination Weave I: conversion thresholds -2%",
+      "Ordination Weave II: conversion thresholds -2%",
+      "Ordination Weave III: conversion thresholds -2%",
+      "Ordination Weave IV: conversion thresholds -2%",
+      "Ordination Weave V: conversion thresholds -2%",
+      "Ordination Weave VI: conversion thresholds -2%",
+      "Ordination Weave VII: conversion thresholds -2%",
+      "Ordination Weave VIII: conversion thresholds -2%"
     ]
   },
   {
     id: "doctrine",
     label: "Doctrine Roots",
     unlocks: [
-      "Lower Cult base cost: 500 -> 350",
-      "Rival spawn interval: +60s",
       "Act return floor: 1.0x -> 1.5x",
       "Act costs: x0.85",
-      "Era II Belief gate multiplier: x0.75",
-      "Narrow Channel I: target surcharges -1%",
-      "Narrow Channel II: target surcharges -1%",
-      "Narrow Channel III: target surcharges -1%",
-      "Doctrine Relay I: target cooldown -2s",
-      "Doctrine Relay II: target cooldown -2s",
-      "Doctrine Relay III: target cooldown -2s",
-      "Doctrine Relay IV: target cooldown -2s"
+      "Rival spawn interval: +60s",
+      "Rivals weakened by 20%",
+      "War Drums I: additional act-cost reduction -1.5%",
+      "War Drums II: additional act-cost reduction -1.5%",
+      "War Drums III: additional act-cost reduction -1.5%",
+      "War Drums IV: additional act-cost reduction -1.5%",
+      "War Drums V: additional act-cost reduction -1.5%",
+      "War Drums VI: additional act-cost reduction -1.5%",
+      "War Drums VII: additional act-cost reduction -1.5%",
+      "War Drums VIII: additional act-cost reduction -1.5%"
+    ]
+  },
+  {
+    id: "stability",
+    label: "Stability Roots",
+    unlocks: [
+      "Veil base regen: 1/120s -> 1/80s",
+      "Veil collapse threshold: 15 -> 8",
+      "Veil collapse immunity: 30s",
+      "Civilization rebuild timer: x0.60",
+      "Anchor Lattice I: veil regen +2%",
+      "Anchor Lattice II: veil regen +2%",
+      "Anchor Lattice III: veil regen +2%",
+      "Anchor Lattice IV: veil regen +2%",
+      "Anchor Lattice V: veil regen +2%",
+      "Anchor Lattice VI: veil regen +2%",
+      "Anchor Lattice VII: veil regen +2%",
+      "Anchor Lattice VIII: veil regen +2%"
     ]
   },
   {
     id: "cataclysm",
     label: "Cataclysm Roots",
     unlocks: [
-      "Veil base regen: 1/120s -> 1/80s",
       "Whisper of Providence Veil cost: 10 -> 5",
-      "Veil collapse threshold: 15 -> 8",
-      "Veil collapse immunity: 30s",
-      "Civilization rebuild timer: x0.60",
       "Reserve Lattice I: +60 miracle reserve cap",
       "Reserve Lattice II: +60 miracle reserve cap",
       "Reserve Lattice III: +60 miracle reserve cap",
       "Reserve Lattice IV: +60 miracle reserve cap",
-      "Omen Bastion I: cult-target whisper fail chance -1.0%",
-      "Omen Bastion II: cult-target whisper fail chance -1.0%",
-      "Omen Bastion III: cult-target whisper fail chance -1.0%"
+      "Reserve Lattice V: +60 miracle reserve cap",
+      "Reserve Lattice VI: +60 miracle reserve cap",
+      "Reserve Lattice VII: +60 miracle reserve cap",
+      "Reserve Lattice VIII: +60 miracle reserve cap",
+      "Reserve Lattice IX: +60 miracle reserve cap",
+      "Reserve Lattice X: +60 miracle reserve cap",
+      "Reserve Lattice XI: +60 miracle reserve cap"
     ]
   }
 ];
-
-const FOLLOWER_RITE_META: Record<
-  FollowerRiteType,
-  {
-    label: string;
-    hint: string;
-  }
-> = {
-  procession: {
-    label: "Pilgrim Procession",
-    hint: "Draws followers along shrine paths."
-  },
-  convergence: {
-    label: "Convergence March",
-    hint: "A great movement, difficult to sustain."
-  }
-};
 
 const ERA_TWO_PLUS_WHISPER_PROFILES: Array<{
   target: WhisperTarget;
@@ -560,7 +571,6 @@ export default function App() {
   const [offlineSummary, setOfflineSummary] = useState<OfflineProgressSummary | null>(
     initialLoad.offlineSummary
   );
-  const [ghostImportStatus, setGhostImportStatus] = useState<string | null>(null);
   const [telemetryStatus, setTelemetryStatus] = useState<string | null>(null);
   const [telemetryRunSummaries, setTelemetryRunSummaries] = useState<TelemetryRunSummary[]>(() =>
     loadTelemetryRunSummaries()
@@ -939,8 +949,6 @@ export default function App() {
     canAlliance: canFormPantheonAlliance(gameState, ally.id),
     canBetray: canBetrayPantheonAlly(gameState, ally.id)
   }));
-  const ghostInfluenceTotals = getGhostInfluenceTotals(gameState);
-
   const canUseWhisper =
     gameState.era >= 2
       ? whisperOptions.some((option) => option.canUse)
@@ -961,7 +969,7 @@ export default function App() {
 
   const echoTreeViews = ECHO_TREE_META
     .filter((tree) => {
-      if (tree.id === "whispers") return true;
+      if (tree.id === "whispers" || tree.id === "conversion") return true;
       if (tree.id === "doctrine") return gameState.era >= 2;
       return gameState.era >= 3;
     })
@@ -1015,19 +1023,6 @@ export default function App() {
     ritual: canStartAct(gameState, "ritual"),
     proclaim: canStartAct(gameState, "proclaim")
   };
-  const followerRiteOptions = (Object.keys(FOLLOWER_RITE_META) as FollowerRiteType[]).map((type) => {
-    const costs = getFollowerRiteCost(gameState, type);
-    return {
-      type,
-      label: FOLLOWER_RITE_META[type].label,
-      hint: FOLLOWER_RITE_META[type].hint,
-      influenceCost: costs.influenceCost,
-      beliefCost: costs.beliefCost,
-      projectedFollowers: getFollowerRiteFollowerGain(gameState, type, nowMs),
-      uses: costs.uses,
-      canPerform: canPerformFollowerRite(gameState, type)
-    };
-  });
   const activeActs = gameState.doctrine.activeActs.map((act) => ({
     id: act.id,
     type: act.type,
@@ -1046,7 +1041,7 @@ export default function App() {
   const canUseSuppressRival = canSuppressRival(gameState);
   const doctrineGrowthSummary =
     gameState.era >= 3
-      ? `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults \u00b7 ${formatResource(activeActs.length)} of ${formatResource(actSlotCap)} rites active`
+      ? `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults \u00b7 ${formatResource(activeActs.length)} of ${formatResource(actSlotCap)} acts active`
       : `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults`;
   const domainsGrowthSummary = `Synergy x${formatResource(domainSynergy, 2)} \u00b7 ${formatResource(doctrineResonance.activePairs)} resonance pairs`;
   const rivalsGrowthSummary = hasActiveRivals
@@ -1070,9 +1065,6 @@ export default function App() {
   const veilErosionPerSecond = getVeilErosionPerSecond(gameState);
   const veilCollapseThreshold = getVeilCollapseThreshold(gameState);
   const miracleReserveCap = getMiracleReserveCap(gameState);
-  const civilizationRebuildSeconds = gameState.cataclysm.civilizationCollapsed
-    ? Math.max(0, Math.ceil((gameState.cataclysm.civilizationRebuildEndsAt - nowMs) / 1000))
-    : 0;
   const miracleOptions = MIRACLE_TIERS.map((tier) => ({
     tier,
     influenceCost: getMiracleInfluenceCost(tier),
@@ -1147,7 +1139,6 @@ export default function App() {
     canUseWhisper || canUseRecruit
       ? `Whisper ${formatResource(cheapestWhisperCost)}+ \u00b7 Recruit`
       : "Influence is recovering.";
-  const activeCataclysmSummary = `${formatResource(gameState.resources.veil)} \u00b7 ${veilStability.label} \u00b7 civ ${formatResource(gameState.cataclysm.civilizationHealth)}`;
   const metaOverviewSummary = `Era ${formatResource(era)} \u00b7 ${formatResource(gameState.prestige.completedRuns)} completed runs`;
   const metaAscensionSummary = uiReveal.showAscensionPanel
     ? `${formatResource(gameState.prestige.echoes)} Echoes \u00b7 +${formatResource(ascensionEchoGain)} this run`
@@ -1338,16 +1329,6 @@ export default function App() {
     });
   };
 
-  const onPerformFollowerRite = (type: FollowerRiteType) => {
-    const actionAt = Date.now();
-    setGameState((prev) => {
-      const next = performFollowerRite(prev, type, actionAt);
-      if (next === prev) return prev;
-      recordTelemetryAction(next, "perform_follower_rite", actionAt);
-      return next;
-    });
-  };
-
   const onSuppressRival = () => {
     const actionAt = Date.now();
     setGameState((prev) => {
@@ -1444,41 +1425,6 @@ export default function App() {
       setFinalChoiceMaskVisible(false);
       finalChoiceMaskTimerRef.current = null;
     }, 1800);
-  };
-
-  const onExportGhostSignatures = () => {
-    const payload = exportGhostSignatures(gameStateRef.current);
-    const stamp = new Date().toISOString().replace(/[:]/g, "-");
-    const fileName = `veilborn-signatures-${stamp}.json`;
-    const blob = new Blob([payload], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    setGhostImportStatus(`Exported signatures to ${fileName}.`);
-  };
-
-  const onImportGhostSignatures = async (file: File) => {
-    const rawText = await file.text();
-    const nowMs = Date.now();
-    let importedCount = 0;
-    let error: string | null = null;
-
-    setGameState((prev) => {
-      const result = performImportGhostSignatures(prev, rawText, nowMs);
-      importedCount = result.importedCount;
-      error = result.error;
-      return result.state;
-    });
-
-    if (error) {
-      setGhostImportStatus(error);
-      return;
-    }
-
-    setGhostImportStatus(`Imported ${formatResource(importedCount)} signatures from ${file.name}.`);
   };
 
   const onExportSave = () => {
@@ -1758,8 +1704,6 @@ export default function App() {
       actResonantBonus={getActResonantBonus(gameState)}
       canStartAct={canStartActs}
       onStartAct={onStartAct}
-      followerRites={followerRiteOptions}
-      onPerformFollowerRite={onPerformFollowerRite}
       rivalsCount={gameState.doctrine.rivals.length}
       rivalStrength={rivalStrength}
       rivalDrainPerSecond={rivalDrainPerSecond}
@@ -1785,8 +1729,6 @@ export default function App() {
       actResonantBonus={getActResonantBonus(gameState)}
       canStartAct={canStartActs}
       onStartAct={onStartAct}
-      followerRites={followerRiteOptions}
-      onPerformFollowerRite={onPerformFollowerRite}
       rivalsCount={gameState.doctrine.rivals.length}
       rivalStrength={rivalStrength}
       rivalDrainPerSecond={rivalDrainPerSecond}
@@ -1836,8 +1778,10 @@ export default function App() {
       unravelingBeliefTarget={unravelingGate.beliefTarget}
       unravelingVeilProgress={gameState.resources.veil}
       unravelingVeilTarget={unravelingGate.veilTarget}
-      unravelingMiraclesProgress={gameState.cataclysm.miraclesThisRun}
-      unravelingMiraclesTarget={unravelingGate.miraclesTarget}
+      unravelingRitesProgress={gameState.cataclysm.miraclesThisRun}
+      unravelingRitesTarget={unravelingGate.miraclesTarget}
+      unravelingRiteVeilStrainProgress={gameState.cataclysm.gateRiteVeilSpent}
+      unravelingRiteVeilStrainTarget={unravelingGate.riteVeilStrainTarget}
       unravelingRunTimeProgressSeconds={gameState.simulation.totalElapsedMs / 1000}
       unravelingRunTimeTargetSeconds={unravelingGate.runTimeTargetSeconds}
       unravelingReady={unravelingGate.ready}
@@ -1867,8 +1811,10 @@ export default function App() {
       unravelingBeliefTarget={unravelingGate.beliefTarget}
       unravelingVeilProgress={gameState.resources.veil}
       unravelingVeilTarget={unravelingGate.veilTarget}
-      unravelingMiraclesProgress={gameState.cataclysm.miraclesThisRun}
-      unravelingMiraclesTarget={unravelingGate.miraclesTarget}
+      unravelingRitesProgress={gameState.cataclysm.miraclesThisRun}
+      unravelingRitesTarget={unravelingGate.miraclesTarget}
+      unravelingRiteVeilStrainProgress={gameState.cataclysm.gateRiteVeilSpent}
+      unravelingRiteVeilStrainTarget={unravelingGate.riteVeilStrainTarget}
       unravelingRunTimeProgressSeconds={gameState.simulation.totalElapsedMs / 1000}
       unravelingRunTimeTargetSeconds={unravelingGate.runTimeTargetSeconds}
       unravelingReady={unravelingGate.ready}
@@ -1899,10 +1845,11 @@ export default function App() {
       acolytes={gameState.acolytes}
       prophets={gameState.prophets}
       cults={gameState.cults}
+      acolyteFollowerGainRatePerSecond={passiveFollowerRateBreakdown.acolytePerSecond}
       prophetFollowerGainRatePerSecond={passiveFollowerRateBreakdown.prophetPerSecond}
       cultFollowerGainRatePerSecond={passiveFollowerRateBreakdown.cultPerSecond}
       prophetResonanceBonus={doctrineResonance.prophetPassiveBonus}
-      cultResonanceBonus={doctrineResonance.cultRiteBonus}
+      cultResonanceBonus={doctrineResonance.cultPassiveBonus}
       whisperResonanceSurchargeReduction={doctrineResonance.whisperSurchargeReduction}
       whisperResonanceCooldownReductionMs={doctrineResonance.whisperCooldownReductionMs}
       whisperFollowerRateSource={whisperFollowerRateSource}
@@ -1934,10 +1881,9 @@ export default function App() {
         veilRegenPerSecond={veilRegenPerSecond}
         veilErosionPerSecond={veilErosionPerSecond}
         veilCollapseThreshold={veilCollapseThreshold}
-        civilizationHealth={gameState.cataclysm.civilizationHealth}
-        civilizationCollapsed={gameState.cataclysm.civilizationCollapsed}
-        civilizationRebuildInSeconds={civilizationRebuildSeconds}
         miraclesThisRun={gameState.cataclysm.miraclesThisRun}
+        riteVeilStrain={gameState.cataclysm.gateRiteVeilSpent}
+        riteVeilStrainTarget={unravelingGate.riteVeilStrainTarget}
         miracleOptions={miracleOptions}
         onCastMiracle={onCastMiracle}
       />
@@ -1971,10 +1917,8 @@ export default function App() {
       whisperPanel={whisperPanel}
       doctrinePanel={era >= 3 ? doctrineGrowthPanel : null}
       progressPanel={era >= 3 ? progressPanel : null}
-      cataclysmPanel={eraThreeCataclysmPanel}
       whisperSummary={activeWhispersSummary}
       doctrineSummary={doctrineGrowthSummary}
-      cataclysmSummary={activeCataclysmSummary}
     />
   );
 
@@ -2026,7 +1970,13 @@ export default function App() {
 
   const activeTabContent = era === 2 ? eraTwoActiveContent : eraThreeActiveContent;
   const growthTabContent = era === 2 ? eraTwoGrowthContent : eraThreeGrowthContent;
-  const gateTabContent = era >= 3 ? eraThreeGatePanel : null;
+  const gateTabContent =
+    era >= 3 ? (
+      <div className="space-y-2">
+        {eraThreeCataclysmPanel}
+        {eraThreeGatePanel}
+      </div>
+    ) : null;
   const metaOverviewPanel = (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
       <p>
@@ -2046,15 +1996,8 @@ export default function App() {
       ascensionEchoGain={ascensionEchoGain}
       canAscend={canUseAscend}
       treeViews={echoTreeViews}
-      ghostLocalCount={gameState.ghost.localSignatures.length}
-      ghostImportedCount={gameState.ghost.importedSignatures.length}
-      ghostImportStatus={ghostImportStatus}
-      ghostInfluenceTotals={ghostInfluenceTotals}
-      ghostInfluences={gameState.ghost.activeInfluences}
       onPurchaseTree={onPurchaseEchoTreeRank}
       onAscend={onAscend}
-      onExportGhostSignatures={onExportGhostSignatures}
-      onImportGhostSignatures={onImportGhostSignatures}
     />
   ) : (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">

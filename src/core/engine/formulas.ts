@@ -29,7 +29,7 @@ import {
   DOMAIN_RESONANCE_PROPHET_PASSIVE_PER_TIER,
   DOMAIN_RESONANCE_WHISPER_SURCHARGE_REDUCTION_PER_TIER,
   DOMAIN_RESONANCE_WHISPER_COOLDOWN_REDUCTION_MS_PER_TIER,
-  DOMAIN_RESONANCE_CULT_RITE_BONUS_PER_TIER,
+  DOMAIN_RESONANCE_CULT_PASSIVE_PER_TIER,
   DOMAIN_MULTIPLIER_SCALE,
   DOMAIN_SYNERGY_SCALE,
   DOMAIN_XP_BASE,
@@ -61,6 +61,8 @@ import {
   PASSIVE_FOLLOWER_RATE_PER_CULT,
   PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO,
   PASSIVE_FOLLOWER_RATE_PER_PROPHET,
+  PASSIVE_FOLLOWER_RATE_PER_ACOLYTE_ERA_TWO,
+  PASSIVE_FOLLOWER_RATE_PER_ACOLYTE,
   PASSIVE_FOLLOWER_RATE_PER_SHRINE,
   PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER,
   PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER,
@@ -91,18 +93,6 @@ import {
   MIRACLE_RESERVE_PER_SHRINE,
   MIRACLE_RESERVE_START_BONUS,
   MIRACLE_RESERVE_ECHO_BONUS_PER_RANK,
-  FOLLOWER_RITE_BASE_BELIEF_COST,
-  FOLLOWER_RITE_BASE_FOLLOWERS,
-  FOLLOWER_RITE_BASE_INFLUENCE_COST,
-  FOLLOWER_RITE_COST_SCALAR,
-  FOLLOWER_RITE_PER_CULT_SCALE,
-  FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE,
-  FOLLOWER_RITE_PER_DOMAIN_PAIR_SCALE,
-  FOLLOWER_RITE_PER_PROPHET_SCALE,
-  FOLLOWER_RITE_PER_SHRINE_SCALE,
-  FOLLOWER_RITE_VEIL_DANGER_MULTIPLIER,
-  FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER,
-  FOLLOWER_RITE_VEIL_SAFE_MULTIPLIER,
   FOLLOWER_BELIEF_TRICKLE_PER_FOLLOWER,
   PROPHET_DOMAIN_OUTPUT_SCALE,
   PROPHET_OUTPUT_BASE,
@@ -125,6 +115,7 @@ import {
   RIVAL_STRENGTH_SCALE,
   RIVAL_WEAKENED_MULTIPLIER,
   UNRAVELING_BELIEF_GATE,
+  UNRAVELING_RITE_VEIL_STRAIN_GATE,
   UNRAVELING_MIRACLES_GATE,
   UNRAVELING_RUNTIME_GATE_SECONDS,
   UNRAVELING_VEIL_GATE,
@@ -168,7 +159,6 @@ import {
   type EchoTreeId,
   type WhisperMagnitude,
   type WhisperTarget,
-  type FollowerRiteType,
   type EchoTreeRanks,
   type GameState,
   type MiracleTier
@@ -221,18 +211,13 @@ export interface BeliefGenerationBreakdown {
 
 export interface PassiveFollowerRateBreakdown {
   totalPerSecond: number;
+  acolytePerSecond: number;
   prophetPerSecond: number;
   cultPerSecond: number;
   shrinePerSecond: number;
 }
 
-export interface FollowerRiteCost {
-  influenceCost: number;
-  beliefCost: number;
-  uses: number;
-}
-
-type DoctrineResonanceFocus = "prophets" | "whispers" | "rites";
+type DoctrineResonanceFocus = "prophets" | "whispers" | "cults";
 type DoctrineResonancePairId = "life_death" | "light_void" | "tempest_memory";
 
 interface DoctrineResonancePairDefinition {
@@ -255,7 +240,7 @@ export interface DoctrineResonancePairState {
   prophetPassiveBonus: number;
   whisperSurchargeReduction: number;
   whisperCooldownReductionMs: number;
-  cultRiteBonus: number;
+  cultPassiveBonus: number;
 }
 
 export interface DoctrineResonanceState {
@@ -264,7 +249,7 @@ export interface DoctrineResonanceState {
   prophetPassiveBonus: number;
   whisperSurchargeReduction: number;
   whisperCooldownReductionMs: number;
-  cultRiteBonus: number;
+  cultPassiveBonus: number;
 }
 
 export interface EraOneGateStatus {
@@ -293,6 +278,8 @@ export interface UnravelingGateStatus {
   veilReady: boolean;
   miraclesTarget: number;
   miraclesReady: boolean;
+  riteVeilStrainTarget: number;
+  riteVeilStrainReady: boolean;
   runTimeTargetSeconds: number;
   runTimeReady: boolean;
   ready: boolean;
@@ -437,31 +424,39 @@ export function getArchitectureCivilizationModifier(state: GameState): number {
 
 const WHISPERS_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
   "startInf",
-  "prophetThreshold",
-  "resonantWord",
-  "era1Gate",
-  "rivalWeaken"
+  "resonantWord"
 ];
 
-const DOCTRINE_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
+const CONVERSION_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
+  "prophetThreshold",
   "cultCostBase",
-  "rivalDelay",
-  "actFloor",
-  "actDiscount",
+  "era1Gate",
   "era2Gate"
 ];
 
-const CATACLYSM_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
+const DOCTRINE_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
+  "actFloor",
+  "actDiscount",
+  "rivalDelay",
+  "rivalWeaken"
+];
+
+const STABILITY_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
   "veilRegen",
-  "miracleVeilDiscount",
   "collapseThreshold",
   "collapseImmunity",
   "civRebuild"
 ];
 
+const CATACLYSM_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
+  "miracleVeilDiscount"
+];
+
 const TREE_UNLOCKS: Record<EchoTreeId, Array<keyof EchoBonuses>> = {
   whispers: WHISPERS_TREE_UNLOCKS,
+  conversion: CONVERSION_TREE_UNLOCKS,
   doctrine: DOCTRINE_TREE_UNLOCKS,
+  stability: STABILITY_TREE_UNLOCKS,
   cataclysm: CATACLYSM_TREE_UNLOCKS
 };
 const ECHO_ROOT_UNLOCK_RANKS = 5;
@@ -504,6 +499,21 @@ function getEchoOverflowRanks(state: GameState, treeId: EchoTreeId): number {
   return Math.max(0, getEchoTreeRank(state, treeId) - ECHO_ROOT_UNLOCK_RANKS);
 }
 
+function getConversionEchoThresholdMultiplier(state: GameState): number {
+  const overflowRanks = getEchoOverflowRanks(state, "conversion");
+  return Math.max(0.7, 1 - overflowRanks * 0.02);
+}
+
+function getDoctrineEchoActCostMultiplier(state: GameState): number {
+  const overflowRanks = getEchoOverflowRanks(state, "doctrine");
+  return Math.max(0.78, 1 - overflowRanks * 0.015);
+}
+
+function getStabilityEchoVeilRegenMultiplier(state: GameState): number {
+  const overflowRanks = getEchoOverflowRanks(state, "stability");
+  return 1 + Math.min(0.2, overflowRanks * 0.02);
+}
+
 export function getWhisperEchoYieldBonus(state: GameState): number {
   const overflowRanks = getEchoOverflowRanks(state, "whispers");
   return Math.min(
@@ -521,7 +531,7 @@ export function getWhisperEchoFailReduction(state: GameState): number {
 }
 
 export function getWhisperEchoBoostedFailReduction(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "cataclysm");
+  const overflowRanks = getEchoOverflowRanks(state, "whispers");
   return Math.min(
     WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX,
     overflowRanks * WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK
@@ -529,7 +539,7 @@ export function getWhisperEchoBoostedFailReduction(state: GameState): number {
 }
 
 export function getWhisperEchoSurchargeReduction(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "doctrine");
+  const overflowRanks = getEchoOverflowRanks(state, "whispers");
   return Math.min(
     WHISPER_ECHO_SURCHARGE_REDUCTION_MAX,
     overflowRanks * WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK
@@ -537,7 +547,7 @@ export function getWhisperEchoSurchargeReduction(state: GameState): number {
 }
 
 export function getWhisperEchoCooldownReductionMs(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "doctrine");
+  const overflowRanks = getEchoOverflowRanks(state, "whispers");
   return Math.min(
     WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS,
     overflowRanks * WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS
@@ -627,7 +637,7 @@ export function getPantheonAllianceFactors(state: GameState): PantheonAllianceFa
 const DOCTRINE_RESONANCE_PAIRS: DoctrineResonancePairDefinition[] = [
   { id: "life_death", focus: "prophets", left: "harvest", right: "death" },
   { id: "light_void", focus: "whispers", left: "fire", right: "void" },
-  { id: "tempest_memory", focus: "rites", left: "storm", right: "memory" }
+  { id: "tempest_memory", focus: "cults", left: "storm", right: "memory" }
 ];
 
 function getDoctrineResonanceTier(minimumLevel: number): 0 | 1 | 2 | 3 {
@@ -667,7 +677,7 @@ export function getDoctrineResonanceState(state: GameState): DoctrineResonanceSt
         pair.focus === "whispers" ? tier * DOMAIN_RESONANCE_WHISPER_SURCHARGE_REDUCTION_PER_TIER : 0,
       whisperCooldownReductionMs:
         pair.focus === "whispers" ? tier * DOMAIN_RESONANCE_WHISPER_COOLDOWN_REDUCTION_MS_PER_TIER : 0,
-      cultRiteBonus: pair.focus === "rites" ? tier * DOMAIN_RESONANCE_CULT_RITE_BONUS_PER_TIER : 0
+      cultPassiveBonus: pair.focus === "cults" ? tier * DOMAIN_RESONANCE_CULT_PASSIVE_PER_TIER : 0
     };
   });
 
@@ -678,7 +688,7 @@ export function getDoctrineResonanceState(state: GameState): DoctrineResonanceSt
       prophetPassiveBonus: accumulator.prophetPassiveBonus + pair.prophetPassiveBonus,
       whisperSurchargeReduction: accumulator.whisperSurchargeReduction + pair.whisperSurchargeReduction,
       whisperCooldownReductionMs: accumulator.whisperCooldownReductionMs + pair.whisperCooldownReductionMs,
-      cultRiteBonus: accumulator.cultRiteBonus + pair.cultRiteBonus
+      cultPassiveBonus: accumulator.cultPassiveBonus + pair.cultPassiveBonus
     }),
     {
       pairs: [],
@@ -686,7 +696,7 @@ export function getDoctrineResonanceState(state: GameState): DoctrineResonanceSt
       prophetPassiveBonus: 0,
       whisperSurchargeReduction: 0,
       whisperCooldownReductionMs: 0,
-      cultRiteBonus: 0
+      cultPassiveBonus: 0
     }
   );
 }
@@ -718,7 +728,7 @@ export function getDomainSynergy(state: GameState): number {
   const resonance = getDoctrineResonanceState(state);
   const devotionModifiers = getDevotionPathModifiers(state);
   const baseSynergy =
-    (1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs + resonance.cultRiteBonus) *
+    (1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs + resonance.cultPassiveBonus) *
     (1 + devotionModifiers.domainSynergyBonus) *
     getArchitectureDomainModifier(state) *
     getFinalChoiceDomainModifier(state);
@@ -734,12 +744,6 @@ function getPassiveFollowerVeilZoneMultiplier(veil: number): number {
   if (veil > 55) return PASSIVE_FOLLOWER_VEIL_SAFE_MULTIPLIER;
   if (veil < 30) return PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER;
   return PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER;
-}
-
-function getFollowerRiteVeilZoneMultiplier(veil: number): number {
-  if (veil > 55) return FOLLOWER_RITE_VEIL_SAFE_MULTIPLIER;
-  if (veil < 30) return FOLLOWER_RITE_VEIL_DANGER_MULTIPLIER;
-  return FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER;
 }
 
 export function getWhisperFollowerRateMultiplierForTarget(
@@ -763,6 +767,7 @@ export function getPassiveFollowerRateBreakdown(
   if (state.era < 2) {
     return {
       totalPerSecond: 0,
+      acolytePerSecond: 0,
       prophetPerSecond: 0,
       cultPerSecond: 0,
       shrinePerSecond: 0
@@ -771,6 +776,9 @@ export function getPassiveFollowerRateBreakdown(
 
   const resonance = getDoctrineResonanceState(state);
   const whisperFollowerRateMultiplier = getWhisperFollowerRateMultiplier(state);
+  const acolyteBaseRatePerSecond =
+    (state.era >= 3 ? PASSIVE_FOLLOWER_RATE_PER_ACOLYTE : PASSIVE_FOLLOWER_RATE_PER_ACOLYTE_ERA_TWO) *
+    state.acolytes;
   const prophetBaseRatePerSecond =
     (state.era >= 3
       ? PASSIVE_FOLLOWER_RATE_PER_PROPHET
@@ -780,9 +788,11 @@ export function getPassiveFollowerRateBreakdown(
     (1 + resonance.prophetPassiveBonus);
 
   if (state.era < 3) {
+    const acolytePerSecond = Math.max(0, acolyteBaseRatePerSecond);
     const prophetPerSecond = Math.max(0, prophetBaseRatePerSecond);
     return {
-      totalPerSecond: prophetPerSecond,
+      totalPerSecond: acolytePerSecond + prophetPerSecond,
+      acolytePerSecond,
       prophetPerSecond,
       cultPerSecond: 0,
       shrinePerSecond: 0
@@ -792,6 +802,7 @@ export function getPassiveFollowerRateBreakdown(
   if (state.cataclysm.civilizationHealth <= 0) {
     return {
       totalPerSecond: 0,
+      acolytePerSecond: 0,
       prophetPerSecond: 0,
       cultPerSecond: 0,
       shrinePerSecond: 0
@@ -802,17 +813,19 @@ export function getPassiveFollowerRateBreakdown(
     PASSIVE_FOLLOWER_RATE_PER_CULT *
     state.cults *
     whisperFollowerRateMultiplier *
-    (1 + resonance.cultRiteBonus);
+    (1 + resonance.cultPassiveBonus);
   const shrineBaseRatePerSecond = PASSIVE_FOLLOWER_RATE_PER_SHRINE * state.doctrine.shrinesBuilt;
   const civHealthMultiplier = Math.max(0, state.cataclysm.civilizationHealth / 100);
   const veilZoneMultiplier = getPassiveFollowerVeilZoneMultiplier(state.resources.veil);
   const globalMultiplier = civHealthMultiplier * veilZoneMultiplier;
+  const acolytePerSecond = Math.max(0, acolyteBaseRatePerSecond * globalMultiplier);
   const prophetPerSecond = Math.max(0, prophetBaseRatePerSecond * globalMultiplier);
   const cultPerSecond = Math.max(0, cultBaseRatePerSecond * globalMultiplier);
   const shrinePerSecond = Math.max(0, shrineBaseRatePerSecond * globalMultiplier);
 
   return {
-    totalPerSecond: prophetPerSecond + cultPerSecond + shrinePerSecond,
+    totalPerSecond: acolytePerSecond + prophetPerSecond + cultPerSecond + shrinePerSecond,
+    acolytePerSecond,
     prophetPerSecond,
     cultPerSecond,
     shrinePerSecond
@@ -821,56 +834,6 @@ export function getPassiveFollowerRateBreakdown(
 
 export function getPassiveFollowerRate(state: GameState, nowMs: number): number {
   return getPassiveFollowerRateBreakdown(state, nowMs).totalPerSecond;
-}
-
-export function getFollowerRiteUses(state: GameState, type: FollowerRiteType): number {
-  return Math.max(0, Math.floor(state.doctrine.followerRitesUsed?.[type] ?? 0));
-}
-
-export function getFollowerRiteCost(state: GameState, type: FollowerRiteType): FollowerRiteCost {
-  const uses = getFollowerRiteUses(state, type);
-  return {
-    influenceCost: Math.ceil(
-      FOLLOWER_RITE_BASE_INFLUENCE_COST[type] * Math.pow(FOLLOWER_RITE_COST_SCALAR[type], uses)
-    ),
-    beliefCost: Math.ceil(
-      FOLLOWER_RITE_BASE_BELIEF_COST[type] * Math.pow(FOLLOWER_RITE_COST_SCALAR[type], uses)
-    ),
-    uses
-  };
-}
-
-export function getFollowerRiteFollowerGain(
-  state: GameState,
-  type: FollowerRiteType,
-  nowMs: number
-): number {
-  void nowMs;
-  if (state.era < 3) return 0;
-  if (state.cults <= 0) return 0;
-  if (state.cataclysm.civilizationHealth <= 0) return 0;
-
-  const baseFollowers = FOLLOWER_RITE_BASE_FOLLOWERS[type];
-  const resonance = getDoctrineResonanceState(state);
-  const infrastructureMultiplier =
-    1 +
-    state.cults * FOLLOWER_RITE_PER_CULT_SCALE +
-    state.doctrine.shrinesBuilt * FOLLOWER_RITE_PER_SHRINE_SCALE +
-    state.prophets * FOLLOWER_RITE_PER_PROPHET_SCALE +
-    state.matchingDomainPairs * FOLLOWER_RITE_PER_DOMAIN_PAIR_SCALE +
-    getTotalDomainLevel(state) * FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE +
-    resonance.cultRiteBonus;
-  const civHealthMultiplier = Math.max(0, Math.min(1, state.cataclysm.civilizationHealth / 100));
-  const veilMultiplier = getFollowerRiteVeilZoneMultiplier(state.resources.veil);
-  return Math.max(
-    1,
-    Math.floor(
-      baseFollowers *
-        infrastructureMultiplier *
-        civHealthMultiplier *
-        veilMultiplier
-    )
-  );
 }
 
 export function getVeilRegenPerSecond(state: GameState): number {
@@ -885,7 +848,7 @@ export function getVeilRegenPerSecond(state: GameState): number {
     shrineCount > 0
       ? (shrineCount * shrineBaseRate) / (1 + shrineCount * VEIL_REGEN_SHRINE_DIMINISHING_SCALE)
       : 0;
-  return baseRegen + shrineRegen;
+  return (baseRegen + shrineRegen) * getStabilityEchoVeilRegenMultiplier(state);
 }
 
 export function getVeilErosionPerSecond(state: GameState): number {
@@ -910,7 +873,7 @@ export function getCultOutput(state: GameState): number {
     state.resources.followers *
     CULT_OUTPUT_SCALE *
     getDomainSynergy(state) *
-    (1 + resonance.cultRiteBonus);
+    (1 + resonance.cultPassiveBonus);
   return baseOutput * getDevotionPathModifiers(state).cultOutputMultiplier;
 }
 
@@ -1212,24 +1175,40 @@ export function getWhisperFollowerPreview(
 
 export function getFollowersForNextProphet(state: GameState): number {
   const base = state.echoBonuses.prophetThreshold ? PROPHET_THRESHOLD_ECHO_BASE : PROPHET_THRESHOLD_BASE;
-  return Math.ceil(base * Math.pow(PROPHET_THRESHOLD_SCALAR, state.prophets));
+  return Math.ceil(base * Math.pow(PROPHET_THRESHOLD_SCALAR, state.prophets) * getConversionEchoThresholdMultiplier(state));
 }
 
 export function getFollowersForNextAcolyte(state: GameState): number {
-  return Math.ceil(ACOLYTE_THRESHOLD_BASE * Math.pow(ACOLYTE_THRESHOLD_SCALAR, state.acolytes));
+  return Math.ceil(
+    ACOLYTE_THRESHOLD_BASE *
+      Math.pow(ACOLYTE_THRESHOLD_SCALAR, state.acolytes) *
+      getConversionEchoThresholdMultiplier(state)
+  );
 }
 
 export function getAcolytesForNextProphet(state: GameState): number {
-  return PROPHET_ACOLYTE_REQUIREMENT_BASE + Math.floor(state.prophets / PROPHET_ACOLYTE_REQUIREMENT_STEP);
+  return Math.max(
+    1,
+    Math.ceil(
+      (PROPHET_ACOLYTE_REQUIREMENT_BASE + Math.floor(state.prophets / PROPHET_ACOLYTE_REQUIREMENT_STEP)) *
+        getConversionEchoThresholdMultiplier(state)
+    )
+  );
 }
 
 export function getProphetsForNextCult(state: GameState): number {
-  return CULT_PROPHET_REQUIREMENT_BASE + Math.floor(state.cults / CULT_PROPHET_REQUIREMENT_STEP);
+  return Math.max(
+    1,
+    Math.ceil(
+      (CULT_PROPHET_REQUIREMENT_BASE + Math.floor(state.cults / CULT_PROPHET_REQUIREMENT_STEP)) *
+        getConversionEchoThresholdMultiplier(state)
+    )
+  );
 }
 
 export function getCultFormationCost(state: GameState): number {
   const base = state.echoBonuses.cultCostBase ? CULT_COST_ECHO_BASE : CULT_COST_BASE;
-  return Math.ceil(base * Math.pow(CULT_COST_SCALAR, state.cults));
+  return Math.ceil(base * Math.pow(CULT_COST_SCALAR, state.cults) * getConversionEchoThresholdMultiplier(state));
 }
 
 export function getRecruitFollowerGainBase(state: GameState): number {
@@ -1330,7 +1309,7 @@ export function simulateDomainInvestments(
 
 export function getActCost(state: GameState, type: ActType): number {
   const discount = state.echoBonuses.actDiscount ? ACT_COST_DISCOUNT : 1;
-  return Math.ceil(ACT_BASE_COST[type] * discount);
+  return Math.ceil(ACT_BASE_COST[type] * discount * getDoctrineEchoActCostMultiplier(state));
 }
 
 export function getActDurationSeconds(type: ActType): number {
@@ -1343,7 +1322,7 @@ export function getActBaseMultiplier(type: ActType): number {
 
 export function getActResonantBonus(state: GameState): number {
   const resonance = getDoctrineResonanceState(state);
-  return state.matchingDomainPairs * 0.12 + resonance.cultRiteBonus;
+  return state.matchingDomainPairs * 0.12 + resonance.cultPassiveBonus;
 }
 
 export function getActBeliefMultiplier(state: GameState, baseMultiplier: number): number {
@@ -1507,10 +1486,12 @@ export function getUnravelingGateStatus(state: GameState): UnravelingGateStatus 
   const beliefTarget = UNRAVELING_BELIEF_GATE;
   const veilTarget = UNRAVELING_VEIL_GATE;
   const miraclesTarget = UNRAVELING_MIRACLES_GATE;
+  const riteVeilStrainTarget = UNRAVELING_RITE_VEIL_STRAIN_GATE;
   const runTimeTargetSeconds = UNRAVELING_RUNTIME_GATE_SECONDS;
   const beliefReady = state.stats.totalBeliefEarned >= beliefTarget;
   const veilReady = state.resources.veil <= veilTarget;
   const miraclesReady = state.cataclysm.miraclesThisRun >= miraclesTarget;
+  const riteVeilStrainReady = state.cataclysm.gateRiteVeilSpent >= riteVeilStrainTarget;
   const runTimeReady = state.simulation.totalElapsedMs / 1000 >= runTimeTargetSeconds;
 
   return {
@@ -1520,8 +1501,10 @@ export function getUnravelingGateStatus(state: GameState): UnravelingGateStatus 
     veilReady,
     miraclesTarget,
     miraclesReady,
+    riteVeilStrainTarget,
+    riteVeilStrainReady,
     runTimeTargetSeconds,
     runTimeReady,
-    ready: beliefReady && veilReady && miraclesReady && runTimeReady
+    ready: beliefReady && veilReady && miraclesReady && riteVeilStrainReady && runTimeReady
   };
 }

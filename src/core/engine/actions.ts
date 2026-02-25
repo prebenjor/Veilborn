@@ -34,7 +34,6 @@ import {
   type DevotionPath,
   type EchoTreeId,
   type FinalChoice,
-  type FollowerRiteType,
   type GameState,
   type MiracleTier,
   type WhisperMagnitude,
@@ -74,8 +73,6 @@ import {
   getProphetsForNextCult,
   getMatchingDomainPairs,
   getDomainSynergy,
-  getFollowerRiteCost,
-  getFollowerRiteFollowerGain,
   simulateDomainInvestments,
   isPantheonUnlocked,
   getMiracleBeliefGain,
@@ -106,7 +103,6 @@ type OmenKind =
   | "prophet"
   | "cult"
   | "act"
-  | "followerRite"
   | "suppress"
   | "miracle"
   | "civCollapse"
@@ -173,11 +169,6 @@ const ACT_LABELS: Record<ActType, string> = {
   proclaim: "Proclamation"
 };
 
-const FOLLOWER_RITE_LABELS: Record<FollowerRiteType, string> = {
-  procession: "Pilgrim Procession",
-  convergence: "Convergence March"
-};
-
 const DEVOTION_OMEN_FIRST_STACK = "Something stirs at the edge of attention.";
 const DEVOTION_OMEN_MAX_STACK = "The devotion of your followers has taken root.";
 const DEVOTION_OMEN_AFTER_ASCENSION = "The stillness returns. Begin again.";
@@ -190,7 +181,6 @@ const MAJOR_OMEN_KINDS: OmenKind[] = [
   "domainLevel",
   "prophet",
   "cult",
-  "followerRite",
   "suppress",
   "miracle",
   "civCollapse",
@@ -826,14 +816,6 @@ function createOmen(
     `In the salt quarter, a ${detail?.toLowerCase() ?? "rite"} started without proclamation.`
   ] as const;
 
-  const followerRiteStarts = [
-    "Caravans turned toward your shrines without summons.",
-    "Processions crossed district lines by torchlight and did not turn back.",
-    "Door by door, your sign was offered and taken.",
-    "The old roads filled with pilgrims who spoke your silence aloud.",
-    "At first bell, the squares were already crowded with listeners."
-  ] as const;
-
   const suppressStarts = [
     "You bent rival doctrine until it cracked.",
     "A splinter faith was silenced before it found a second voice.",
@@ -973,14 +955,6 @@ function createOmen(
     return {
       rngState: a.rngState,
       text: `${a.value} The doctrine tightened around a single intention.`
-    };
-  }
-
-  if (kind === "followerRite") {
-    const a = pickOne(rngSeed, followerRiteStarts);
-    return {
-      rngState: a.rngState,
-      text: `${a.value} ${detail ?? "The faithful arrived in numbers that no clerk could count twice."}`
     };
   }
 
@@ -1655,60 +1629,6 @@ export function performStartAct(state: GameState, type: ActType, nowMs: number):
   return appendOmen(withDevotionPath, nowMs, "act", ACT_LABELS[type]);
 }
 
-export function canPerformFollowerRite(state: GameState, type: FollowerRiteType): boolean {
-  if (state.era < 3) return false;
-  if (state.cults <= 0) return false;
-  if (state.cataclysm.civilizationCollapsed) return false;
-  const cost = getFollowerRiteCost(state, type);
-  return (
-    state.resources.influence >= cost.influenceCost && state.resources.belief >= cost.beliefCost
-  );
-}
-
-export function performFollowerRite(
-  state: GameState,
-  type: FollowerRiteType,
-  nowMs: number
-): GameState {
-  if (!canPerformFollowerRite(state, type)) return state;
-
-  const cost = getFollowerRiteCost(state, type);
-  const followerGain = getFollowerRiteFollowerGain(state, type, nowMs);
-  const nextUses = Math.max(0, state.doctrine.followerRitesUsed?.[type] ?? 0) + 1;
-
-  const withRite = {
-    ...state,
-    resources: {
-      ...state.resources,
-      influence: state.resources.influence - cost.influenceCost,
-      belief: state.resources.belief - cost.beliefCost,
-      followers: state.resources.followers + followerGain
-    },
-    doctrine: {
-      ...state.doctrine,
-      followerRitesUsed: {
-        ...(state.doctrine.followerRitesUsed ?? { procession: 0, convergence: 0 }),
-        [type]: nextUses
-      }
-    },
-    activity: resolveActivityAfterAction(state.activity, nowMs),
-    meta: {
-      ...state.meta,
-      updatedAt: nowMs
-    }
-  };
-
-  const withDevotionPath = withDevotionMomentumDelta(withRite, nowMs, { accord: 1 });
-
-  const detail = `${FOLLOWER_RITE_LABELS[type]} gathered ${followerGain} followers. Uses this run: ${nextUses}.`;
-  return appendOmen(
-    withPeakFollowers(withDevotionPath, withDevotionPath.resources.followers),
-    nowMs,
-    "followerRite",
-    detail
-  );
-}
-
 export function canSuppressRival(state: GameState): boolean {
   if (state.era < 2) return false;
   if (state.doctrine.rivals.length <= 0) return false;
@@ -1785,6 +1705,8 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
   const followersAfterCiv = civilizationCollapsed
     ? Math.floor(peakBefore * CIV_COLLAPSE_FOLLOWER_RETENTION)
     : state.resources.followers;
+  const nextVeil = Math.max(VEIL_MIN, state.resources.veil - veilCost);
+  const veilSpentByRite = Math.max(0, state.resources.veil - nextVeil);
 
   const withMiracle = {
     ...state,
@@ -1792,7 +1714,7 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
       ...state.resources,
       belief: state.resources.belief + beliefGain,
       influence: state.resources.influence - influenceSpent,
-      veil: Math.max(VEIL_MIN, state.resources.veil - veilCost),
+      veil: nextVeil,
       followers: followersAfterCiv
     },
     activity: resolveActivityAfterAction(state.activity, nowMs),
@@ -1803,6 +1725,7 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     cataclysm: {
       ...state.cataclysm,
       miraclesThisRun: state.cataclysm.miraclesThisRun + 1,
+      gateRiteVeilSpent: state.cataclysm.gateRiteVeilSpent + veilSpentByRite,
       miracleReserve: Math.max(
         0,
         Math.min(miracleReserveCap, state.cataclysm.miracleReserve - reserveSpent)

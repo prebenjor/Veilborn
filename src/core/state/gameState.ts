@@ -122,10 +122,12 @@ export const CADENCE_PROMPT_INTERVAL_MS = 45 * 1000;
 export const CADENCE_ACTION_BELIEF_BONUS = 5;
 export const CADENCE_ACTION_FOLLOWER_BONUS = 1;
 
-export const PASSIVE_FOLLOWER_RATE_PER_CULT = 0.35;
+export const PASSIVE_FOLLOWER_RATE_PER_CULT = 0.45;
 export const PASSIVE_FOLLOWER_RATE_PER_SHRINE = 0.25;
-export const PASSIVE_FOLLOWER_RATE_PER_PROPHET = 0.05;
-export const PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO = 0.02;
+export const PASSIVE_FOLLOWER_RATE_PER_PROPHET = 0.06;
+export const PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO = 0.03;
+export const PASSIVE_FOLLOWER_RATE_PER_ACOLYTE = 0.03;
+export const PASSIVE_FOLLOWER_RATE_PER_ACOLYTE_ERA_TWO = 0.015;
 export const WHISPER_PASSIVE_FOLLOWER_RATE_EFFECT = 0.12;
 export const PASSIVE_FOLLOWER_VEIL_SAFE_MULTIPLIER = 0.8;
 export const PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER = 1.1;
@@ -137,9 +139,9 @@ export const PROPHET_THRESHOLD_SCALAR = 1.6;
 export const ACOLYTE_THRESHOLD_BASE = 18;
 export const ACOLYTE_THRESHOLD_SCALAR = 1.45;
 export const PROPHET_ACOLYTE_REQUIREMENT_BASE = 2;
-export const PROPHET_ACOLYTE_REQUIREMENT_STEP = 3;
+export const PROPHET_ACOLYTE_REQUIREMENT_STEP = 4;
 export const CULT_PROPHET_REQUIREMENT_BASE = 1;
-export const CULT_PROPHET_REQUIREMENT_STEP = 2;
+export const CULT_PROPHET_REQUIREMENT_STEP = 3;
 
 export const CULT_COST_BASE = 500;
 export const CULT_COST_ECHO_BASE = 350;
@@ -167,33 +169,6 @@ export const ACT_FLOOR_BASE = 1.0;
 export const ACT_FLOOR_ECHO = 1.5;
 export const ACT_COST_DISCOUNT = 0.85;
 
-export type FollowerRiteType = "procession" | "convergence";
-export const FOLLOWER_RITE_TYPES: FollowerRiteType[] = ["procession", "convergence"];
-export const FOLLOWER_RITE_BASE_INFLUENCE_COST: Record<FollowerRiteType, number> = {
-  procession: 220,
-  convergence: 680
-};
-export const FOLLOWER_RITE_BASE_BELIEF_COST: Record<FollowerRiteType, number> = {
-  procession: 12000,
-  convergence: 90000
-};
-export const FOLLOWER_RITE_COST_SCALAR: Record<FollowerRiteType, number> = {
-  procession: 1.28,
-  convergence: 1.35
-};
-export const FOLLOWER_RITE_BASE_FOLLOWERS: Record<FollowerRiteType, number> = {
-  procession: 180,
-  convergence: 900
-};
-export const FOLLOWER_RITE_PER_CULT_SCALE = 0.08;
-export const FOLLOWER_RITE_PER_SHRINE_SCALE = 0.06;
-export const FOLLOWER_RITE_PER_PROPHET_SCALE = 0.04;
-export const FOLLOWER_RITE_PER_DOMAIN_PAIR_SCALE = 0.07;
-export const FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE = 0.01;
-export const FOLLOWER_RITE_VEIL_SAFE_MULTIPLIER = 0.95;
-export const FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER = 1.1;
-export const FOLLOWER_RITE_VEIL_DANGER_MULTIPLIER = 1.2;
-
 export const RIVAL_SPAWN_BASE_MS = 300 * 1000;
 export const RIVAL_SPAWN_ECHO_DELAY_MS = 60 * 1000;
 export const RIVAL_EVENT_DURATION_MS = 90 * 1000;
@@ -219,7 +194,7 @@ export const DOMAIN_RESONANCE_TIER_THREE_LEVEL = 9;
 export const DOMAIN_RESONANCE_PROPHET_PASSIVE_PER_TIER = 0.04;
 export const DOMAIN_RESONANCE_WHISPER_SURCHARGE_REDUCTION_PER_TIER = 0.08;
 export const DOMAIN_RESONANCE_WHISPER_COOLDOWN_REDUCTION_MS_PER_TIER = 4000;
-export const DOMAIN_RESONANCE_CULT_RITE_BONUS_PER_TIER = 0.05;
+export const DOMAIN_RESONANCE_CULT_PASSIVE_PER_TIER = 0.05;
 
 export const ERA_ONE_BELIEF_GATE_BASE = 10000;
 export const ERA_ONE_GATE_ECHO_MULTIPLIER = 0.7;
@@ -231,6 +206,7 @@ export const ERA_TWO_CULT_GATE = 3;
 export const UNRAVELING_BELIEF_GATE = 5000000;
 export const UNRAVELING_VEIL_GATE = 20;
 export const UNRAVELING_MIRACLES_GATE = 2;
+export const UNRAVELING_RITE_VEIL_STRAIN_GATE = 50;
 export const UNRAVELING_RUNTIME_GATE_SECONDS = 240 * 60;
 
 export const VEIL_MIN = 0;
@@ -362,12 +338,25 @@ export interface PantheonLegacyState {
   betrayedAllyEver: boolean;
 }
 
-export type EchoTreeId = "whispers" | "doctrine" | "cataclysm";
-export const ECHO_TREE_ORDER: EchoTreeId[] = ["whispers", "doctrine", "cataclysm"];
+export type EchoTreeId =
+  | "whispers"
+  | "conversion"
+  | "doctrine"
+  | "stability"
+  | "cataclysm";
+export const ECHO_TREE_ORDER: EchoTreeId[] = [
+  "whispers",
+  "conversion",
+  "doctrine",
+  "stability",
+  "cataclysm"
+];
 
 export interface EchoTreeRanks {
   whispers: number;
+  conversion: number;
   doctrine: number;
+  stability: number;
   cataclysm: number;
 }
 
@@ -504,7 +493,6 @@ export interface DoctrineState {
   activeActs: ActiveAct[];
   actsCompleted: number;
   shrinesBuilt: number;
-  followerRitesUsed: Record<FollowerRiteType, number>;
   rivals: RivalState[];
   lastRivalSpawnAt: number;
   survivedRivalEvent: boolean;
@@ -514,6 +502,7 @@ export interface DoctrineState {
 
 export interface CataclysmState {
   miraclesThisRun: number;
+  gateRiteVeilSpent: number;
   miracleReserve: number;
   civilizationHealth: number;
   civilizationCollapsed: boolean;
@@ -592,7 +581,9 @@ function createInitialRngState(nowMs: number): number {
 export function createDefaultEchoTreeRanks(): EchoTreeRanks {
   return {
     whispers: 0,
+    conversion: 0,
     doctrine: 0,
+    stability: 0,
     cataclysm: 0
   };
 }
@@ -756,10 +747,6 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       activeActs: [],
       actsCompleted: 0,
       shrinesBuilt: 0,
-      followerRitesUsed: {
-        procession: 0,
-        convergence: 0
-      },
       rivals: [],
       lastRivalSpawnAt: nowMs,
       survivedRivalEvent: false,
@@ -768,6 +755,7 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     },
     cataclysm: {
       miraclesThisRun: 0,
+      gateRiteVeilSpent: 0,
       miracleReserve: 0,
       civilizationHealth: CIV_HEALTH_MAX,
       civilizationCollapsed: false,

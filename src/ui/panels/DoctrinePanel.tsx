@@ -1,4 +1,4 @@
-import type { ActType, FollowerRiteType } from "../../core/state/gameState";
+import type { ActType } from "../../core/state/gameState";
 import { formatProjected, formatResource } from "../../core/ui/numberFormat";
 import { formatDurationCompact } from "../../core/ui/timeFormat";
 
@@ -6,17 +6,6 @@ interface ActiveActView {
   id: string;
   type: ActType;
   remainingSeconds: number;
-}
-
-interface FollowerRiteView {
-  type: FollowerRiteType;
-  label: string;
-  hint: string;
-  influenceCost: number;
-  beliefCost: number;
-  projectedFollowers: number;
-  uses: number;
-  canPerform: boolean;
 }
 
 interface DoctrinePanelProps {
@@ -31,8 +20,6 @@ interface DoctrinePanelProps {
   actResonantBonus: number;
   canStartAct: Record<ActType, boolean>;
   onStartAct: (type: ActType) => void;
-  followerRites: FollowerRiteView[];
-  onPerformFollowerRite: (type: FollowerRiteType) => void;
   rivalsCount: number;
   rivalStrength: number;
   rivalDrainPerSecond: number;
@@ -68,8 +55,6 @@ export function DoctrinePanel({
   actResonantBonus,
   canStartAct,
   onStartAct,
-  followerRites,
-  onPerformFollowerRite,
   rivalsCount,
   rivalStrength,
   rivalDrainPerSecond,
@@ -199,31 +184,6 @@ export function DoctrinePanel({
               </aside>
             </div>
 
-            {era >= 3 && followerRites.length > 0 ? (
-              <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Follower Rites</p>
-                {followerRites.map((rite) => (
-                  <div key={rite.type} className="rounded-lg border border-white/10 bg-black/20 p-2">
-                    <p className="text-xs text-veil/80">{rite.label}</p>
-                    <p className="text-[11px] text-veil/60">{rite.hint}</p>
-                    <p className="mt-1 text-[11px] text-veil/60">
-                      Cost {formatResource(rite.influenceCost)} Influence + {formatResource(rite.beliefCost)} Belief
-                    </p>
-                    <p className="mt-1 text-[11px] text-veil/60">
-                      {formatProjected(rite.projectedFollowers)} followers - {formatResource(rite.uses)} uses
-                    </p>
-                    <button
-                      type="button"
-                      disabled={!rite.canPerform}
-                      onClick={() => onPerformFollowerRite(rite.type)}
-                      className="mt-1 rounded-lg border border-ember/60 px-2 py-1 text-xs text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-                    >
-                      Invoke
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </article>
         ) : null}
 

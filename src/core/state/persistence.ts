@@ -34,7 +34,6 @@ import {
   type Mortal,
   type OmenEntry,
   type FinalChoice,
-  type FollowerRiteType,
   type PantheonAlly,
   type PantheonLegacyState,
   type PantheonState,
@@ -143,7 +142,15 @@ function readActType(value: unknown): ActiveAct["type"] | null {
 }
 
 function readEchoTreeId(value: unknown): EchoTreeId | null {
-  if (value === "whispers" || value === "doctrine" || value === "cataclysm") return value;
+  if (
+    value === "whispers" ||
+    value === "conversion" ||
+    value === "doctrine" ||
+    value === "stability" ||
+    value === "cataclysm"
+  ) {
+    return value;
+  }
   return null;
 }
 
@@ -444,21 +451,10 @@ function sanitizeGhostState(value: unknown, fallback: GhostState): GhostState {
 
 function sanitizeDoctrine(value: unknown, fallback: DoctrineState): DoctrineState {
   if (!isRecord(value)) return fallback;
-  const followerRitesUsed: Record<FollowerRiteType, number> = {
-    procession: Math.max(
-      0,
-      Math.floor(readNumber(isRecord(value.followerRitesUsed) ? value.followerRitesUsed.procession : null, fallback.followerRitesUsed.procession))
-    ),
-    convergence: Math.max(
-      0,
-      Math.floor(readNumber(isRecord(value.followerRitesUsed) ? value.followerRitesUsed.convergence : null, fallback.followerRitesUsed.convergence))
-    )
-  };
   return {
     activeActs: sanitizeActiveActs(value.activeActs, fallback.activeActs),
     actsCompleted: Math.max(0, Math.floor(readNumber(value.actsCompleted, fallback.actsCompleted))),
     shrinesBuilt: Math.max(0, Math.floor(readNumber(value.shrinesBuilt, fallback.shrinesBuilt))),
-    followerRitesUsed,
     rivals: sanitizeRivals(value.rivals, fallback.rivals),
     lastRivalSpawnAt: Math.max(0, readNumber(value.lastRivalSpawnAt, fallback.lastRivalSpawnAt)),
     survivedRivalEvent: readBoolean(value.survivedRivalEvent, fallback.survivedRivalEvent),
@@ -471,6 +467,10 @@ function sanitizeCataclysm(value: unknown, fallback: CataclysmState): CataclysmS
   if (!isRecord(value)) return fallback;
   return {
     miraclesThisRun: Math.max(0, Math.floor(readNumber(value.miraclesThisRun, fallback.miraclesThisRun))),
+    gateRiteVeilSpent: Math.max(
+      0,
+      readNumber(value.gateRiteVeilSpent, fallback.gateRiteVeilSpent)
+    ),
     miracleReserve: Math.max(0, readNumber(value.miracleReserve, fallback.miracleReserve)),
     civilizationHealth: Math.max(0, Math.min(100, readNumber(value.civilizationHealth, fallback.civilizationHealth))),
     civilizationCollapsed: readBoolean(value.civilizationCollapsed, fallback.civilizationCollapsed),
@@ -582,30 +582,36 @@ function inferTreeRankFromBonuses(bonuses: EchoBonuses, keys: Array<keyof EchoBo
 
 function inferTreeRanksFromEchoBonuses(bonuses: EchoBonuses): {
   whispers: number;
+  conversion: number;
   doctrine: number;
+  stability: number;
   cataclysm: number;
 } {
   return {
     whispers: inferTreeRankFromBonuses(bonuses, [
       "startInf",
-      "prophetThreshold",
-      "resonantWord",
-      "era1Gate",
-      "rivalWeaken"
+      "resonantWord"
     ]),
-    doctrine: inferTreeRankFromBonuses(bonuses, [
+    conversion: inferTreeRankFromBonuses(bonuses, [
+      "prophetThreshold",
       "cultCostBase",
-      "rivalDelay",
-      "actFloor",
-      "actDiscount",
+      "era1Gate",
       "era2Gate"
     ]),
-    cataclysm: inferTreeRankFromBonuses(bonuses, [
+    doctrine: inferTreeRankFromBonuses(bonuses, [
+      "actFloor",
+      "actDiscount",
+      "rivalDelay",
+      "rivalWeaken"
+    ]),
+    stability: inferTreeRankFromBonuses(bonuses, [
       "veilRegen",
-      "miracleVeilDiscount",
       "collapseThreshold",
       "collapseImmunity",
       "civRebuild"
+    ]),
+    cataclysm: inferTreeRankFromBonuses(bonuses, [
+      "miracleVeilDiscount"
     ])
   };
 }
@@ -629,7 +635,9 @@ function sanitizePrestige(
   const rawTreeRanks = isRecord(value.treeRanks) ? value.treeRanks : {};
   const normalizedTreeRanks = {
     whispers: fallback.treeRanks.whispers,
+    conversion: fallback.treeRanks.conversion,
     doctrine: fallback.treeRanks.doctrine,
+    stability: fallback.treeRanks.stability,
     cataclysm: fallback.treeRanks.cataclysm
   };
 
@@ -643,12 +651,23 @@ function sanitizePrestige(
   }
 
   const inferredTreeRanks = inferTreeRanksFromEchoBonuses(normalizedBonuses);
-  const hasAnyRank =
-    normalizedTreeRanks.whispers > 0 ||
-    normalizedTreeRanks.doctrine > 0 ||
-    normalizedTreeRanks.cataclysm > 0;
-
-  const treeRanks = hasAnyRank ? normalizedTreeRanks : inferredTreeRanks;
+  const treeRanks = {
+    whispers: Object.prototype.hasOwnProperty.call(rawTreeRanks, "whispers")
+      ? normalizedTreeRanks.whispers
+      : inferredTreeRanks.whispers,
+    conversion: Object.prototype.hasOwnProperty.call(rawTreeRanks, "conversion")
+      ? normalizedTreeRanks.conversion
+      : inferredTreeRanks.conversion,
+    doctrine: Object.prototype.hasOwnProperty.call(rawTreeRanks, "doctrine")
+      ? normalizedTreeRanks.doctrine
+      : inferredTreeRanks.doctrine,
+    stability: Object.prototype.hasOwnProperty.call(rawTreeRanks, "stability")
+      ? normalizedTreeRanks.stability
+      : inferredTreeRanks.stability,
+    cataclysm: Object.prototype.hasOwnProperty.call(rawTreeRanks, "cataclysm")
+      ? normalizedTreeRanks.cataclysm
+      : inferredTreeRanks.cataclysm
+  };
 
   return {
     echoes: Math.max(0, Math.floor(readNumber(value.echoes, fallback.echoes))),

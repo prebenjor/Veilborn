@@ -7,6 +7,7 @@ interface ProgressPanelProps {
   acolytes: number;
   prophets: number;
   cults: number;
+  acolyteFollowerGainRatePerSecond: number;
   prophetFollowerGainRatePerSecond: number;
   cultFollowerGainRatePerSecond: number;
   prophetResonanceBonus: number;
@@ -34,6 +35,7 @@ export function ProgressPanel({
   acolytes,
   prophets,
   cults,
+  acolyteFollowerGainRatePerSecond,
   prophetFollowerGainRatePerSecond,
   cultFollowerGainRatePerSecond,
   prophetResonanceBonus,
@@ -68,6 +70,11 @@ export function ProgressPanel({
           <p className="mt-1 text-xs text-veil/65">
             Ordination consumes followers and prepares future prophets.
           </p>
+          {era >= 2 ? (
+            <p className="mt-1 text-xs text-veil/65">
+              {formatRate(acolyteFollowerGainRatePerSecond)}/s followers
+            </p>
+          ) : null}
           {era >= 2 ? (
             <p className="mt-1 text-xs text-veil/65">
               Whisper resonance: -{formatResource(whisperResonanceSurchargeReduction * 100)}% surcharge, -

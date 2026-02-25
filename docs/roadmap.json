@@ -303,10 +303,10 @@
         "All GROWTH containers are collapsible with persisted localStorage state",
         "Era II rivals collapse to one-line status when inactive and expand to full controls when active",
         "Era II threshold sits at the bottom of GROWTH (not ACTIVE) and defaults to collapsed",
-        "Era III GROWTH order is Doctrine (merged) -> Domains -> Rivals; Threshold remains in persistent Unraveling strip",
+        "Era III GROWTH order is Domains -> Rivals; gate progression is handled in the dedicated GATE tab",
         "Era II+ META containers are collapsible with persisted localStorage state",
-        "ACTIVE tab prioritizes Cataclysm, rivals, whispers, and influence pressure in Era III",
-        "Unraveling gate as persistent strip in Era III",
+        "Era III ACTIVE order is Whispers -> Doctrine, with gate rites and gate conditions moved to the GATE tab",
+        "Unraveling progression uses dedicated GATE tab surfaces (no persistent strip)",
         "Echo trees constrained to META view; between-run systems removed from active flow",
         "Persistent omen surface across tabs (drawer/strip)",
         "Theme token progression by era (data-era) for palette/texture/typography density shifts",
@@ -795,7 +795,7 @@
       "execute_after": "M14",
       "notes": "Trimmed to unresolved items after PF-26 and UI consolidation follow-ups. Completed checks (Meta label, Cataclysm top ordering, Veil Stability descriptor in stat bar) were removed from scope.",
       "scope": [
-        "Unraveling Gate label appears twice (section header and inner bar header) - inner bar label should read 'Ready to Unravel' when conditions unmet, 'Cross the Threshold' when all met",
+        "Gate label appears twice (section header and inner bar header) - inner bar label should read 'Ready to Unravel' when conditions unmet, 'Cross the Threshold' when all met",
         "Suppress Rival button when no rivals are present should be hidden entirely, not greyed or visible",
         "Bottom status line must be hidden in Era III per era vocabulary progression spec"
       ]
@@ -814,7 +814,7 @@
         "Replace Miracle T2 with The Anointing",
         "Replace Miracle T3 with The Rending",
         "Replace Miracle T4 with Unraveling",
-        "Apply miracle names everywhere tier labels appear: Cataclysm panel, omen log, stats surfaces, and any tier-referenced tooltip/projection text",
+        "Apply miracle names everywhere tier labels appear: Gate Rites panel, omen log, stats surfaces, and any tier-referenced tooltip/projection text",
         "Update MANIFESTO.md and docs/GAME_REFERENCE.md in the same change with revised Veil formulas and miracle names",
         "Keep non-PF25 miracle numeric retunes tracked in dedicated follow-up items"
       ],
@@ -839,7 +839,7 @@
         "Use a separate fixed top-right STATS dock on wide viewports instead of embedding STATS in the sidebar",
         "Desktop STATS dock defaults collapsed with trigger label `STATS` and no glow treatment",
         "Hide the mobile floating STATS button on wide viewports; keep it on mobile",
-        "Keep Stat Bar and Era III Unraveling Gate strip full width above the split",
+        "Keep Stat Bar and Era III GATE tab shell surfaces full width above the split",
         "Constrain left content column (Era I single-column and Era II/III tab content) to accommodate sidebar",
         "Give right panel subtle background differentiation while preserving era token styling",
         "Filter active omen surface to current run (`entry.at >= runStartTimestamp`) so prior-run lines do not render in the live surface",
@@ -855,7 +855,7 @@
         "On >= 800px, mobile floating STATS button is hidden; on < 800px it is visible",
         "On < 800px, existing omen strip and floating stats behavior remain unchanged",
         "Tab/era content in the left column remains readable with no horizontal overflow",
-        "Stat Bar and Era III Unraveling strip remain full width",
+        "Stat Bar and Era III GATE tab shell surfaces remain full width",
         "Active omen surface only shows entries from the current run and never displays prior-run lines",
         "Active omen surface shows at most six recent entries"
       ]
@@ -869,7 +869,7 @@
       "scope": [
         "Introduce Era III miracle reserve pool fed by Influence overflow at cap",
         "Miracle cast affordability checks and costs use total miracle power (Influence + reserve), spending Influence first then reserve",
-        "Expose miracle reserve and total miracle power in Cataclysm and Stats surfaces",
+        "Expose miracle reserve and total miracle power in Gate Rites and Stats surfaces",
         "Retune Whisper of Providence output profile (base gain, Veil cost, civ damage) to reduce overperformance",
         "Add post-ascension Era I Legacy Echoes quick-spend panel so Echo points are investable before returning to Era III",
         "Update MANIFESTO.md, docs/GAME_REFERENCE.md, and regression coverage for the new formulas/behavior"
@@ -877,7 +877,7 @@
       "validation": [
         "Miracles remain castable through reserve when Influence alone is below cost",
         "Influence overflow at cap accumulates reserve up to reserve cap; reserve does not grow offline",
-        "Cataclysm and Stats surfaces show reserve and total miracle power accurately",
+        "Gate Rites and Stats surfaces show reserve and total miracle power accurately",
         "Whisper of Providence retune reduces early-miracle dominance without changing tier ordering",
         "Echo spending is reachable in Era I after at least one completed run"
       ]

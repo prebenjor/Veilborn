@@ -9,6 +9,9 @@ Incremental browser game based on `MANIFESTO.md` (Revision B).
 - Current whisper target tuning:
   - `Prophets`: `+50` surcharge, `+3%` passive follower-rate effect, cooldown-gated.
   - `Cults`: `+80` surcharge, `+5%` passive follower-rate effect, cooldown-gated.
+- Passive follower arrival in doctrine flow now includes acolytes, prophets, and cults (so promotion consumption does not collapse follower momentum as sharply).
+- Echo Trees are split into 5 focused roots: `Whisper`, `Conversion`, `Doctrine`, `Stability`, and `Cataclysm`.
+- Ghost Echo controls were removed from the Ascension panel surface.
 - Doctrine in active flow is focused on Prophets/Cults and Acts (no lineage section).
 
 ## Docs Source of Truth

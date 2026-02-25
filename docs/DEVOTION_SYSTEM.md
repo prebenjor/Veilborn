@@ -46,7 +46,7 @@ Each path receives distinct mechanical effects in Era III. Switching paths requi
 
 Runtime momentum sources:
 - `Fervour`: start act `+2`, cast miracle `+2`
-- `Accord`: form cult `+2`, follower rite `+1`
+- `Accord`: form cult `+2`
 - `Reverence`: suppress rival `+2`
 - `Ardour`: whisper/recruit/anoint prophet `+1`
 

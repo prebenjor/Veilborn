@@ -1,11 +1,4 @@
-import { useRef } from "react";
-import {
-  ECHO_TREE_MAX_RANK,
-  ECHO_ASCENSION_DIVISOR,
-  DOMAIN_LABELS,
-  type DomainId,
-  type EchoTreeId
-} from "../../core/state/gameState";
+import { ECHO_TREE_MAX_RANK, ECHO_ASCENSION_DIVISOR, type EchoTreeId } from "../../core/state/gameState";
 import { formatResource } from "../../core/ui/numberFormat";
 
 interface EchoTreeView {
@@ -27,24 +20,8 @@ interface AscensionPanelProps {
   ascensionEchoGain: number;
   canAscend: boolean;
   treeViews: EchoTreeView[];
-  ghostLocalCount: number;
-  ghostImportedCount: number;
-  ghostImportStatus: string | null;
-  ghostInfluenceTotals: {
-    domainSynergyDelta: number;
-    rivalSpawnDelta: number;
-  };
-  ghostInfluences: Array<{
-    id: string;
-    title: string;
-    description: string;
-    source: "local" | "imported";
-    dominantDomain: DomainId;
-  }>;
   onPurchaseTree: (treeId: EchoTreeId) => void;
   onAscend: () => void;
-  onExportGhostSignatures: () => void;
-  onImportGhostSignatures: (file: File) => void;
 }
 
 export function AscensionPanel({
@@ -56,34 +33,14 @@ export function AscensionPanel({
   ascensionEchoGain,
   canAscend,
   treeViews,
-  ghostLocalCount,
-  ghostImportedCount,
-  ghostImportStatus,
-  ghostInfluenceTotals,
-  ghostInfluences,
   onPurchaseTree,
-  onAscend,
-  onExportGhostSignatures,
-  onImportGhostSignatures
+  onAscend
 }: AscensionPanelProps) {
-  const importInputRef = useRef<HTMLInputElement | null>(null);
-
-  const ghostSynergyPercent = Math.round(ghostInfluenceTotals.domainSynergyDelta * 100);
-  const ghostRivalPercent = Math.round(Math.abs(ghostInfluenceTotals.rivalSpawnDelta) * 100);
   const nextEchoTargetBelief = Math.max(
     0,
     Math.ceil(Math.pow(ascensionEchoGain + 1, 2) * ECHO_ASCENSION_DIVISOR)
   );
   const beliefToNextEcho = Math.max(0, nextEchoTargetBelief - totalBeliefEarned);
-  const ghostInfluenceParts: string[] = [];
-  if (ghostSynergyPercent !== 0) {
-    ghostInfluenceParts.push(`Synergy ${ghostSynergyPercent > 0 ? "+" : ""}${ghostSynergyPercent}%`);
-  }
-  if (ghostInfluenceTotals.rivalSpawnDelta !== 0) {
-    ghostInfluenceParts.push(
-      `Rivals ${ghostInfluenceTotals.rivalSpawnDelta < 0 ? "accelerated" : "slowed"} (${ghostRivalPercent}%)`
-    );
-  }
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -104,7 +61,7 @@ export function AscensionPanel({
       </div>
 
       {treeViews.length > 0 ? (
-        <div className="mt-3 grid gap-2 md:grid-cols-3">
+        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
           {treeViews.map((tree) => (
             <article key={tree.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
               <p className="text-xs uppercase tracking-[0.2em] text-veil/70">{tree.label}</p>
@@ -114,14 +71,12 @@ export function AscensionPanel({
               <p className="mt-1 text-xs text-veil/65">
                 {tree.nextCost === null
                   ? "Maxed"
-                  : `Next rank · ${formatResource(tree.nextCost)} ${
+                  : `Next rank - ${formatResource(tree.nextCost)} ${
                       tree.nextCost === 1 ? "Echo" : "Echoes"
                     }`}
               </p>
               {tree.unlockedBonuses.length > 0 ? (
-                <p className="mt-1 text-xs text-veil/60">
-                  Unlocked: {tree.unlockedBonuses.join(", ")}
-                </p>
+                <p className="mt-1 text-xs text-veil/60">Unlocked: {tree.unlockedBonuses.join(", ")}</p>
               ) : null}
               <p className="mt-1 text-xs text-veil/60">
                 {tree.nextBonus ? `Next unlock: ${tree.nextBonus}` : "All unlocks active."}
@@ -138,9 +93,7 @@ export function AscensionPanel({
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-xs text-veil/65">
-          The deeper branches remain veiled in this age.
-        </p>
+        <p className="mt-3 text-xs text-veil/65">The deeper branches remain veiled in this age.</p>
       )}
 
       <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
@@ -165,65 +118,6 @@ export function AscensionPanel({
           Ascend
         </button>
       </div>
-
-      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Ghost Echoes</p>
-        <p className="mt-1 text-sm text-white">
-          {formatResource(ghostLocalCount)} local · {formatResource(ghostImportedCount)} imported
-        </p>
-        {ghostInfluenceParts.length > 0 ? (
-          <p className="mt-1 text-xs text-veil/65">{ghostInfluenceParts.join(" · ")}</p>
-        ) : null}
-
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onExportGhostSignatures}
-            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
-          >
-            Export Signatures
-          </button>
-          <button
-            type="button"
-            onClick={() => importInputRef.current?.click()}
-            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
-          >
-            Import Signatures
-          </button>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onImportGhostSignatures(file);
-              event.currentTarget.value = "";
-            }}
-          />
-        </div>
-
-        {ghostImportStatus ? (
-          <p className="mt-2 text-xs text-veil/70">{ghostImportStatus}</p>
-        ) : null}
-
-        {ghostInfluences.length > 0 ? (
-          <div className="mt-3 space-y-2">
-            {ghostInfluences.map((influence) => (
-              <article key={influence.id} className="rounded-lg border border-white/10 bg-black/20 p-2">
-                <p className="text-xs text-white">
-                  {influence.title} ({influence.source === "imported" ? "Imported" : "Local"},{" "}
-                  {DOMAIN_LABELS[influence.dominantDomain]})
-                </p>
-                <p className="mt-1 text-[11px] text-veil/65">{influence.description}</p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-2 text-xs text-veil/60">No signatures active.</p>
-        )}
-      </div>
-
     </section>
   );
 }

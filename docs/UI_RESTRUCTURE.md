@@ -65,9 +65,9 @@ Stats visibility rule:
   - Threshold is not rendered in `ACTIVE`; it sits at the bottom of `GROWTH`, collapsed by default.
   - Meta tab label is always `Meta` (no `Meta (Lite)` suffix).
 - Era III: full `ACTIVE`, `GROWTH`, `GATE`, `META`.
-- Era III `ACTIVE` order: Whispers -> Doctrine (merged, includes cult rites) -> Cataclysm.
+- Era III `ACTIVE` order: Whispers -> Doctrine (merged doctrine progression and acts).
 - Era III `GROWTH` order: Domains -> Rivals.
-- Era III `GATE` tab contains the unraveling progression panel and replaces the old persistent strip.
+- Era III `GATE` tab contains Gate Rites (rite invocation + Veil pressure) and the gate progression panel; it replaces the old persistent strip.
 - Era II+ `META` containers are collapsible with persisted state.
 - Era III critical actions must be reachable without long scroll.
 - Omen feed contract:
