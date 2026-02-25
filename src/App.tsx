@@ -194,7 +194,7 @@ const BACKGROUND_TICK_MS = 1000;
 const LOW_POWER_TICK_MS = 500;
 const LOW_BATTERY_LEVEL = 0.2;
 
-type UiTab = "active" | "growth" | "meta";
+type UiTab = "active" | "growth" | "gate" | "meta";
 type EraValue = 1 | 2 | 3;
 type TransitionKind = "fade" | "vignette";
 
@@ -325,14 +325,15 @@ function getWhisperFollowerRateSourceLabel(
 
 function getAvailableTabs(era: EraValue): UiTab[] {
   if (era <= 1) return [];
-  return ["active", "growth", "meta"];
+  if (era === 2) return ["active", "growth", "meta"];
+  return ["active", "growth", "gate", "meta"];
 }
 
 function loadUiTabPreference(): UiTab {
   if (typeof window === "undefined") return "active";
   try {
     const raw = window.localStorage.getItem(UI_TAB_KEY);
-    if (raw === "active" || raw === "growth" || raw === "meta") {
+    if (raw === "active" || raw === "growth" || raw === "gate" || raw === "meta") {
       return raw;
     }
   } catch {
@@ -1823,10 +1824,10 @@ export default function App() {
     />
   ) : null;
 
-  const unravelingGateStrip = era >= 3 ? (
+  const eraThreeGatePanel = era >= 3 ? (
     <EraGatePanel
       era={gameState.era}
-      presentation="strip"
+      presentation="panel"
       eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
       eraOneBeliefTarget={eraOneGate.beliefTarget}
       prophetsProgress={gameState.prophets}
@@ -1939,23 +1940,20 @@ export default function App() {
 
   const eraThreeActiveContent = (
     <EraThreeActiveLayout
-      cataclysmPanel={eraThreeCataclysmPanel}
-      rivalsPanel={era >= 3 ? doctrineRivalsPanel : null}
       whisperPanel={whisperPanel}
-      cataclysmSummary={activeCataclysmSummary}
-      rivalsSummary={rivalsGrowthSummary}
+      doctrinePanel={era >= 3 ? doctrineGrowthPanel : null}
+      progressPanel={era >= 3 ? progressPanel : null}
+      cataclysmPanel={eraThreeCataclysmPanel}
       whisperSummary={activeWhispersSummary}
-      hasActiveRivals={hasActiveRivals}
+      doctrineSummary={doctrineGrowthSummary}
+      cataclysmSummary={activeCataclysmSummary}
     />
   );
 
   const eraThreeGrowthContent = (
     <EraThreeGrowthLayout
-      doctrinePanel={era >= 3 ? doctrineGrowthPanel : null}
-      progressPanel={era >= 3 ? progressPanel : null}
       domainPanel={domainPanel}
       rivalsPanel={era >= 3 ? doctrineRivalsPanel : null}
-      doctrineSummary={doctrineGrowthSummary}
       domainsSummary={domainsGrowthSummary}
       rivalsSummary={rivalsGrowthSummary}
       hasActiveRivals={hasActiveRivals}
@@ -1995,6 +1993,7 @@ export default function App() {
 
   const activeTabContent = era === 2 ? eraTwoActiveContent : eraThreeActiveContent;
   const growthTabContent = era === 2 ? eraTwoGrowthContent : eraThreeGrowthContent;
+  const gateTabContent = era >= 3 ? eraThreeGatePanel : null;
   const metaOverviewPanel = (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
       <p>
@@ -2167,7 +2166,6 @@ export default function App() {
           veil={gameState.resources.veil}
           veilStability={veilStability}
         />
-        {unravelingGateStrip}
         <div className="flex flex-col gap-4 min-[800px]:flex-row min-[800px]:items-start min-[800px]:gap-6">
           <div className="min-w-0 space-y-4 min-[800px]:min-w-[500px] min-[800px]:w-[calc(100%-240px)] lg:w-[calc(100%-300px)]">
             {era >= 2 ? (
@@ -2182,6 +2180,8 @@ export default function App() {
               <>{activeTabContent}</>
             ) : safeActiveTab === "growth" ? (
               <>{growthTabContent}</>
+            ) : safeActiveTab === "gate" ? (
+              <>{gateTabContent}</>
             ) : (
               <>{metaTabContent}</>
             )}

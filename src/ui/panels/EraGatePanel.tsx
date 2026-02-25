@@ -201,8 +201,8 @@ export function EraGatePanel({
         }
       ];
       return {
-        title: "Unraveling Gate",
-        thresholdLabel: "UNRAVELING GATE",
+        title: "Gate",
+        thresholdLabel: "GATE",
         conditions: conditionViews,
         ready: unravelingReady,
         crossAction: null as (() => void) | null,

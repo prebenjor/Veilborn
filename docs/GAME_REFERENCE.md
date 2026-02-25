@@ -540,14 +540,15 @@ Era II:
 - bottom status: one directive line
 
 Era III:
-- cataclysm in active flow
-- `active` order: Cataclysm -> Rivals -> Whispers (collapsible containers)
-- `active` containers persist collapse state (`active_cataclysm_collapsed`, `active_rivals_collapsed`, `active_whispers_collapsed`)
-- `growth` order: Doctrine (merged) -> Domains -> Rivals
+- `active` order: Whispers -> Doctrine -> Cataclysm (collapsible containers)
+- `active` containers persist collapse state (`active_whispers_collapsed`, `active_doctrine_collapsed`, `active_cataclysm_collapsed`)
+- rivals are moved out of active flow and live in `growth`
+- `growth` order: Domains -> Rivals
+- `gate` is a dedicated tab (separate from `meta`) for unraveling progression
 - `meta` containers persist collapse state (`meta_overview_collapsed`, `meta_ascension_collapsed`, `meta_remembrance_collapsed`, `meta_pantheon_collapsed`)
-- unraveling gate strip always visible
+- no persistent unraveling strip in Era III
 - event log header: `Omens`
-- gate label: `Unraveling Gate`
+- gate label: `Gate`
 - bottom status line removed
 
 Disclosure policy:

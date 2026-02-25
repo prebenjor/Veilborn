@@ -2,48 +2,26 @@ import type { ReactNode } from "react";
 import { CollapsibleContainer } from "../layout/CollapsibleContainer";
 
 interface EraThreeActiveLayoutProps {
-  cataclysmPanel: ReactNode;
-  rivalsPanel: ReactNode;
   whisperPanel: ReactNode;
-  cataclysmSummary: string;
-  rivalsSummary: string;
+  doctrinePanel: ReactNode;
+  progressPanel: ReactNode;
+  cataclysmPanel: ReactNode;
   whisperSummary: string;
-  hasActiveRivals: boolean;
+  doctrineSummary: string;
+  cataclysmSummary: string;
 }
 
 export function EraThreeActiveLayout({
-  cataclysmPanel,
-  rivalsPanel,
   whisperPanel,
-  cataclysmSummary,
-  rivalsSummary,
+  doctrinePanel,
+  progressPanel,
+  cataclysmPanel,
   whisperSummary,
-  hasActiveRivals
+  doctrineSummary,
+  cataclysmSummary,
 }: EraThreeActiveLayoutProps) {
   return (
     <div className="space-y-2">
-      <CollapsibleContainer
-        title="Cataclysm"
-        summary={cataclysmSummary}
-        storageKey="active_cataclysm_collapsed"
-      >
-        <div className="[&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none [&>section]:backdrop-blur-none [&>section>h2]:hidden">
-          {cataclysmPanel}
-        </div>
-      </CollapsibleContainer>
-
-      <CollapsibleContainer
-        title="Rivals"
-        summary={rivalsSummary}
-        storageKey="active_rivals_collapsed"
-        defaultCollapsed={!hasActiveRivals}
-        forceExpanded={hasActiveRivals}
-      >
-        <div className="[&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none [&>section]:backdrop-blur-none [&>section>h2]:hidden">
-          {rivalsPanel}
-        </div>
-      </CollapsibleContainer>
-
       <CollapsibleContainer
         title="Whispers"
         summary={whisperSummary}
@@ -51,6 +29,27 @@ export function EraThreeActiveLayout({
       >
         <div className="[&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none [&>section]:backdrop-blur-none [&>section>h2]:hidden">
           {whisperPanel}
+        </div>
+      </CollapsibleContainer>
+
+      <CollapsibleContainer
+        title="Doctrine"
+        summary={doctrineSummary}
+        storageKey="active_doctrine_collapsed"
+      >
+        <div className="space-y-3 [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none [&>section]:backdrop-blur-none [&>section>h2]:hidden">
+          {progressPanel}
+          {doctrinePanel}
+        </div>
+      </CollapsibleContainer>
+
+      <CollapsibleContainer
+        title="Cataclysm"
+        summary={cataclysmSummary}
+        storageKey="active_cataclysm_collapsed"
+      >
+        <div className="[&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none [&>section]:backdrop-blur-none [&>section>h2]:hidden">
+          {cataclysmPanel}
         </div>
       </CollapsibleContainer>
     </div>

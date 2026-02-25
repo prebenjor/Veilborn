@@ -23,7 +23,7 @@ Event log header labels are canonical:
 Gate labels are canonical:
 - Era I: `Threshold`
 - Era II: `Threshold`
-- Era III: `Unraveling Gate`
+- Era III: `Gate`
 
 Bottom status line behavior is canonical:
 - Era I: one quiet atmospheric line
@@ -64,8 +64,10 @@ Stats visibility rule:
   - Rivals collapse to a single-line summary when inactive and auto-expand when active.
   - Threshold is not rendered in `ACTIVE`; it sits at the bottom of `GROWTH`, collapsed by default.
   - Meta tab label is always `Meta` (no `Meta (Lite)` suffix).
-- Era III: full `ACTIVE`, `GROWTH`, `META`.
-- Era III `GROWTH` order: Doctrine (merged) -> Domains -> Rivals (Threshold remains in the persistent Unraveling strip).
+- Era III: full `ACTIVE`, `GROWTH`, `GATE`, `META`.
+- Era III `ACTIVE` order: Whispers -> Doctrine (merged) -> Cataclysm.
+- Era III `GROWTH` order: Domains -> Rivals.
+- Era III `GATE` tab contains the unraveling progression panel and replaces the old persistent strip.
 - Era II+ `META` containers are collapsible with persisted state.
 - Era III critical actions must be reachable without long scroll.
 - Omen feed contract:

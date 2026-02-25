@@ -1,4 +1,4 @@
-type UiTab = "active" | "growth" | "meta";
+type UiTab = "active" | "growth" | "gate" | "meta";
 
 interface TabDockProps {
   availableTabs: UiTab[];
@@ -20,12 +20,16 @@ export function TabDock({ availableTabs, activeTab, onSelectTab }: TabDockProps)
             type="button"
             onClick={() => onSelectTab(tab)}
             className={`rounded-lg px-3 py-1.5 text-xs uppercase tracking-[0.2em] transition ${
-              activeTab === tab
-                ? "bg-white/14 text-white"
-                : "text-veil/70 hover:bg-white/8 hover:text-veil"
+              tab === "gate"
+                ? activeTab === tab
+                  ? "border border-ember/60 bg-ember/15 text-ember"
+                  : "border border-ember/25 text-ember/80 hover:bg-ember/10 hover:text-ember"
+                : activeTab === tab
+                  ? "bg-white/14 text-white"
+                  : "text-veil/70 hover:bg-white/8 hover:text-veil"
             }`}
           >
-            {tab === "active" ? "Active" : tab === "growth" ? "Growth" : "Meta"}
+            {tab === "active" ? "Active" : tab === "growth" ? "Growth" : tab === "gate" ? "Gate" : "Meta"}
           </button>
         ))}
       </div>
