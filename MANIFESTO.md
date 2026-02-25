@@ -62,7 +62,7 @@ Output growth is controlled by scaling costs and systemic pressure, not hidden m
 
 `cult_output = prophet_count * follower_count * 0.08 * domain_synergy`
 
-`domain_synergy = 1 + (0.25 * matching_domain_pairs)`
+`domain_synergy = 1 + (0.25 * active_resonance_pairs) + (0.05 * tempest_memory_resonance_tier)`
 
 `veil_bonus = 1 + ((100 - veil) * 0.008)`
 
@@ -160,6 +160,9 @@ Costs:
 - Era II+ whisper targets:
   - Prophets: surcharge `+50`, follower multiplier `1.25`, fail chance `0.08`, cooldown `60s`, passive follower-rate bonus `+3%`
   - Cults: surcharge `+80`, follower multiplier `1.4`, fail chance `0.12`, cooldown `90s`, passive follower-rate bonus `+5%`
+- Domain resonance modifier (Light-Void):
+  - whisper surcharge reduction: `8%` per resonance tier
+  - whisper cooldown reduction: `4s` per resonance tier
 - Whisper profile cost:
 
 `whisper_cost = ceil(base_whisper_cost + target_surcharge + one_time_delta)`
@@ -191,9 +194,25 @@ Miracle Reserve (Era III):
 
 Six domains with level and XP progression.
 
+Domain labels in UI/runtime:
+- `Light` (fire id)
+- `Death` (death id)
+- `Life` (harvest id)
+- `Tempest` (storm id)
+- `Memory` (memory id)
+- `Void` (void id)
+
 Belief invest cost:
 
-`domain_invest_cost = 50 * 1.8^(current_level)`
+`domain_invest_cost = 50 * 1.8^(current_level) * era_mult * tier_mult`
+
+`era_mult = 0.85` in Era II, `1.0` in Era III
+
+`tier_mult` by current level:
+- level `<2`: `0.8`
+- level `2-4`: `1.0`
+- level `5-8`: `1.3`
+- level `>=9`: `1.65`
 
 XP requirement:
 
@@ -202,7 +221,16 @@ XP requirement:
 Domain level effects:
 - `+0.1` prophet base output per total level.
 - `+0.15` base domain multiplier per total level.
-- `+0.25` cult synergy per matching pair.
+- `+0.25` cult synergy per active resonance pair.
+- Resonance pairs and doctrine hooks:
+  - `Life-Death`: prophet passive follower-rate bonus `+4%` per resonance tier.
+  - `Light-Void`: whisper surcharge reduction `8%` per tier and cooldown reduction `4s` per tier.
+  - `Tempest-Memory`: cult rite and cult passive follower-rate bonus `+5%` per tier.
+
+Resonance tier thresholds use the minimum level of each pair:
+- Tier I at min level `2`
+- Tier II at min level `5`
+- Tier III at min level `9`
 
 Meta-progression anchor:
 - Echo `domain_carry`: retained as a planned meta-progression upgrade (not yet active in current runtime).
@@ -245,7 +273,7 @@ Act return:
 
 `belief_gained = current_B/s * act_duration * belief_mult * 0.3`
 
-`belief_mult = max(act_floor, base_mult + domain_match * 0.2)`
+`belief_mult = max(act_floor, base_mult + (0.12 * active_resonance_pairs) + (0.05 * tempest_memory_resonance_tier))`
 
 `act_floor = 1.0`, or `1.5` with Echo `act_floor`.
 
@@ -258,7 +286,7 @@ Acts must reward engagement without invalidating passive systems.
 
 Passive follower arrival (Era III only):
 
-`passiveFollowerRate = (0.35*cults + 0.25*shrines + 0.05*prophets) * (civHealth/100) * veilZoneMult`
+`passiveFollowerRate = ((0.35*cults*(1+tempest_memory_bonus)) + 0.25*shrines + (0.05*prophets*(1+life_death_bonus))) * whisper_target_mult * (civHealth/100) * veilZoneMult`
 
 `veilZoneMult`:
 - Veil `>55`: `0.8`

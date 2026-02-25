@@ -17,6 +17,19 @@ import {
   CULT_OUTPUT_SCALE,
   DOMAIN_INVEST_BASE_COST,
   DOMAIN_INVEST_COST_SCALAR,
+  DOMAIN_INVEST_COST_ERA_TWO_MULTIPLIER,
+  DOMAIN_INVEST_COST_ERA_THREE_MULTIPLIER,
+  DOMAIN_INVEST_COST_PRE_TIER_MULTIPLIER,
+  DOMAIN_INVEST_COST_TIER_ONE_MULTIPLIER,
+  DOMAIN_INVEST_COST_TIER_TWO_MULTIPLIER,
+  DOMAIN_INVEST_COST_TIER_THREE_MULTIPLIER,
+  DOMAIN_RESONANCE_TIER_ONE_LEVEL,
+  DOMAIN_RESONANCE_TIER_TWO_LEVEL,
+  DOMAIN_RESONANCE_TIER_THREE_LEVEL,
+  DOMAIN_RESONANCE_PROPHET_PASSIVE_PER_TIER,
+  DOMAIN_RESONANCE_WHISPER_SURCHARGE_REDUCTION_PER_TIER,
+  DOMAIN_RESONANCE_WHISPER_COOLDOWN_REDUCTION_MS_PER_TIER,
+  DOMAIN_RESONANCE_CULT_RITE_BONUS_PER_TIER,
   DOMAIN_MULTIPLIER_SCALE,
   DOMAIN_SYNERGY_SCALE,
   DOMAIN_XP_BASE,
@@ -217,6 +230,41 @@ export interface FollowerRiteCost {
   influenceCost: number;
   beliefCost: number;
   uses: number;
+}
+
+type DoctrineResonanceFocus = "prophets" | "whispers" | "rites";
+type DoctrineResonancePairId = "life_death" | "light_void" | "tempest_memory";
+
+interface DoctrineResonancePairDefinition {
+  id: DoctrineResonancePairId;
+  focus: DoctrineResonanceFocus;
+  left: DomainId;
+  right: DomainId;
+}
+
+export interface DoctrineResonancePairState {
+  id: DoctrineResonancePairId;
+  focus: DoctrineResonanceFocus;
+  left: DomainId;
+  right: DomainId;
+  leftLevel: number;
+  rightLevel: number;
+  minimumLevel: number;
+  tier: 0 | 1 | 2 | 3;
+  nextTierLevel: number | null;
+  prophetPassiveBonus: number;
+  whisperSurchargeReduction: number;
+  whisperCooldownReductionMs: number;
+  cultRiteBonus: number;
+}
+
+export interface DoctrineResonanceState {
+  pairs: DoctrineResonancePairState[];
+  activePairs: number;
+  prophetPassiveBonus: number;
+  whisperSurchargeReduction: number;
+  whisperCooldownReductionMs: number;
+  cultRiteBonus: number;
 }
 
 export interface EraOneGateStatus {
@@ -576,6 +624,73 @@ export function getPantheonAllianceFactors(state: GameState): PantheonAllianceFa
   };
 }
 
+const DOCTRINE_RESONANCE_PAIRS: DoctrineResonancePairDefinition[] = [
+  { id: "life_death", focus: "prophets", left: "harvest", right: "death" },
+  { id: "light_void", focus: "whispers", left: "fire", right: "void" },
+  { id: "tempest_memory", focus: "rites", left: "storm", right: "memory" }
+];
+
+function getDoctrineResonanceTier(minimumLevel: number): 0 | 1 | 2 | 3 {
+  if (minimumLevel >= DOMAIN_RESONANCE_TIER_THREE_LEVEL) return 3;
+  if (minimumLevel >= DOMAIN_RESONANCE_TIER_TWO_LEVEL) return 2;
+  if (minimumLevel >= DOMAIN_RESONANCE_TIER_ONE_LEVEL) return 1;
+  return 0;
+}
+
+function getNextDoctrineResonanceTierLevel(minimumLevel: number): number | null {
+  if (minimumLevel < DOMAIN_RESONANCE_TIER_ONE_LEVEL) return DOMAIN_RESONANCE_TIER_ONE_LEVEL;
+  if (minimumLevel < DOMAIN_RESONANCE_TIER_TWO_LEVEL) return DOMAIN_RESONANCE_TIER_TWO_LEVEL;
+  if (minimumLevel < DOMAIN_RESONANCE_TIER_THREE_LEVEL) return DOMAIN_RESONANCE_TIER_THREE_LEVEL;
+  return null;
+}
+
+export function getDoctrineResonanceState(state: GameState): DoctrineResonanceState {
+  const pairs = DOCTRINE_RESONANCE_PAIRS.map<DoctrineResonancePairState>((pair) => {
+    const leftLevel = getEffectiveDomainLevel(state, pair.left);
+    const rightLevel = getEffectiveDomainLevel(state, pair.right);
+    const minimumLevel = Math.min(leftLevel, rightLevel);
+    const tier = getDoctrineResonanceTier(minimumLevel);
+    const nextTierLevel = getNextDoctrineResonanceTierLevel(minimumLevel);
+
+    return {
+      id: pair.id,
+      focus: pair.focus,
+      left: pair.left,
+      right: pair.right,
+      leftLevel,
+      rightLevel,
+      minimumLevel,
+      tier,
+      nextTierLevel,
+      prophetPassiveBonus: pair.focus === "prophets" ? tier * DOMAIN_RESONANCE_PROPHET_PASSIVE_PER_TIER : 0,
+      whisperSurchargeReduction:
+        pair.focus === "whispers" ? tier * DOMAIN_RESONANCE_WHISPER_SURCHARGE_REDUCTION_PER_TIER : 0,
+      whisperCooldownReductionMs:
+        pair.focus === "whispers" ? tier * DOMAIN_RESONANCE_WHISPER_COOLDOWN_REDUCTION_MS_PER_TIER : 0,
+      cultRiteBonus: pair.focus === "rites" ? tier * DOMAIN_RESONANCE_CULT_RITE_BONUS_PER_TIER : 0
+    };
+  });
+
+  return pairs.reduce<DoctrineResonanceState>(
+    (accumulator, pair) => ({
+      pairs: [...accumulator.pairs, pair],
+      activePairs: accumulator.activePairs + (pair.tier > 0 ? 1 : 0),
+      prophetPassiveBonus: accumulator.prophetPassiveBonus + pair.prophetPassiveBonus,
+      whisperSurchargeReduction: accumulator.whisperSurchargeReduction + pair.whisperSurchargeReduction,
+      whisperCooldownReductionMs: accumulator.whisperCooldownReductionMs + pair.whisperCooldownReductionMs,
+      cultRiteBonus: accumulator.cultRiteBonus + pair.cultRiteBonus
+    }),
+    {
+      pairs: [],
+      activePairs: 0,
+      prophetPassiveBonus: 0,
+      whisperSurchargeReduction: 0,
+      whisperCooldownReductionMs: 0,
+      cultRiteBonus: 0
+    }
+  );
+}
+
 export function getHighestDomainLevel(state: GameState): number {
   return state.domains.reduce((max, domain) => Math.max(max, domain.level), 0);
 }
@@ -585,8 +700,7 @@ export function getDominantDomainLevel(state: GameState): number {
 }
 
 export function getMatchingDomainPairs(state: GameState): number {
-  const activeDomains = state.domains.filter((domain) => domain.level > 0).length;
-  return Math.floor(activeDomains / 2);
+  return getDoctrineResonanceState(state).activePairs;
 }
 
 export function getProphetOutput(totalDomainLevel: number, state?: GameState): number {
@@ -601,9 +715,10 @@ export function getDomainMultiplier(totalDomainLevel: number): number {
 }
 
 export function getDomainSynergy(state: GameState): number {
+  const resonance = getDoctrineResonanceState(state);
   const devotionModifiers = getDevotionPathModifiers(state);
   const baseSynergy =
-    (1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs) *
+    (1 + DOMAIN_SYNERGY_SCALE * state.matchingDomainPairs + resonance.cultRiteBonus) *
     (1 + devotionModifiers.domainSynergyBonus) *
     getArchitectureDomainModifier(state) *
     getFinalChoiceDomainModifier(state);
@@ -654,13 +769,15 @@ export function getPassiveFollowerRateBreakdown(
     };
   }
 
+  const resonance = getDoctrineResonanceState(state);
   const whisperFollowerRateMultiplier = getWhisperFollowerRateMultiplier(state);
   const prophetBaseRatePerSecond =
     (state.era >= 3
       ? PASSIVE_FOLLOWER_RATE_PER_PROPHET
       : PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO) *
     state.prophets *
-    whisperFollowerRateMultiplier;
+    whisperFollowerRateMultiplier *
+    (1 + resonance.prophetPassiveBonus);
 
   if (state.era < 3) {
     const prophetPerSecond = Math.max(0, prophetBaseRatePerSecond);
@@ -682,7 +799,10 @@ export function getPassiveFollowerRateBreakdown(
   }
 
   const cultBaseRatePerSecond =
-    PASSIVE_FOLLOWER_RATE_PER_CULT * state.cults * whisperFollowerRateMultiplier;
+    PASSIVE_FOLLOWER_RATE_PER_CULT *
+    state.cults *
+    whisperFollowerRateMultiplier *
+    (1 + resonance.cultRiteBonus);
   const shrineBaseRatePerSecond = PASSIVE_FOLLOWER_RATE_PER_SHRINE * state.doctrine.shrinesBuilt;
   const civHealthMultiplier = Math.max(0, state.cataclysm.civilizationHealth / 100);
   const veilZoneMultiplier = getPassiveFollowerVeilZoneMultiplier(state.resources.veil);
@@ -731,13 +851,15 @@ export function getFollowerRiteFollowerGain(
   if (state.cataclysm.civilizationHealth <= 0) return 0;
 
   const baseFollowers = FOLLOWER_RITE_BASE_FOLLOWERS[type];
+  const resonance = getDoctrineResonanceState(state);
   const infrastructureMultiplier =
     1 +
     state.cults * FOLLOWER_RITE_PER_CULT_SCALE +
     state.doctrine.shrinesBuilt * FOLLOWER_RITE_PER_SHRINE_SCALE +
     state.prophets * FOLLOWER_RITE_PER_PROPHET_SCALE +
     state.matchingDomainPairs * FOLLOWER_RITE_PER_DOMAIN_PAIR_SCALE +
-    getTotalDomainLevel(state) * FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE;
+    getTotalDomainLevel(state) * FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE +
+    resonance.cultRiteBonus;
   const civHealthMultiplier = Math.max(0, Math.min(1, state.cataclysm.civilizationHealth / 100));
   const veilMultiplier = getFollowerRiteVeilZoneMultiplier(state.resources.veil);
   return Math.max(
@@ -782,7 +904,13 @@ export function getVeilCollapseThreshold(state: GameState): number {
 
 export function getCultOutput(state: GameState): number {
   if (state.cults <= 0 || state.prophets <= 0 || state.resources.followers <= 0) return 0;
-  const baseOutput = state.prophets * state.resources.followers * CULT_OUTPUT_SCALE * getDomainSynergy(state);
+  const resonance = getDoctrineResonanceState(state);
+  const baseOutput =
+    state.prophets *
+    state.resources.followers *
+    CULT_OUTPUT_SCALE *
+    getDomainSynergy(state) *
+    (1 + resonance.cultRiteBonus);
   return baseOutput * getDevotionPathModifiers(state).cultOutputMultiplier;
 }
 
@@ -984,7 +1112,8 @@ export function getWhisperTargetCooldownMs(
   if (state.era < 2 || target === "crowd") return 0;
   const baseCooldownMs =
     target === "cults" ? WHISPER_CULTS_BASE_COOLDOWN_MS : WHISPER_PROPHETS_BASE_COOLDOWN_MS;
-  return Math.max(0, baseCooldownMs - getWhisperEchoCooldownReductionMs(state));
+  const resonanceReductionMs = getDoctrineResonanceState(state).whisperCooldownReductionMs;
+  return Math.max(0, baseCooldownMs - getWhisperEchoCooldownReductionMs(state) - resonanceReductionMs);
 }
 
 export function isWhisperTargetOnCooldown(
@@ -999,7 +1128,8 @@ function getWhisperTargetCostSurcharge(state: GameState, target: WhisperTarget):
   if (state.era < 2) return 0;
   const baseSurcharge = WHISPER_BASE_COST_SURCHARGE[target];
   const surchargeMultiplier = 1 - getWhisperEchoSurchargeReduction(state);
-  return Math.max(0, Math.ceil(baseSurcharge * surchargeMultiplier));
+  const resonanceReduction = getDoctrineResonanceState(state).whisperSurchargeReduction;
+  return Math.max(0, Math.ceil(baseSurcharge * surchargeMultiplier * (1 - resonanceReduction)));
 }
 
 function getWhisperTargetFollowerMultiplier(
@@ -1118,8 +1248,22 @@ export function getDevotionRecruitMultiplier(state: GameState): number {
   return 1 + getDevotionStacks(state) * DEVOTION_RECRUIT_BONUS_PER_STACK;
 }
 
-export function getDomainInvestCost(domain: DomainProgress): number {
-  return Math.ceil(DOMAIN_INVEST_BASE_COST * Math.pow(DOMAIN_INVEST_COST_SCALAR, domain.level));
+function getDomainInvestEraMultiplier(era: GameState["era"]): number {
+  return era >= 3 ? DOMAIN_INVEST_COST_ERA_THREE_MULTIPLIER : DOMAIN_INVEST_COST_ERA_TWO_MULTIPLIER;
+}
+
+function getDomainInvestTierMultiplier(level: number): number {
+  if (level < DOMAIN_RESONANCE_TIER_ONE_LEVEL) return DOMAIN_INVEST_COST_PRE_TIER_MULTIPLIER;
+  if (level < DOMAIN_RESONANCE_TIER_TWO_LEVEL) return DOMAIN_INVEST_COST_TIER_ONE_MULTIPLIER;
+  if (level < DOMAIN_RESONANCE_TIER_THREE_LEVEL) return DOMAIN_INVEST_COST_TIER_TWO_MULTIPLIER;
+  return DOMAIN_INVEST_COST_TIER_THREE_MULTIPLIER;
+}
+
+export function getDomainInvestCost(domain: DomainProgress, era: GameState["era"] = 3): number {
+  const base = DOMAIN_INVEST_BASE_COST * Math.pow(DOMAIN_INVEST_COST_SCALAR, domain.level);
+  const eraMultiplier = getDomainInvestEraMultiplier(era);
+  const tierMultiplier = getDomainInvestTierMultiplier(domain.level);
+  return Math.ceil(base * eraMultiplier * tierMultiplier);
 }
 
 export function getDomainXpNeeded(domain: DomainProgress): number {
@@ -1129,7 +1273,8 @@ export function getDomainXpNeeded(domain: DomainProgress): number {
 export function simulateDomainInvestments(
   domain: DomainProgress,
   beliefBudget: number,
-  maxInvestments = Number.POSITIVE_INFINITY
+  maxInvestments = Number.POSITIVE_INFINITY,
+  era: GameState["era"] = 3
 ): DomainInvestmentSimulation {
   if (beliefBudget <= 0 || maxInvestments <= 0) {
     return {
@@ -1152,7 +1297,7 @@ export function simulateDomainInvestments(
       level,
       xp
     };
-    const cost = getDomainInvestCost(currentDomain);
+    const cost = getDomainInvestCost(currentDomain, era);
     if (cost > remainingBelief) break;
 
     remainingBelief -= cost;
@@ -1196,9 +1341,14 @@ export function getActBaseMultiplier(type: ActType): number {
   return ACT_BASE_MULTIPLIER[type];
 }
 
+export function getActResonantBonus(state: GameState): number {
+  const resonance = getDoctrineResonanceState(state);
+  return state.matchingDomainPairs * 0.12 + resonance.cultRiteBonus;
+}
+
 export function getActBeliefMultiplier(state: GameState, baseMultiplier: number): number {
   const floor = state.echoBonuses.actFloor ? ACT_FLOOR_ECHO : ACT_FLOOR_BASE;
-  return Math.max(floor, baseMultiplier + state.matchingDomainPairs * 0.2);
+  return Math.max(floor, baseMultiplier + getActResonantBonus(state));
 }
 
 export function getActRewardBelief(

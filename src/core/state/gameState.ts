@@ -205,8 +205,21 @@ export const RIVAL_SUPPRESS_INFLUENCE_COST = 200;
 
 export const DOMAIN_INVEST_BASE_COST = 50;
 export const DOMAIN_INVEST_COST_SCALAR = 1.8;
+export const DOMAIN_INVEST_COST_ERA_TWO_MULTIPLIER = 0.85;
+export const DOMAIN_INVEST_COST_ERA_THREE_MULTIPLIER = 1.0;
+export const DOMAIN_INVEST_COST_PRE_TIER_MULTIPLIER = 0.8;
+export const DOMAIN_INVEST_COST_TIER_ONE_MULTIPLIER = 1.0;
+export const DOMAIN_INVEST_COST_TIER_TWO_MULTIPLIER = 1.3;
+export const DOMAIN_INVEST_COST_TIER_THREE_MULTIPLIER = 1.65;
 export const DOMAIN_XP_BASE = 3;
 export const DOMAIN_XP_SCALAR = 1.5;
+export const DOMAIN_RESONANCE_TIER_ONE_LEVEL = 2;
+export const DOMAIN_RESONANCE_TIER_TWO_LEVEL = 5;
+export const DOMAIN_RESONANCE_TIER_THREE_LEVEL = 9;
+export const DOMAIN_RESONANCE_PROPHET_PASSIVE_PER_TIER = 0.04;
+export const DOMAIN_RESONANCE_WHISPER_SURCHARGE_REDUCTION_PER_TIER = 0.08;
+export const DOMAIN_RESONANCE_WHISPER_COOLDOWN_REDUCTION_MS_PER_TIER = 4000;
+export const DOMAIN_RESONANCE_CULT_RITE_BONUS_PER_TIER = 0.05;
 
 export const ERA_ONE_BELIEF_GATE_BASE = 10000;
 export const ERA_ONE_GATE_ECHO_MULTIPLIER = 0.7;
@@ -291,10 +304,10 @@ export type DomainId = "fire" | "death" | "harvest" | "storm" | "memory" | "void
 export const DOMAIN_IDS: DomainId[] = ["fire", "death", "harvest", "storm", "memory", "void"];
 
 export const DOMAIN_LABELS: Record<DomainId, string> = {
-  fire: "Fire",
+  fire: "Light",
   death: "Death",
-  harvest: "Harvest",
-  storm: "Storm",
+  harvest: "Life",
+  storm: "Tempest",
   memory: "Memory",
   void: "Void"
 };

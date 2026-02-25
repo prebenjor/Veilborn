@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DOMAIN_IDS, DOMAIN_LABELS, type DomainId, type DomainProgress } from "../../core/state/gameState";
-import { simulateDomainInvestments } from "../../core/engine/formulas";
+import { simulateDomainInvestments, type DoctrineResonanceState } from "../../core/engine/formulas";
 import { formatResource } from "../../core/ui/numberFormat";
 
 type InvestMode = "one" | "p10" | "p25" | "p50" | "max";
@@ -40,64 +40,82 @@ function createDefaultModeByDomain(): Record<DomainId, InvestMode> {
 }
 
 interface DomainPanelProps {
+  era: 1 | 2 | 3;
   belief: number;
   domains: DomainProgress[];
   matchingDomainPairs: number;
   domainSynergy: number;
+  doctrineResonance: DoctrineResonanceState;
   getInvestCost: (domain: DomainProgress) => number;
   getXpNeeded: (domain: DomainProgress) => number;
   onInvest: (domainId: DomainId, investments: number) => void;
 }
 
 export function DomainPanel({
+  era,
   belief,
   domains,
   matchingDomainPairs,
   domainSynergy,
+  doctrineResonance,
   getInvestCost,
   getXpNeeded,
   onInvest
 }: DomainPanelProps) {
-  const [modeByDomain, setModeByDomain] = useState<Record<DomainId, InvestMode>>(
-    createDefaultModeByDomain
-  );
-  const activeDomains = [...domains]
-    .filter((domain) => domain.level > 0)
-    .sort((a, b) => b.level - a.level);
+  const [modeByDomain, setModeByDomain] = useState<Record<DomainId, InvestMode>>(createDefaultModeByDomain);
   const highlightedDomains = new Set(
-    activeDomains.slice(0, matchingDomainPairs * 2).map((domain) => domain.id)
+    doctrineResonance.pairs
+      .filter((pair) => pair.tier > 0)
+      .flatMap((pair) => [pair.left, pair.right])
   );
-  const pairNames = Array.from({ length: matchingDomainPairs }, (_, index) => {
-    const first = activeDomains[index * 2];
-    const second = activeDomains[index * 2 + 1];
-    if (!first || !second) return null;
-    return `${DOMAIN_LABELS[first.id]} + ${DOMAIN_LABELS[second.id]}`;
-  }).filter((entry): entry is string => Boolean(entry));
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
       <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Domains</h2>
       <p className="mt-2 text-xs text-veil/65">
-        Active synergy x{formatResource(domainSynergy, 2)} · {formatResource(matchingDomainPairs)} matched
-        pairs
+        Active synergy x{formatResource(domainSynergy, 2)} - {formatResource(matchingDomainPairs)} resonance pairs
       </p>
-      {pairNames.length > 0 ? (
-        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
-          <summary className="cursor-pointer text-xs text-veil/75">Matched domain pairs</summary>
-          <p className="mt-1 text-[11px] text-veil/65">{pairNames.join(" · ")}</p>
-        </details>
-      ) : null}
+
+      <div className="mt-2 grid gap-2 lg:grid-cols-3">
+        {doctrineResonance.pairs.map((pair) => {
+          const tierLabel = pair.tier <= 0 ? "Dormant" : `Tier ${pair.tier}`;
+          const nextLabel =
+            pair.nextTierLevel === null
+              ? "Resonance complete."
+              : `Next tier at level ${formatResource(pair.nextTierLevel)}.`;
+          const effectLabel =
+            pair.focus === "prophets"
+              ? `Doctrine effect: +${formatResource(pair.prophetPassiveBonus * 100)}% prophet follower rate`
+              : pair.focus === "whispers"
+                ? `Doctrine effect: -${formatResource(pair.whisperSurchargeReduction * 100)}% whisper surcharge -${formatResource(pair.whisperCooldownReductionMs / 1000)}s cooldown`
+                : `Doctrine effect: +${formatResource(pair.cultRiteBonus * 100)}% cult rites and cult follower rate`;
+
+          return (
+            <article key={pair.id} className="rounded-lg border border-white/10 bg-black/20 p-2">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-veil/70">
+                {DOMAIN_LABELS[pair.left]} - {DOMAIN_LABELS[pair.right]}
+              </p>
+              <p className="mt-1 text-[11px] text-white">
+                {tierLabel} - min level {formatResource(pair.minimumLevel)}
+              </p>
+              <p className="mt-1 text-[10px] text-veil/65">{effectLabel}</p>
+              <p className="mt-1 text-[10px] text-veil/55">{nextLabel}</p>
+            </article>
+          );
+        })}
+      </div>
+
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {domains.map((domain) => {
           const singleCost = getInvestCost(domain);
           const mode = modeByDomain[domain.id] ?? "one";
-          const maxSimulation = simulateDomainInvestments(domain, belief);
+          const maxSimulation = simulateDomainInvestments(domain, belief, Number.POSITIVE_INFINITY, era);
           const maxAffordable = maxSimulation.investments;
           const targetInvestments = resolveTargetInvestments(mode, maxAffordable);
           const targetSimulation =
             targetInvestments === maxAffordable
               ? maxSimulation
-              : simulateDomainInvestments(domain, belief, targetInvestments);
+              : simulateDomainInvestments(domain, belief, targetInvestments, era);
           const xpNeeded = getXpNeeded(domain);
           const projectedXpNeeded = getXpNeeded(targetSimulation.resultingDomain);
           const disabled = targetSimulation.investments <= 0;
@@ -112,11 +130,9 @@ export function DomainPanel({
                   : "rounded-xl border border-white/10 bg-black/25 p-3"
               }
             >
-              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">
-                {DOMAIN_LABELS[domain.id]}
-              </p>
+              <p className="text-xs uppercase tracking-[0.2em] text-veil/70">{DOMAIN_LABELS[domain.id]}</p>
               <p className="mt-1 text-sm text-white">
-                Level {formatResource(domain.level)} · XP {formatResource(domain.xp)}/{formatResource(xpNeeded)}
+                Level {formatResource(domain.level)} - XP {formatResource(domain.xp)}/{formatResource(xpNeeded)}
               </p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {INVEST_MODE_OPTIONS.map((option) => (
@@ -143,7 +159,7 @@ export function DomainPanel({
                 {targetSimulation.investments > 0 ? (
                   <>
                     {formatResource(targetSimulation.totalCost)} Belief to Lv
-                    {formatResource(targetSimulation.resultingDomain.level)} · XP{" "}
+                    {formatResource(targetSimulation.resultingDomain.level)} - XP{" "}
                     {formatResource(targetSimulation.resultingDomain.xp)}/{formatResource(projectedXpNeeded)}
                     {targetSimulation.levelsGained > 0
                       ? ` (+${formatResource(targetSimulation.levelsGained)} level${
@@ -166,7 +182,7 @@ export function DomainPanel({
                   : `Invest ${INVEST_MODE_OPTIONS.find((entry) => entry.id === mode)?.label}`}
               </button>
               <p className="mt-1 text-[10px] text-veil/55">
-                Single {formatResource(singleCost)} · Max {formatResource(maxAffordable)}
+                Single {formatResource(singleCost)} - Max {formatResource(maxAffordable)}
               </p>
             </article>
           );

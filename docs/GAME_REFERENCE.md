@@ -19,7 +19,7 @@ When runtime and manifesto diverge, either:
 
 ## Current Build Snapshot
 
-- Save schema: `17`
+- Save schema: `20`
 - Core loop: deterministic tick (`250ms`)
 - Persistence: localStorage save + migration + recovery snapshot
 - Offline sim: enabled (`8h cap`, `85% belief efficiency`)
@@ -78,7 +78,7 @@ Components:
 - `prophetOutput = 2 + totalDomainLevel * 0.1`
 - `domainMultiplier = 1 + totalDomainLevel * 0.15`
 - `cultOutput = prophets * followers * 0.08 * domainSynergy`
-- `domainSynergy = (1 + 0.25 * matchingPairs) * architecture/final-choice/ghost adjustments`
+- `domainSynergy = (1 + 0.25 * activeResonancePairs + 0.05 * tempestMemoryTier) * architecture/final-choice/ghost adjustments`
 - `veilBonus = 1 + ((100 - veil) * 0.008)`
 - `followerTrickle = followers * 0.002`
 
@@ -131,6 +131,9 @@ Era II+ whisper targets:
 - Passive follower-rate impact from last whisper target:
   - `Prophets`: `+3%`
   - `Cults`: `+5%`
+- Light-Void resonance additionally modifies both targets:
+  - `-8%` surcharge per resonance tier
+  - `-4s` cooldown per resonance tier
 
 Whisper cost by profile:
 
@@ -258,13 +261,31 @@ Founding a cult consumes the required prophets.
 
 ### Domain Investment
 
+Runtime domain labels:
+- Light, Death, Life, Tempest, Memory, Void
+
 Invest cost:
 
-`ceil(50 * 1.8^level)`
+`ceil(50 * 1.8^level * eraMult * tierMult)`
+
+`eraMult`:
+- Era II: `0.85`
+- Era III: `1.0`
+
+`tierMult` by current level:
+- `<2`: `0.8`
+- `2-4`: `1.0`
+- `5-8`: `1.3`
+- `>=9`: `1.65`
 
 XP needed:
 
 `ceil(3 * 1.5^level)`
+
+Doctrine resonance pairs (based on minimum level within each pair):
+- `Life-Death`: Tier I/II/III at min level `2/5/9`, bonus `+4%` prophet passive follower rate per tier
+- `Light-Void`: Tier I/II/III at min level `2/5/9`, bonus `-8%` whisper surcharge and `-4s` whisper cooldown per tier
+- `Tempest-Memory`: Tier I/II/III at min level `2/5/9`, bonus `+5%` cult rites and cult passive follower rate per tier
 
 Bulk investing:
 - `+1`, `+10%`, `+25%`, `+50%`, `Max`
@@ -284,7 +305,7 @@ Belief return:
 
 `reward = currentBps * duration * beliefMult * 0.3`
 
-`beliefMult = max(actFloor, baseMult + matchingPairs * 0.2)`
+`beliefMult = max(actFloor, baseMult + activeResonancePairs * 0.12 + tempestMemoryTier * 0.05)`
 
 Act floor:
 - base `1.0`
@@ -325,7 +346,7 @@ Suppress:
 
 Active in era `3` only, and disabled if civilization health `<= 0`.
 
-`rate = (0.35*cults + 0.25*shrines + 0.05*prophets) * (civHealth/100) * veilZoneMult`
+`rate = ((0.35*cults*(1+tempestMemoryBonus)) + 0.25*shrines + (0.05*prophets*(1+lifeDeathBonus))) * whisperTargetMult * (civHealth/100) * veilZoneMult`
 
 Veil zone multiplier:
 - veil `>55`: `0.8`

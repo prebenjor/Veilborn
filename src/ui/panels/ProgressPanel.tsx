@@ -9,6 +9,10 @@ interface ProgressPanelProps {
   cults: number;
   prophetFollowerGainRatePerSecond: number;
   cultFollowerGainRatePerSecond: number;
+  prophetResonanceBonus: number;
+  cultResonanceBonus: number;
+  whisperResonanceSurchargeReduction: number;
+  whisperResonanceCooldownReductionMs: number;
   whisperFollowerRateSource: string | null;
   whisperFollowerRateMultiplier: number;
   nextAcolyteFollowers: number;
@@ -32,6 +36,10 @@ export function ProgressPanel({
   cults,
   prophetFollowerGainRatePerSecond,
   cultFollowerGainRatePerSecond,
+  prophetResonanceBonus,
+  cultResonanceBonus,
+  whisperResonanceSurchargeReduction,
+  whisperResonanceCooldownReductionMs,
   whisperFollowerRateSource,
   whisperFollowerRateMultiplier,
   nextAcolyteFollowers,
@@ -60,6 +68,12 @@ export function ProgressPanel({
           <p className="mt-1 text-xs text-veil/65">
             Ordination consumes followers and prepares future prophets.
           </p>
+          {era >= 2 ? (
+            <p className="mt-1 text-xs text-veil/65">
+              Whisper resonance: -{formatResource(whisperResonanceSurchargeReduction * 100)}% surcharge, -
+              {formatResource(whisperResonanceCooldownReductionMs / 1000)}s cooldown
+            </p>
+          ) : null}
           <button
             type="button"
             disabled={!canOrdainAcolyte}
@@ -80,7 +94,12 @@ export function ProgressPanel({
           {era >= 2 ? (
             <p className="mt-1 text-xs text-veil/65">
               {formatRate(prophetFollowerGainRatePerSecond)}/s followers
-              {whisperFollowerRateSource ? ` - ${whisperFollowerRateSource} x${formatResource(whisperFollowerRateMultiplier, 2)}` : ""}
+              {whisperFollowerRateSource
+                ? ` - ${whisperFollowerRateSource} x${formatResource(whisperFollowerRateMultiplier, 2)}`
+                : ""}
+              {prophetResonanceBonus > 0
+                ? ` - resonance +${formatResource(prophetResonanceBonus * 100)}%`
+                : ""}
             </p>
           ) : null}
           <button
@@ -108,6 +127,9 @@ export function ProgressPanel({
               {formatRate(cultFollowerGainRatePerSecond)}/s followers
               {whisperFollowerRateSource
                 ? ` - ${whisperFollowerRateSource} x${formatResource(whisperFollowerRateMultiplier, 2)}`
+                : ""}
+              {cultResonanceBonus > 0
+                ? ` - resonance +${formatResource(cultResonanceBonus * 100)}%`
                 : ""}
             </p>
             <button

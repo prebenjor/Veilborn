@@ -49,12 +49,14 @@ import {
 import {
   getActBaseMultiplier,
   getActCost,
+  getActResonantBonus,
   getActRewardBelief,
   getAscensionEchoGain,
   getActDurationSeconds,
   getBeliefGenerationBreakdown,
   getCultFormationCost,
   getCultOutput,
+  getDoctrineResonanceState,
   getDomainSynergy,
   getDomainInvestCost,
   getDomainXpNeeded,
@@ -955,6 +957,7 @@ export default function App() {
   const canAdvanceEraTwo = canAdvanceEraTwoToThree(gameState);
   const canUseAscend = canAscend(gameState);
   const domainSynergy = getDomainSynergy(gameState);
+  const doctrineResonance = getDoctrineResonanceState(gameState);
 
   const echoTreeViews = ECHO_TREE_META
     .filter((tree) => {
@@ -1045,7 +1048,7 @@ export default function App() {
     gameState.era >= 3
       ? `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults \u00b7 ${formatResource(activeActs.length)} of ${formatResource(actSlotCap)} rites active`
       : `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults`;
-  const domainsGrowthSummary = `Active synergy x${formatResource(domainSynergy, 2)} \u00b7 ${formatResource(gameState.matchingDomainPairs)} matched pairs`;
+  const domainsGrowthSummary = `Synergy x${formatResource(domainSynergy, 2)} \u00b7 ${formatResource(doctrineResonance.activePairs)} resonance pairs`;
   const rivalsGrowthSummary = hasActiveRivals
     ? `${formatResource(gameState.doctrine.rivals.length)} active \u00b7 strength ${formatResource(rivalStrength)}`
     : gameState.cults <= 0
@@ -1752,7 +1755,7 @@ export default function App() {
       actCosts={actCosts}
       actDurations={actDurations}
       actProjectedBelief={actProjectedBelief}
-      actResonantBonus={gameState.matchingDomainPairs * 0.2}
+      actResonantBonus={getActResonantBonus(gameState)}
       canStartAct={canStartActs}
       onStartAct={onStartAct}
       followerRites={followerRiteOptions}
@@ -1779,7 +1782,7 @@ export default function App() {
       actCosts={actCosts}
       actDurations={actDurations}
       actProjectedBelief={actProjectedBelief}
-      actResonantBonus={gameState.matchingDomainPairs * 0.2}
+      actResonantBonus={getActResonantBonus(gameState)}
       canStartAct={canStartActs}
       onStartAct={onStartAct}
       followerRites={followerRiteOptions}
@@ -1877,11 +1880,13 @@ export default function App() {
   const domainPanel =
     era >= 2 ? (
       <DomainPanel
+        era={gameState.era}
         belief={gameState.resources.belief}
         domains={gameState.domains}
         matchingDomainPairs={gameState.matchingDomainPairs}
         domainSynergy={domainSynergy}
-        getInvestCost={getDomainInvestCost}
+        doctrineResonance={doctrineResonance}
+        getInvestCost={(domain) => getDomainInvestCost(domain, gameState.era)}
         getXpNeeded={getDomainXpNeeded}
         onInvest={onInvestDomain}
       />
@@ -1896,6 +1901,10 @@ export default function App() {
       cults={gameState.cults}
       prophetFollowerGainRatePerSecond={passiveFollowerRateBreakdown.prophetPerSecond}
       cultFollowerGainRatePerSecond={passiveFollowerRateBreakdown.cultPerSecond}
+      prophetResonanceBonus={doctrineResonance.prophetPassiveBonus}
+      cultResonanceBonus={doctrineResonance.cultRiteBonus}
+      whisperResonanceSurchargeReduction={doctrineResonance.whisperSurchargeReduction}
+      whisperResonanceCooldownReductionMs={doctrineResonance.whisperCooldownReductionMs}
       whisperFollowerRateSource={whisperFollowerRateSource}
       whisperFollowerRateMultiplier={whisperFollowerRateMultiplier}
       nextAcolyteFollowers={nextAcolyteFollowers}

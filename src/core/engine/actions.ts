@@ -1351,7 +1351,7 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
 
 export function canInvestDomain(state: GameState, domainId: DomainId): boolean {
   const domain = state.domains.find((item) => item.id === domainId);
-  return Boolean(domain && state.resources.belief >= getDomainInvestCost(domain));
+  return Boolean(domain && state.resources.belief >= getDomainInvestCost(domain, state.era));
 }
 
 export function performDomainInvestment(state: GameState, domainId: DomainId, nowMs: number): GameState {
@@ -1359,7 +1359,7 @@ export function performDomainInvestment(state: GameState, domainId: DomainId, no
   if (domainIndex < 0) return state;
 
   const domain = state.domains[domainIndex];
-  const cost = getDomainInvestCost(domain);
+  const cost = getDomainInvestCost(domain, state.era);
   if (state.resources.belief < cost) return state;
 
   const xpNeeded = getDomainXpNeeded(domain);
@@ -1445,7 +1445,7 @@ export function performDomainInvestments(
   if (normalizedTarget === 1) return performDomainInvestment(state, domainId, nowMs);
 
   const domain = state.domains[domainIndex];
-  const simulation = simulateDomainInvestments(domain, state.resources.belief, normalizedTarget);
+  const simulation = simulateDomainInvestments(domain, state.resources.belief, normalizedTarget, state.era);
   if (simulation.investments <= 0) return state;
 
   const nextDomains = [...state.domains];
