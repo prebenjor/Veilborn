@@ -10,6 +10,7 @@ export const OFFLINE_VEIL_FLOOR = 15;
 export const ECHO_ASCENSION_DIVISOR = 150000;
 export const ECHO_TREE_MAX_RANK = 5;
 export const ECHO_TREE_RANK_COSTS = [1, 2, 3, 5, 8] as const;
+export const OMEN_LOG_MAX_ENTRIES = 6;
 
 export const PROPHET_OUTPUT_BASE = 2;
 export const PROPHET_DOMAIN_OUTPUT_SCALE = 0.1;

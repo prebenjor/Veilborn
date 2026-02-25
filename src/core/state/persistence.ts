@@ -11,6 +11,7 @@ import {
   OFFLINE_MAX_SECONDS,
   OFFLINE_RIVAL_DRAIN_MULTIPLIER,
   OFFLINE_VEIL_FLOOR,
+  OMEN_LOG_MAX_ENTRIES,
   RIVAL_DRAIN_RATE,
   RIVAL_EVENT_DURATION_MS,
   DEVOTION_STACK_MAX,
@@ -260,7 +261,7 @@ function sanitizeOmenLog(value: unknown, fallback: OmenEntry[]): OmenEntry[] {
     })
     .filter((entry): entry is OmenEntry => Boolean(entry));
 
-  return sanitized.length > 0 ? sanitized.slice(0, 200) : fallback;
+  return sanitized.length > 0 ? sanitized.slice(0, OMEN_LOG_MAX_ENTRIES) : fallback;
 }
 
 function sanitizeLineageHistory(value: unknown, fallback: HistoryMarker[]): HistoryMarker[] {

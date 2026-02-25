@@ -16,6 +16,7 @@ import {
   RIVAL_DRAIN_RATE,
   RIVAL_EVENT_DURATION_MS,
   RIVAL_MAX_ACTIVE,
+  OMEN_LOG_MAX_ENTRIES,
   type ActivityState,
   type GameState,
   type HistoryMarkerKind,
@@ -103,7 +104,7 @@ function appendSystemOmen(state: GameState, nowMs: number, text: string): GameSt
         text
       },
       ...state.omenLog
-    ].slice(0, 140),
+    ].slice(0, OMEN_LOG_MAX_ENTRIES),
     nextEventId: state.nextEventId + 1
   };
 }

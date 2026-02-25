@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { formatResource } from "../../core/ui/numberFormat";
 
 interface OmenEntry {
@@ -29,11 +28,6 @@ export function PersistentRightPanel({
   activeDoubtEvent,
   onResolveDoubtChoice
 }: PersistentRightPanelProps) {
-  const [omensExpanded, setOmensExpanded] = useState(false);
-  const previewCount = era === 1 ? 8 : 10;
-  const canExpandOmens = omenEntries.length > previewCount;
-  const visibleOmens = omensExpanded || !canExpandOmens ? omenEntries : omenEntries.slice(0, previewCount);
-
   return (
     <aside className="hidden rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-veil/80 shadow-veil backdrop-blur-sm min-[800px]:sticky min-[800px]:top-8 min-[800px]:flex min-[800px]:w-[240px] min-[800px]:shrink-0 min-[800px]:flex-col lg:w-[300px]">
       <section className="flex flex-col">
@@ -64,21 +58,10 @@ export function PersistentRightPanel({
           </div>
         ) : null}
         <ul className="mt-2 space-y-1 pr-1 text-[12px] text-veil/75">
-          {visibleOmens.map((entry) => (
+          {omenEntries.map((entry) => (
             <li key={entry.id}>{entry.text}</li>
           ))}
         </ul>
-        {canExpandOmens ? (
-          <button
-            type="button"
-            onClick={() => setOmensExpanded((current) => !current)}
-            className="mt-2 self-start rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
-          >
-            {omensExpanded
-              ? "Collapse murmurs"
-              : `Expand murmurs (${formatResource(omenEntries.length - visibleOmens.length)} more)`}
-          </button>
-        ) : null}
       </section>
     </aside>
   );

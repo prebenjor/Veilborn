@@ -117,6 +117,7 @@ import { useVeilAudio } from "./core/audio/useVeilAudio";
 import {
   DOMAIN_LABELS,
   MIRACLE_TIERS,
+  OMEN_LOG_MAX_ENTRIES,
   RIVAL_DRAIN_RATE,
   RIVAL_SUPPRESS_INFLUENCE_COST,
   RECRUIT_INFLUENCE_COST,
@@ -332,7 +333,7 @@ function appendDoubtOutcomeOmen(state: GameState, nowMs: number, text: string): 
         text
       },
       ...state.omenLog
-    ].slice(0, 140),
+    ].slice(0, OMEN_LOG_MAX_ENTRIES),
     nextEventId: state.nextEventId + 1
   };
 }
@@ -1014,7 +1015,7 @@ export default function App() {
   const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
   const surfaceOmenPreview = runScopedOmenLog.slice(0, surfaceOmenPreviewCount);
   const surfaceOmenExpanded = runScopedOmenLog.slice(surfaceOmenPreviewCount, era >= 3 ? 6 : 4);
-  const rightPanelOmens = runScopedOmenLog.slice(0, 80);
+  const rightPanelOmens = runScopedOmenLog.slice(0, OMEN_LOG_MAX_ENTRIES);
   const architectureUnlocked = isArchitectureUnlocked(gameState);
   const remembranceConditions = getRemembranceConditionViews(gameState);
   const totalNameLetters = getRemembranceLetterDefinitions().length;
@@ -2126,9 +2127,9 @@ export default function App() {
           <button
             type="button"
             onClick={() => setDesktopStatsExpanded(true)}
-            className="rounded border border-white/20 bg-black/65 px-3 py-1 text-[10px] tracking-[0.16em] text-veil/75 shadow-veil backdrop-blur-sm transition hover:border-veil/70 hover:text-white"
+            className="rounded border border-white/20 bg-black/65 px-3 py-1 text-[10px] tracking-[0.16em] text-veil/75 backdrop-blur-sm transition hover:border-veil/70 hover:text-white"
           >
-            SHOW STATS
+            STATS
           </button>
         )}
       </div>

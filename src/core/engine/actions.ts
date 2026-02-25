@@ -27,6 +27,7 @@ import {
   CADENCE_ACTION_FOLLOWER_BONUS,
   DOMAIN_LABELS,
   MIRACLE_NAMES,
+  OMEN_LOG_MAX_ENTRIES,
   RECRUIT_BASE_FOLLOWERS,
   RECRUIT_DOMAIN_FOLLOWER_DIVISOR,
   RECRUIT_INFLUENCE_COST,
@@ -1320,7 +1321,7 @@ function appendOmen(state: GameState, nowMs: number, kind: OmenKind, detail?: st
         text: chosen.text
       },
       ...state.omenLog
-    ].slice(0, 140),
+    ].slice(0, OMEN_LOG_MAX_ENTRIES),
     nextEventId: state.nextEventId + 1
   };
 }
