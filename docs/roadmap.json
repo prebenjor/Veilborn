@@ -625,7 +625,7 @@
     {
       "id": "PF-12",
       "title": "Rival Threat Legibility",
-      "status": "queued",
+      "status": "superseded",
       "execute_after": "M20",
       "scope": [
         "Show active rival strength as a relative threat level, not a raw number, until Era II is established",
@@ -633,7 +633,8 @@
         "Add a brief in-world description of each rival's character on first appearance (one line, not a dossier)",
         "Suppression cost UI should show whether player can currently afford suppress vs. convert",
         "Rival panel visibility follows era-locked disclosure rules"
-      ]
+      ],
+      "notes": "Superseded by M22 (Rival Identity and Faith Competition System). Rival legibility and response affordance now belong to the milestone-level rival redesign."
     },
     {
       "id": "PF-13",
@@ -773,9 +774,9 @@
     {
       "id": "PF-23",
       "title": "Active Act Visual State - Running vs Available",
-      "status": "queued",
+      "status": "completed",
       "execute_after": "M14",
-      "notes": "Currently active/running acts are not visually distinct from available acts. When an act is in progress it should be immediately identifiable with a countdown and visual differentiation. Slot count header updates correctly but the cards themselves do not communicate state.",
+      "notes": "Implemented. Running acts now expose live countdowns and per-type running state, with visual differentiation from available acts and accurate active-slot feedback.",
       "scope": [
         "Running act cards render with a countdown timer showing time remaining",
         "Running act cards are visually differentiated from available ones: dimmed or shifted background, progress bar underlay, or equivalent",
@@ -790,14 +791,11 @@
       "title": "Era III UI Consistency Pass",
       "status": "queued",
       "execute_after": "M14",
-      "notes": "Several small inconsistencies visible in Era III runtime that conflict with the UI restructure spec and string replacement doc. Collect here to be addressed in one pass.",
+      "notes": "Trimmed to unresolved items after PF-26 and UI consolidation follow-ups. Completed checks (Meta label, Cataclysm top ordering, Veil Stability descriptor in stat bar) were removed from scope.",
       "scope": [
         "Unraveling Gate label appears twice (section header and inner bar header) - inner bar label should read 'Ready to Unravel' when conditions unmet, 'Cross the Threshold' when all met",
         "Suppress Rival button when no rivals are present should be hidden entirely, not greyed or visible",
-        "Veil Stability descriptor (Calm/Thinning/Fraying/Critical/Unraveling) must appear in stat bar in Era III - confirm implementation matches UI_RESTRUCTURE.md spec",
-        "Bottom status line must be hidden in Era III per era vocabulary progression spec",
-        "Cataclysm panel must appear at top of ACTIVE tab in Era III above Rivals and Whispers - confirm correct order per GAME_REFERENCE.md Era III active order",
-        "META tab label must read 'Meta' with no suffix in all eras"
+        "Bottom status line must be hidden in Era III per era vocabulary progression spec"
       ]
     },
     {
