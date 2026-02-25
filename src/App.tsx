@@ -505,6 +505,7 @@ export default function App() {
     getRecoverySnapshotMeta()
   );
   const [activeTab, setActiveTab] = useState<UiTab>(() => loadUiTabPreference());
+  const [desktopStatsExpanded, setDesktopStatsExpanded] = useState(false);
   const [devToolsEnabled, setDevToolsEnabled] = useState<boolean>(() => loadDevToolsEnabled());
   const [lowPowerHint, setLowPowerHint] = useState(false);
   const [tickIntervalMs, setTickIntervalMs] = useState<number>(WORLD_TICK_MS);
@@ -2097,7 +2098,6 @@ export default function App() {
             omenEntries={rightPanelOmens}
             activeDoubtEvent={activeDoubtEventCard}
             onResolveDoubtChoice={onResolveDoubtChoice}
-            statsContent={<StatsDrawer presentation="embedded" {...statsDrawerProps} />}
           />
         </div>
         {showStatsDrawer ? (
@@ -2106,6 +2106,32 @@ export default function App() {
           </div>
         ) : null}
       </motion.div>
+      <div className="fixed right-4 top-4 z-40 hidden min-[800px]:block">
+        {desktopStatsExpanded ? (
+          <div className="w-[280px] rounded-2xl border border-white/20 bg-black/65 p-3 shadow-veil backdrop-blur-sm lg:w-[320px]">
+            <div className="mb-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDesktopStatsExpanded(false)}
+                className="rounded border border-white/20 px-2 py-0.5 text-[10px] tracking-[0.16em] text-veil/75 transition hover:border-veil/70 hover:text-white"
+              >
+                HIDE STATS
+              </button>
+            </div>
+            <div className="max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
+              <StatsDrawer presentation="embedded" {...statsDrawerProps} />
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDesktopStatsExpanded(true)}
+            className="rounded border border-white/20 bg-black/65 px-3 py-1 text-[10px] tracking-[0.16em] text-veil/75 shadow-veil backdrop-blur-sm transition hover:border-veil/70 hover:text-white"
+          >
+            SHOW STATS
+          </button>
+        )}
+      </div>
       {showPersistentOmenSurface ? (
         <div className="min-[800px]:hidden">
           <OmenSurface

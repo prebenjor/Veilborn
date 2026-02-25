@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { formatResource } from "../../core/ui/numberFormat";
 
 interface OmenEntry {
@@ -20,7 +20,6 @@ interface PersistentRightPanelProps {
   omenEntries: OmenEntry[];
   activeDoubtEvent: ActiveDoubtEventView | null;
   onResolveDoubtChoice: (choice: "a" | "b") => void;
-  statsContent: ReactNode;
 }
 
 export function PersistentRightPanel({
@@ -28,11 +27,9 @@ export function PersistentRightPanel({
   omenTitle,
   omenEntries,
   activeDoubtEvent,
-  onResolveDoubtChoice,
-  statsContent
+  onResolveDoubtChoice
 }: PersistentRightPanelProps) {
   const [omensExpanded, setOmensExpanded] = useState(false);
-  const [statsExpanded, setStatsExpanded] = useState(false);
   const previewCount = era === 1 ? 8 : 10;
   const canExpandOmens = omenEntries.length > previewCount;
   const visibleOmens = omensExpanded || !canExpandOmens ? omenEntries : omenEntries.slice(0, previewCount);
@@ -82,19 +79,6 @@ export function PersistentRightPanel({
               : `Expand murmurs (${formatResource(omenEntries.length - visibleOmens.length)} more)`}
           </button>
         ) : null}
-      </section>
-
-      <div className="my-4 border-t border-white/10" />
-
-      <section className="pr-1">
-        <button
-          type="button"
-          onClick={() => setStatsExpanded((current) => !current)}
-          className="rounded border border-white/20 px-2 py-0.5 text-[10px] tracking-[0.16em] text-veil/75 transition hover:border-veil/70 hover:text-white"
-        >
-          {statsExpanded ? "HIDE STATS" : "SHOW STATS"}
-        </button>
-        {statsExpanded ? <div className="mt-2">{statsContent}</div> : null}
       </section>
     </aside>
   );
