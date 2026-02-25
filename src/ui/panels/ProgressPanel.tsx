@@ -51,40 +51,46 @@ export function ProgressPanel({
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
       <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Doctrine Seeds</h2>
-      <div className={`mt-3 grid gap-3 ${era >= 2 ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
+      <div className={`mt-3 grid gap-3 ${era >= 2 ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-1"}`}>
+        <article className="rounded-xl border border-white/10 bg-black/25 p-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Acolytes</p>
+          <p className="mt-1 text-sm text-white">
+            {formatResource(acolytes)} active {" - "}next at {formatResource(nextAcolyteFollowers)} followers
+          </p>
+          <p className="mt-1 text-xs text-veil/65">
+            Ordination consumes followers and prepares future prophets.
+          </p>
+          <button
+            type="button"
+            disabled={!canOrdainAcolyte}
+            onClick={onOrdainAcolyte}
+            className="mt-2 rounded-lg border border-white/30 px-2 py-1 text-xs text-veil/85 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+          >
+            Ordain Acolyte
+          </button>
+        </article>
+
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
           <p className="mt-1 text-sm text-white">
             {formatResource(prophets)} active {" - "}
             {formatResource(nextProphetFollowers)} followers + {formatResource(nextProphetAcolytes)} acolytes to next
           </p>
-          <p className="mt-1 text-xs text-veil/65">
-            Acolytes {formatResource(acolytes)} {" - "}next at {formatResource(nextAcolyteFollowers)} followers
-          </p>
+          <p className="mt-1 text-xs text-veil/65">Requires {formatResource(nextProphetAcolytes)} acolytes (consumed).</p>
           {era >= 2 ? (
             <p className="mt-1 text-xs text-veil/65">
               {formatRate(prophetFollowerGainRatePerSecond)}/s followers
               {whisperFollowerRateSource ? ` - ${whisperFollowerRateSource} x${formatResource(whisperFollowerRateMultiplier, 2)}` : ""}
             </p>
           ) : null}
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={!canOrdainAcolyte}
-              onClick={onOrdainAcolyte}
-              className="rounded-lg border border-white/30 px-2 py-1 text-xs text-veil/85 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-            >
-              Ordain Acolyte
-            </button>
-            <button
-              type="button"
-              disabled={!canAnointProphet}
-              onClick={onAnointProphet}
-              className="rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-            >
-              Anoint Prophet
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={!canAnointProphet}
+            onClick={onAnointProphet}
+            className="mt-2 rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+          >
+            Anoint Prophet
+          </button>
         </article>
 
         {era >= 2 && showCultControls ? (
