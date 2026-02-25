@@ -48,11 +48,13 @@ import {
   PANTHEON_DOMAIN_POISON_OUTPUT_MULTIPLIER,
   PANTHEON_UNLOCK_COMPLETED_RUNS,
   PASSIVE_FOLLOWER_RATE_PER_CULT,
+  PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO,
   PASSIVE_FOLLOWER_RATE_PER_PROPHET,
   PASSIVE_FOLLOWER_RATE_PER_SHRINE,
   PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER,
   PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER,
   PASSIVE_FOLLOWER_VEIL_SAFE_MULTIPLIER,
+  WHISPER_PASSIVE_FOLLOWER_RATE_EFFECT,
   GHOST_BONUS_BASE,
   INFLUENCE_BASE_CAP,
   INFLUENCE_BASE_REGEN_PER_SECOND,
@@ -641,15 +643,43 @@ function getFollowerRiteVeilZoneMultiplier(veil: number): number {
   return FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER;
 }
 
+export function getWhisperFollowerRateMultiplier(state: GameState): number {
+  if (state.era < 2) return 1;
+  const profile = normalizeWhisperProfile(state, {
+    target: state.activity.lastWhisperTarget,
+    magnitude: state.activity.lastWhisperMagnitude
+  });
+  const targetMultiplier = WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER[profile.target];
+  const magnitudeMultiplier =
+    state.era >= 3 && profile.magnitude === "boosted"
+      ? WHISPER_BOOSTED_FOLLOWER_MULTIPLIER[profile.target]
+      : 1;
+  const combinedMultiplier = targetMultiplier * magnitudeMultiplier;
+  return Math.max(1, 1 + (combinedMultiplier - 1) * WHISPER_PASSIVE_FOLLOWER_RATE_EFFECT);
+}
+
 export function getPassiveFollowerRate(state: GameState, nowMs: number): number {
   void nowMs;
-  if (state.era < 3) return 0;
+  if (state.era < 2) return 0;
+
+  const whisperFollowerRateMultiplier = getWhisperFollowerRateMultiplier(state);
+  const prophetRatePerSecond =
+    (state.era >= 3
+      ? PASSIVE_FOLLOWER_RATE_PER_PROPHET
+      : PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO) *
+    state.prophets *
+    whisperFollowerRateMultiplier;
+
+  if (state.era < 3) {
+    return Math.max(0, prophetRatePerSecond);
+  }
+
   if (state.cataclysm.civilizationHealth <= 0) return 0;
 
   const baseRate =
     PASSIVE_FOLLOWER_RATE_PER_CULT * state.cults +
     PASSIVE_FOLLOWER_RATE_PER_SHRINE * state.doctrine.shrinesBuilt +
-    PASSIVE_FOLLOWER_RATE_PER_PROPHET * state.prophets;
+    prophetRatePerSecond;
   if (baseRate <= 0) return 0;
 
   const civHealthMultiplier = Math.max(0, state.cataclysm.civilizationHealth / 100);

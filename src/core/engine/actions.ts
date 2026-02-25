@@ -1441,7 +1441,9 @@ export function performWhisper(state: GameState, nowMs: number, options?: Whispe
         ...state.activity,
         whisperWindowStartedAt: normalizedCycle.whisperWindowStartedAt,
         whispersInWindow: normalizedCycle.whispersInWindow + 1,
-        whisperTargetCooldowns: whisperCooldowns
+        whisperTargetCooldowns: whisperCooldowns,
+        lastWhisperTarget: normalizedOptions.target,
+        lastWhisperMagnitude: normalizedOptions.magnitude
       },
       nowMs
     ),

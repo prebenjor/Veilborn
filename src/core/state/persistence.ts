@@ -51,7 +51,9 @@ import {
   type RivalState,
   type GhostState,
   type GhostRunSignature,
-  type GhostInfluence
+  type GhostInfluence,
+  type WhisperMagnitude,
+  type WhisperTarget
 } from "./gameState";
 import {
   getBeliefPerSecond,
@@ -771,6 +773,22 @@ function sanitizeWhisperTargetCooldowns(
   };
 }
 
+function sanitizeWhisperTarget(
+  value: unknown,
+  fallback: WhisperTarget
+): WhisperTarget {
+  if (value === "crowd" || value === "prophets" || value === "cults") return value;
+  return fallback;
+}
+
+function sanitizeWhisperMagnitude(
+  value: unknown,
+  fallback: WhisperMagnitude
+): WhisperMagnitude {
+  if (value === "base" || value === "boosted") return value;
+  return fallback;
+}
+
 function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const fallback = createInitialGameState(nowMs);
   if (!isRecord(rawState)) return fallback;
@@ -828,6 +846,14 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
       whisperTargetCooldowns: sanitizeWhisperTargetCooldowns(
         rawActivity.whisperTargetCooldowns,
         fallback.activity.whisperTargetCooldowns
+      ),
+      lastWhisperTarget: sanitizeWhisperTarget(
+        rawActivity.lastWhisperTarget,
+        fallback.activity.lastWhisperTarget
+      ),
+      lastWhisperMagnitude: sanitizeWhisperMagnitude(
+        rawActivity.lastWhisperMagnitude,
+        fallback.activity.lastWhisperMagnitude
       ),
       lastCadencePromptAt: Math.max(0, readNumber(rawActivity.lastCadencePromptAt, nowMs)),
       cadencePromptActive: readBoolean(rawActivity.cadencePromptActive, false)
@@ -896,7 +922,8 @@ const MIGRATORS: Record<number, Migrator> = {
   14: sanitizeState,
   15: sanitizeState,
   16: sanitizeState,
-  17: sanitizeState
+  17: sanitizeState,
+  18: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

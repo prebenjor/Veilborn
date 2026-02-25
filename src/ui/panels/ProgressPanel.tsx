@@ -6,6 +6,9 @@ interface ProgressPanelProps {
   era: number;
   prophets: number;
   cults: number;
+  followerGainRatePerSecond: number;
+  whisperFollowerRateSource: string | null;
+  whisperFollowerRateMultiplier: number;
   nextProphetFollowers: number;
   nextCultBeliefCost: number;
   lineageGeneration: number;
@@ -30,6 +33,9 @@ export function ProgressPanel({
   era,
   prophets,
   cults,
+  followerGainRatePerSecond,
+  whisperFollowerRateSource,
+  whisperFollowerRateMultiplier,
   nextProphetFollowers,
   nextCultBeliefCost,
   lineageGeneration,
@@ -62,9 +68,15 @@ export function ProgressPanel({
         <article className="rounded-xl border border-white/10 bg-black/25 p-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
           <p className="mt-1 text-sm text-white">
-            {formatResource(prophets)} active {" \u00b7 "}
+            {formatResource(prophets)} active {" - "}
             {formatResource(nextProphetFollowers)} followers to next
           </p>
+          {era >= 2 ? (
+            <p className="mt-1 text-xs text-veil/65">
+              {formatRate(followerGainRatePerSecond)}/s followers
+              {whisperFollowerRateSource ? ` - ${whisperFollowerRateSource} x${formatResource(whisperFollowerRateMultiplier, 2)}` : ""}
+            </p>
+          ) : null}
           <button
             type="button"
             disabled={!canAnointProphet}

@@ -50,6 +50,12 @@ const ACT_CONFIG: Array<{ type: ActType; label: string; hint: string }> = [
   { type: "proclaim", label: "Great Proclamation", hint: "Longest act, largest return." }
 ];
 
+const ACT_LABELS: Record<ActType, string> = {
+  shrine: "Raise Shrine",
+  ritual: "Bind Ritual",
+  proclaim: "Great Proclamation"
+};
+
 export function DoctrinePanel({
   era,
   cultOutput,
@@ -84,6 +90,18 @@ export function DoctrinePanel({
   );
   const strongestProjected = Math.max(...sortedActs.map((act) => actProjectedBelief[act.type]), 1);
   const hasRivals = rivalsCount > 0;
+  const runningActs = [...activeActs].sort((left, right) => left.remainingSeconds - right.remainingSeconds);
+  const activeActsByType = activeActs.reduce<Record<ActType, ActiveActView[]>>(
+    (accumulator, act) => {
+      accumulator[act.type].push(act);
+      return accumulator;
+    },
+    {
+      shrine: [],
+      ritual: [],
+      proclaim: []
+    }
+  );
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -103,20 +121,45 @@ export function DoctrinePanel({
               {formatResource(slotsUsed)} of {formatResource(actSlotCap)} slots active
             </p>
             <p className="mt-1 text-xs text-veil/65">
-              Cult output {formatResource(cultOutput)}/s · synergy x{formatResource(domainSynergy, 2)}
+              Cult output {formatResource(cultOutput)}/s - synergy x{formatResource(domainSynergy, 2)}
             </p>
+
+            {slotsUsed > 0 ? (
+              <div className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-veil/65">Running Acts</p>
+                <div className="mt-1 space-y-1">
+                  {runningActs.slice(0, 5).map((act) => (
+                    <p key={act.id} className="text-[11px] text-veil/70">
+                      {ACT_LABELS[act.type]} - {formatDurationCompact(act.remainingSeconds)} left
+                    </p>
+                  ))}
+                  {runningActs.length > 5 ? (
+                    <p className="text-[11px] text-veil/60">+{formatResource(runningActs.length - 5)} more running</p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-2 space-y-2">
               {sortedActs.map((act) => {
                 const projectedBelief = actProjectedBelief[act.type];
                 const deEmphasized = projectedBelief < strongestProjected * 0.55;
+                const runningForType = activeActsByType[act.type];
+                const runningCount = runningForType.length;
+                const nextResolveIn =
+                  runningCount > 0
+                    ? Math.max(0, Math.min(...runningForType.map((entry) => entry.remainingSeconds)))
+                    : 0;
+
                 return (
                   <div
                     key={act.type}
                     className={
-                      deEmphasized
-                        ? "rounded-lg border border-white/10 bg-black/20 p-2 opacity-70"
-                        : "rounded-lg border border-white/10 bg-black/20 p-2"
+                      runningCount > 0
+                        ? "rounded-lg border border-ember/35 bg-ember/5 p-2"
+                        : deEmphasized
+                          ? "rounded-lg border border-white/10 bg-black/20 p-2 opacity-70"
+                          : "rounded-lg border border-white/10 bg-black/20 p-2"
                     }
                   >
                     <p className="text-xs text-veil/80">{act.label}</p>
@@ -126,15 +169,26 @@ export function DoctrinePanel({
                     </p>
                     <p className="mt-1 text-[11px] text-veil/60">
                       {formatProjected(projectedBelief)} Belief
-                      {actResonantBonus > 0 ? ` · resonant +${formatResource(actResonantBonus, 2)}` : ""}
+                      {actResonantBonus > 0 ? ` - resonant +${formatResource(actResonantBonus, 2)}` : ""}
                     </p>
+                    {runningCount > 0 ? (
+                      <p className="mt-1 text-[11px] text-ember/80">
+                        {formatResource(runningCount)} running - next resolves in {formatDurationCompact(nextResolveIn)}
+                      </p>
+                    ) : null}
                     <button
                       type="button"
                       disabled={!canStartAct[act.type]}
                       onClick={() => onStartAct(act.type)}
                       className="mt-1 rounded-lg border border-ember/60 px-2 py-1 text-xs text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
                     >
-                      Start
+                      {canStartAct[act.type]
+                        ? runningCount > 0
+                          ? "Start Another"
+                          : "Start"
+                        : runningCount > 0
+                          ? "Running"
+                          : "Start"}
                     </button>
                   </div>
                 );
@@ -152,7 +206,7 @@ export function DoctrinePanel({
                       Cost {formatResource(rite.influenceCost)} Influence + {formatResource(rite.beliefCost)} Belief
                     </p>
                     <p className="mt-1 text-[11px] text-veil/60">
-                      {formatProjected(rite.projectedFollowers)} followers · {formatResource(rite.uses)} uses
+                      {formatProjected(rite.projectedFollowers)} followers - {formatResource(rite.uses)} uses
                     </p>
                     <button
                       type="button"

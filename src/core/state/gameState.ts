@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 17;
+export const GAME_STATE_SCHEMA_VERSION = 18;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -124,6 +124,8 @@ export const CADENCE_ACTION_FOLLOWER_BONUS = 1;
 export const PASSIVE_FOLLOWER_RATE_PER_CULT = 0.35;
 export const PASSIVE_FOLLOWER_RATE_PER_SHRINE = 0.25;
 export const PASSIVE_FOLLOWER_RATE_PER_PROPHET = 0.05;
+export const PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO = 0.02;
+export const WHISPER_PASSIVE_FOLLOWER_RATE_EFFECT = 0.35;
 export const PASSIVE_FOLLOWER_VEIL_SAFE_MULTIPLIER = 0.8;
 export const PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER = 1.1;
 export const PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER = 1.25;
@@ -502,6 +504,8 @@ export interface ActivityState {
   whisperWindowStartedAt: number;
   whispersInWindow: number;
   whisperTargetCooldowns: Record<WhisperTarget, number>;
+  lastWhisperTarget: WhisperTarget;
+  lastWhisperMagnitude: WhisperMagnitude;
   lastCadencePromptAt: number;
   cadencePromptActive: boolean;
 }
@@ -791,6 +795,8 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
         prophets: 0,
         cults: 0
       },
+      lastWhisperTarget: "crowd",
+      lastWhisperMagnitude: "base",
       lastCadencePromptAt: nowMs,
       cadencePromptActive: false
     },

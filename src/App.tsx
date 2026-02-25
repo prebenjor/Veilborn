@@ -77,6 +77,7 @@ import {
   getMiracleReserveCap,
   getMiracleVeilCost,
   getPassiveFollowerRate,
+  getWhisperFollowerRateMultiplier,
   getRivalSpawnIntervalMs,
   getTotalRivalStrength,
   getUnravelingGateStatus,
@@ -321,6 +322,21 @@ const ERA_THREE_WHISPER_PROFILES: Array<{
   { target: "prophets", magnitude: "boosted", label: "Sacred Charge" },
   { target: "cults", magnitude: "boosted", label: "Doctrine Wave" }
 ];
+
+function getWhisperFollowerRateSourceLabel(
+  target: WhisperTarget,
+  magnitude: WhisperMagnitude,
+  era: EraValue
+): string {
+  if (era >= 3 && magnitude === "boosted") {
+    if (target === "crowd") return "Open Proclamation";
+    if (target === "prophets") return "Sacred Charge";
+    return "Doctrine Wave";
+  }
+  if (target === "crowd") return "Crowd";
+  if (target === "prophets") return "Prophets";
+  return "Cults";
+}
 
 function getAvailableTabs(era: EraValue): UiTab[] {
   if (era <= 1) return [];
@@ -850,6 +866,15 @@ export default function App() {
   const influenceCap = getInfluenceCap(gameState);
   const influenceRegenBreakdown = getInfluenceRegenBreakdown(gameState);
   const passiveFollowerRate = getPassiveFollowerRate(gameState, nowMs);
+  const whisperFollowerRateMultiplier = getWhisperFollowerRateMultiplier(gameState);
+  const whisperFollowerRateSource =
+    gameState.era >= 2
+      ? getWhisperFollowerRateSourceLabel(
+          gameState.activity.lastWhisperTarget,
+          gameState.activity.lastWhisperMagnitude,
+          gameState.era
+        )
+      : null;
   const whisperCostDelta = nextWhisperCostDelta ?? 0;
   const whisperCost = getWhisperCostForProfile(
     gameState,
@@ -1860,6 +1885,9 @@ export default function App() {
       era={gameState.era}
       prophets={gameState.prophets}
       cults={gameState.cults}
+      followerGainRatePerSecond={passiveFollowerRate}
+      whisperFollowerRateSource={whisperFollowerRateSource}
+      whisperFollowerRateMultiplier={whisperFollowerRateMultiplier}
       nextProphetFollowers={nextProphetFollowers}
       nextCultBeliefCost={nextCultBeliefCost}
       lineageGeneration={gameState.lineage.generation}
