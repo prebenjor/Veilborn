@@ -40,11 +40,18 @@ Stats visibility rule:
 - Stats is backward-facing and is not a spoiler surface.
 - Stats access must remain available in every era and every tab.
 - Stats content should grow by era and only include active or already encountered systems.
+- Desktop (`>=800px`): Stats is a fixed top-right dock with a collapsed-by-default `STATS` trigger.
+- Mobile (`<800px`): Stats remains a floating button that opens the drawer.
 
 ## Layout Rules
 
 - Era I: minimal single-column surface, no tabs.
 - Era I: Whisper/Recruit actions and Prophet conversion live in one merged card.
+- Desktop shell breakpoint is `800px`:
+  - left column holds era content
+  - right sidebar holds the omen feed only
+  - right sidebar width: `240px` (`300px` on large screens)
+  - left column min width: `500px`
 - Era II: `ACTIVE` and `GROWTH`, with constrained `META` content.
 - Era II tab contract:
   - `ACTIVE` order: Whispers -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds.
@@ -60,6 +67,11 @@ Stats visibility rule:
 - Era III `GROWTH` order: Doctrine (merged) -> Domains -> Rivals (Threshold remains in the persistent Unraveling strip).
 - Era II+ `META` containers are collapsible with persisted state.
 - Era III critical actions must be reachable without long scroll.
+- Omen feed contract:
+  - header follows era vocabulary (`Murmurs` / `Whispers` / `Omens`)
+  - active surface is run-scoped (`entry.at >= runStartTimestamp`)
+  - feed is capped to 6 entries (`OMEN_LOG_MAX_ENTRIES`)
+  - no desktop expand control; keep it a short rolling feed
 
 ## Implementation Notes
 

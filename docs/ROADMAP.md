@@ -248,7 +248,9 @@ Notes:
 - Export-driven M14 loop: gather 2-3 beginner + 2-3 ascended telemetry exports, run compare/audit, apply one small constant delta, then re-run.
 - `PF-25` completed Veil pressure rebalance + miracle naming and superseded `PF-21`.
 - `PF-22` completed Era III Influence cap scaling (cult/domain/shrine terms).
+- `PF-26` completed desktop shell split: persistent OMENS sidebar (`>=800px`) + fixed top-right STATS dock (collapsed by default); mobile behavior unchanged.
 - `PF-27` completed miracle power reserve + post-ascension Era I legacy echo quick-spend access.
+- PF-26 follow-up behavior is live: active omen surface is run-scoped and capped to 6 entries to prevent prior-run bleed and long-scroll clutter.
 - Remaining M14 scope is economy constant calibration against target run durations.
 
 Deliverables:

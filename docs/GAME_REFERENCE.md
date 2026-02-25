@@ -19,7 +19,7 @@ When runtime and manifesto diverge, either:
 
 ## Current Build Snapshot
 
-- Save schema: `15`
+- Save schema: `16`
 - Core loop: deterministic tick (`250ms`)
 - Persistence: localStorage save + migration + recovery snapshot
 - Offline sim: enabled (`8h cap`, `85% belief efficiency`)
@@ -53,7 +53,7 @@ Completed PFs currently reflected in runtime:
 - `PF-17` domain synergy feedback baseline
 - `PF-22` era III influence cap scaling
 - `PF-25` veil pressure rebalance and miracle naming baseline
-- `PF-26` persistent right panel (omens/stats)
+- `PF-26` desktop omens sidebar + fixed stats dock (run-scoped/capped omen feed)
 - `PF-27` miracle reserve + legacy echo access
 
 ## Core Systems and Formulas
@@ -469,6 +469,10 @@ Era II+:
 - app shell orchestration in `src/App.tsx`; era-specific composition extracted to `src/ui/eras/*`
 - shared shell surfaces extracted to `src/ui/layout/*` (stat bar, tab dock, persistent omen surface)
 - tab containers in `active`, `growth`, and `meta` are collapsible with persisted localStorage state
+- desktop shell breakpoint is `>=800px` (two-column layout with left content + right omens sidebar)
+- right omens sidebar width is `240px` (`300px` on large screens); left column enforces a `500px` minimum
+- desktop stats uses a separate fixed top-right dock (collapsed by default, trigger label `STATS`)
+- the right omens sidebar has no expand control and shows a short rolling feed (max 6 entries)
 
 Era II:
 - `active` order: Whisper/Recruit -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds
@@ -502,12 +506,16 @@ Era III:
 Disclosure policy:
 - future-era systems hidden until unlock
 - cult controls reveal near affordability threshold (`90%`)
-- stats surface is always accessible (embedded in persistent right panel on wide viewports, floating drawer on mobile) and only shows unlocked-system metrics.
+- stats surface is always accessible (fixed top-right dock on desktop, floating drawer on mobile) and only shows unlocked-system metrics
+- active omen surfaces are run-scoped (`entry.at >= runStartTimestamp`) so prior-run lines do not leak into fresh runs
+- omen feed is capped to the latest 6 entries (`OMEN_LOG_MAX_ENTRIES`)
 
 ### Stats, Telemetry, and Exports
 
-Stats drawer:
+Stats surface:
 - always accessible in every era and tab
+- desktop (`>=800px`): fixed top-right dock with collapsed-by-default trigger (`STATS`)
+- mobile (`<800px`): floating button opens drawer
 - run timers and cadence info
 - follower flow lines
 - devotion path + stack line (path appears in Era II+)

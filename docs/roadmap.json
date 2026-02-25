@@ -829,30 +829,36 @@
     },
     {
       "id": "PF-26",
-      "title": "Persistent Right Panel - Omens and Stats",
+      "title": "Persistent Desktop Shell - Omens Sidebar and Stats Dock",
       "status": "completed",
       "execute_after": "M20",
-      "notes": "Wide-viewport shell now presents OMENS and STATS as a single persistent right panel in all eras. Mobile keeps existing behavior (bottom omen strip + floating stats button). This is layout-only and does not alter omen/stat content.",
+      "notes": "Implemented with UX follow-up. On wider viewports the shell uses a persistent OMENS sidebar plus a separate fixed STATS dock. Mobile keeps the existing bottom omen strip and floating stats button. Omen rendering is run-scoped to prevent prior-run bleed and capped for readability.",
       "scope": [
-        "On viewports >= 1024px, render a persistent right sidebar (280px) in all eras",
-        "Move OMENS/MURMURS/WHISPERS log surface into the right panel on wide viewports",
-        "Move STATS into the right panel on wide viewports with always-visible embedded presentation",
-        "Hide floating STATS button on wide viewports; keep it on mobile",
+        "On viewports >= 800px, render a persistent right OMENS sidebar in all eras",
+        "Sidebar width contract: 240px default, 300px on large screens; left column keeps a 500px minimum width",
+        "Move OMENS/MURMURS/WHISPERS log surface into the right sidebar on wide viewports",
+        "Use a separate fixed top-right STATS dock on wide viewports instead of embedding STATS in the sidebar",
+        "Desktop STATS dock defaults collapsed with trigger label `STATS` and no glow treatment",
+        "Hide the mobile floating STATS button on wide viewports; keep it on mobile",
         "Keep Stat Bar and Era III Unraveling Gate strip full width above the split",
         "Constrain left content column (Era I single-column and Era II/III tab content) to accommodate sidebar",
         "Give right panel subtle background differentiation while preserving era token styling",
-        "Maintain independent scroll regions for OMENS and STATS inside the panel",
-        "Preserve existing mobile behavior unchanged for viewports < 1024px",
-        "No changes to omen content, stats content, formulas, strings, or game state"
+        "Filter active omen surface to current run (`entry.at >= runStartTimestamp`) so prior-run lines do not render in the live surface",
+        "Cap stored/rendered omen entries to the latest six (`OMEN_LOG_MAX_ENTRIES = 6`)",
+        "Remove desktop-only expand control for the right-panel omen list; the surface remains a short rolling feed",
+        "Preserve existing mobile behavior unchanged for viewports < 800px",
+        "No changes to formulas; content systems remain unchanged apart from log visibility hygiene and presentation layout"
       ],
       "validation": [
-        "On >= 1024px, right panel is visible in Era I, Era II, and Era III",
-        "Era header label in panel follows vocabulary progression: MURMURS (I), WHISPERS (II), OMENS (III)",
-        "Floating STATS button is hidden on >= 1024px and visible on < 1024px",
-        "On < 1024px, existing omen strip and floating stats behavior remain unchanged",
+        "On >= 800px, right OMENS sidebar is visible in Era I, Era II, and Era III",
+        "Era header label in sidebar follows vocabulary progression: MURMURS (I), WHISPERS (II), OMENS (III)",
+        "On >= 800px, STATS is accessed through the fixed top-right dock and is collapsed by default",
+        "On >= 800px, mobile floating STATS button is hidden; on < 800px it is visible",
+        "On < 800px, existing omen strip and floating stats behavior remain unchanged",
         "Tab/era content in the left column remains readable with no horizontal overflow",
         "Stat Bar and Era III Unraveling strip remain full width",
-        "OMENS and STATS sections in right panel scroll independently"
+        "Active omen surface only shows entries from the current run and never displays prior-run lines",
+        "Active omen surface shows at most six recent entries"
       ]
     },
     {
