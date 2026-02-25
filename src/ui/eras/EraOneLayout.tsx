@@ -129,7 +129,7 @@ export function EraOneLayout({
         </div>
       </section>
       {eraGatePanel}
-      <section className="veil-omen-compact rounded-2xl border border-white/10 bg-black/20 p-4 shadow-veil backdrop-blur-sm lg:hidden">
+      <section className="veil-omen-compact rounded-2xl border border-white/10 bg-black/20 p-4 shadow-veil backdrop-blur-sm min-[800px]:hidden">
         <h2 className="text-xs uppercase tracking-[0.25em] text-veil/70">{omenTitle}</h2>
         {activeDoubtEvent ? (
           <>

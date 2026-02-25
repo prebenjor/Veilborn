@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 15;
+export const GAME_STATE_SCHEMA_VERSION = 16;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -508,6 +508,7 @@ export interface CataclysmState {
 export interface RunMeta {
   schemaVersion: number;
   runId: string;
+  runStartTimestamp: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -718,6 +719,7 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     meta: {
       schemaVersion: GAME_STATE_SCHEMA_VERSION,
       runId,
+      runStartTimestamp: nowMs,
       createdAt: nowMs,
       updatedAt: nowMs
     },

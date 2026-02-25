@@ -983,8 +983,10 @@ export default function App() {
   const era = gameState.era;
   const availableTabs = getAvailableTabs(era);
   const safeActiveTab = getSafeTab(activeTab, availableTabs);
+  const runStartTimestamp = gameState.meta.runStartTimestamp;
+  const runScopedOmenLog = gameState.omenLog.filter((entry) => entry.at >= runStartTimestamp);
   const omenPreviewCount = era === 1 ? 3 : 2;
-  const visibleOmens = gameState.omenLog.slice(0, omenPreviewCount);
+  const visibleOmens = runScopedOmenLog.slice(0, omenPreviewCount);
   const activeDoubtEventCard =
     era === 1 && activeDoubtEvent
       ? {
@@ -1009,9 +1011,9 @@ export default function App() {
           : "Someone is listening in the dark.";
   const veilStability = getVeilStabilityView(gameState.resources.veil, veilCollapseThreshold);
   const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
-  const surfaceOmenPreview = gameState.omenLog.slice(0, surfaceOmenPreviewCount);
-  const surfaceOmenExpanded = gameState.omenLog.slice(surfaceOmenPreviewCount, era >= 3 ? 6 : 4);
-  const rightPanelOmens = gameState.omenLog.slice(0, 80);
+  const surfaceOmenPreview = runScopedOmenLog.slice(0, surfaceOmenPreviewCount);
+  const surfaceOmenExpanded = runScopedOmenLog.slice(surfaceOmenPreviewCount, era >= 3 ? 6 : 4);
+  const rightPanelOmens = runScopedOmenLog.slice(0, 80);
   const architectureUnlocked = isArchitectureUnlocked(gameState);
   const remembranceConditions = getRemembranceConditionViews(gameState);
   const totalNameLetters = getRemembranceLetterDefinitions().length;
@@ -2035,7 +2037,7 @@ export default function App() {
         initial={reducedMotion ? false : { opacity: 0, y: 16 }}
         animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={reducedMotion ? { duration: 0 } : { duration: 0.45 }}
-        className="veil-content relative mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-24 pt-8 md:px-8"
+        className="veil-content relative mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-24 pt-8 lg:px-8"
       >
         <header className="veil-header space-y-2">
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
@@ -2070,8 +2072,8 @@ export default function App() {
           veilStability={veilStability}
         />
         {unravelingGateStrip}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
-          <div className="min-w-0 flex-1 space-y-4">
+        <div className="flex flex-col gap-4 min-[800px]:flex-row min-[800px]:items-start min-[800px]:gap-6">
+          <div className="min-w-0 space-y-4 min-[800px]:min-w-[500px] min-[800px]:w-[calc(100%-240px)] lg:w-[calc(100%-300px)]">
             {era >= 2 ? (
               <TabDock availableTabs={availableTabs} activeTab={safeActiveTab} onSelectTab={setActiveTab} />
             ) : null}
@@ -2099,13 +2101,13 @@ export default function App() {
           />
         </div>
         {showStatsDrawer ? (
-          <div className="lg:hidden">
+          <div className="min-[800px]:hidden">
             <StatsDrawer presentation="floating" {...statsDrawerProps} />
           </div>
         ) : null}
       </motion.div>
       {showPersistentOmenSurface ? (
-        <div className="lg:hidden">
+        <div className="min-[800px]:hidden">
           <OmenSurface
             era={era}
             title={uiReveal.omenTitle}

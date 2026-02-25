@@ -32,7 +32,7 @@ export function PersistentRightPanel({
   statsContent
 }: PersistentRightPanelProps) {
   return (
-    <aside className="hidden w-[280px] rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-veil/80 shadow-veil backdrop-blur-sm lg:sticky lg:top-8 lg:flex lg:h-[calc(100vh-4rem)] lg:flex-col">
+    <aside className="hidden rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-veil/80 shadow-veil backdrop-blur-sm min-[800px]:sticky min-[800px]:top-8 min-[800px]:flex min-[800px]:h-[calc(100vh-4rem)] min-[800px]:w-[240px] min-[800px]:shrink-0 min-[800px]:flex-col lg:w-[300px]">
       <section className="flex min-h-0 flex-[3] flex-col">
         <h2 className="text-xs uppercase tracking-[0.25em] text-veil/80">{omenTitle}</h2>
         {era === 1 && activeDoubtEvent ? (
@@ -73,4 +73,3 @@ export function PersistentRightPanel({
     </aside>
   );
 }
-

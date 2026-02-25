@@ -780,6 +780,13 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
     meta: {
       schemaVersion: GAME_STATE_SCHEMA_VERSION,
       runId: readString(rawMeta.runId, fallback.meta.runId),
+      runStartTimestamp: Math.max(
+        0,
+        readNumber(
+          rawMeta.runStartTimestamp,
+          readNumber(rawMeta.createdAt, fallback.meta.runStartTimestamp)
+        )
+      ),
       createdAt: readNumber(rawMeta.createdAt, fallback.meta.createdAt),
       updatedAt: Math.max(0, readNumber(rawMeta.updatedAt, nowMs))
     },
@@ -865,7 +872,8 @@ const MIGRATORS: Record<number, Migrator> = {
   12: sanitizeState,
   13: sanitizeState,
   14: sanitizeState,
-  15: sanitizeState
+  15: sanitizeState,
+  16: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {
