@@ -1,17 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-const GROWTH_DOCTRINE_COLLAPSED_KEY = "growth_doctrine_collapsed";
 const GROWTH_DOMAINS_COLLAPSED_KEY = "growth_domains_collapsed";
 const GROWTH_RIVALS_COLLAPSED_KEY = "growth_rivals_collapsed";
 const GROWTH_THRESHOLD_COLLAPSED_KEY = "growth_threshold_collapsed";
 
 interface EraTwoGrowthLayoutProps {
-  doctrinePanel: ReactNode;
-  progressPanel: ReactNode;
   domainPanel: ReactNode;
   rivalsPanel: ReactNode;
   thresholdPanel: ReactNode;
-  doctrineSummary: string;
   domainsSummary: string;
   rivalsSummary: string;
   thresholdSummary: string;
@@ -112,12 +108,9 @@ function GrowthContainer({
 }
 
 export function EraTwoGrowthLayout({
-  doctrinePanel,
-  progressPanel,
   domainPanel,
   rivalsPanel,
   thresholdPanel,
-  doctrineSummary,
   domainsSummary,
   rivalsSummary,
   thresholdSummary,
@@ -126,18 +119,6 @@ export function EraTwoGrowthLayout({
 }: EraTwoGrowthLayoutProps) {
   return (
     <div className="space-y-2">
-      <GrowthContainer
-        title="Doctrine"
-        summary={doctrineSummary}
-        storageKey={GROWTH_DOCTRINE_COLLAPSED_KEY}
-        defaultCollapsed={false}
-      >
-        <div className="space-y-3 [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none [&>section]:backdrop-blur-none [&>section>h2]:hidden">
-          {progressPanel}
-          {doctrinePanel}
-        </div>
-      </GrowthContainer>
-
       <GrowthContainer
         title="Domains"
         summary={domainsSummary}

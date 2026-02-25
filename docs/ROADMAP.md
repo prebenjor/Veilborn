@@ -288,10 +288,11 @@ Deliverables:
   - Era II: ACTIVE + GROWTH (+ constrained META content) tabbed structure
   - Era III: full ACTIVE/GROWTH/META flow with low-scroll decision surfaces
 - Era II tab contract:
-  - ACTIVE order: Whispers, Influence meter, Doctrine (Acts), Doctrine Seeds
+  - ACTIVE order: Whispers, Doctrine (merged)
+  - Influence remains in the top stat bar; no separate ACTIVE Influence container
   - ACTIVE containers are collapsible with persisted state
-  - GROWTH order: Doctrine (merged), Domains, Rivals, Threshold
-  - Doctrine + Doctrine Seeds are merged into one collapsible Doctrine container in GROWTH
+  - Doctrine + Doctrine Seeds are merged into one collapsible Doctrine container in ACTIVE
+  - GROWTH order: Domains, Rivals, Threshold
   - All GROWTH containers are collapsible with persisted state
   - Rivals collapse to one-line summary when inactive and expand only when active
   - Threshold sits at bottom of GROWTH (not ACTIVE) and defaults to collapsed

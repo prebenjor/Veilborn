@@ -54,11 +54,12 @@ Stats visibility rule:
   - left column min width: `500px`
 - Era II: `ACTIVE` and `GROWTH`, with constrained `META` content.
 - Era II tab contract:
-  - `ACTIVE` order: Whispers -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds.
+  - `ACTIVE` order: Whispers -> Doctrine (merged container).
+  - Influence remains in the top stat bar; there is no separate `ACTIVE` Influence container.
   - Whispers in Era II keep the familiar Era I interaction style (no subtitle); cadence prompt and optional rival-drain nudge line may appear.
   - `ACTIVE` containers are collapsible with persisted state.
-  - `GROWTH` order: Doctrine (merged container) -> Domains -> Rivals -> Threshold.
-  - Doctrine and Doctrine Seeds content are merged into one `DOCTRINE` container in `GROWTH`, ordered as Prophets/Cults, Lineage, then Acts.
+  - Doctrine and Doctrine Seeds content are merged into one `DOCTRINE` container in `ACTIVE`, ordered as Prophets/Cults, Lineage, then Acts.
+  - `GROWTH` order: Domains -> Rivals -> Threshold.
   - All `GROWTH` containers are collapsible with persisted state.
   - Rivals collapse to a single-line summary when inactive and auto-expand when active.
   - Threshold is not rendered in `ACTIVE`; it sits at the bottom of `GROWTH`, collapsed by default.

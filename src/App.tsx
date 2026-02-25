@@ -961,8 +961,18 @@ export default function App() {
   const safeActiveTab = getSafeTab(activeTab, availableTabs);
   const runStartTimestamp = gameState.meta.runStartTimestamp;
   const runScopedOmenLog = gameState.omenLog.filter((entry) => entry.at >= runStartTimestamp);
+  const dedupedRunScopedOmenLog = runScopedOmenLog.reduce<typeof runScopedOmenLog>((accumulator, entry) => {
+    const seenTexts = new Set(accumulator.map((item) => item.text));
+    const seenFingerprints = new Set(accumulator.map((item) => toOmenFingerprint(item.text)));
+    const fingerprint = toOmenFingerprint(entry.text);
+    if (seenTexts.has(entry.text) || seenFingerprints.has(fingerprint)) {
+      return accumulator;
+    }
+    accumulator.push(entry);
+    return accumulator;
+  }, []);
   const omenPreviewCount = era === 1 ? 3 : 2;
-  const visibleOmens = runScopedOmenLog.slice(0, omenPreviewCount);
+  const visibleOmens = dedupedRunScopedOmenLog.slice(0, omenPreviewCount);
   const activeDoubtEventCard =
     era === 1 && activeDoubtEvent
       ? {
@@ -987,9 +997,12 @@ export default function App() {
           : "Someone is listening in the dark.";
   const veilStability = getVeilStabilityView(gameState.resources.veil, veilCollapseThreshold);
   const surfaceOmenPreviewCount = era >= 3 ? 2 : 1;
-  const surfaceOmenPreview = runScopedOmenLog.slice(0, surfaceOmenPreviewCount);
-  const surfaceOmenExpanded = runScopedOmenLog.slice(surfaceOmenPreviewCount, era >= 3 ? 6 : 4);
-  const rightPanelOmens = runScopedOmenLog.slice(0, OMEN_LOG_MAX_ENTRIES);
+  const surfaceOmenPreview = dedupedRunScopedOmenLog.slice(0, surfaceOmenPreviewCount);
+  const surfaceOmenExpanded = dedupedRunScopedOmenLog.slice(
+    surfaceOmenPreviewCount,
+    era >= 3 ? 6 : 4
+  );
+  const rightPanelOmens = dedupedRunScopedOmenLog.slice(0, OMEN_LOG_MAX_ENTRIES);
   const architectureUnlocked = isArchitectureUnlocked(gameState);
   const remembranceConditions = getRemembranceConditionViews(gameState);
   const totalNameLetters = getRemembranceLetterDefinitions().length;
@@ -999,9 +1012,6 @@ export default function App() {
     canUseWhisper || canUseRecruit
       ? `Whisper ${formatResource(whisperCost)} \u00b7 Recruit ${formatResource(RECRUIT_INFLUENCE_COST)}`
       : "Influence is recovering.";
-  const activeInfluenceSummary = `${formatResource(gameState.resources.influence)} / ${formatResource(influenceCap)}`;
-  const activeDoctrineSummary = `${formatResource(activeActs.length)} of ${formatResource(actSlotCap)} acts active \u00b7 synergy x${formatResource(domainSynergy, 2)}`;
-  const activeProgressSummary = `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults`;
   const activeCataclysmSummary = `${formatResource(gameState.resources.veil)} \u00b7 ${veilStability.label} \u00b7 civ ${formatResource(gameState.cataclysm.civilizationHealth)}`;
   const metaOverviewSummary = `Era ${formatResource(era)} \u00b7 ${formatResource(gameState.prestige.completedRuns)} completed runs`;
   const metaAscensionSummary = uiReveal.showAscensionPanel
@@ -1741,24 +1751,6 @@ export default function App() {
     />
   );
 
-  const eraTwoInfluenceFill =
-    influenceCap <= 0 ? 0 : Math.max(0, Math.min(1, gameState.resources.influence / influenceCap));
-  const eraTwoInfluenceNearCap = eraTwoInfluenceFill >= 0.8;
-  const eraTwoInfluenceMeter =
-    era === 2 ? (
-      <div className="px-1 py-1">
-        <p className={`text-sm ${eraTwoInfluenceNearCap ? "text-ember" : "text-veil/75"}`}>
-          {formatResource(gameState.resources.influence)} / {formatResource(influenceCap)}
-        </p>
-        <div className="mt-2 h-2 overflow-hidden rounded-full border border-white/15 bg-black/35">
-          <div
-            className={`h-full transition-all ${eraTwoInfluenceNearCap ? "bg-ember/75" : "bg-veil/60"}`}
-            style={{ width: `${(eraTwoInfluenceFill * 100).toFixed(2)}%` }}
-          />
-        </div>
-      </div>
-    ) : null;
-
   const eraThreeCataclysmPanel =
     era >= 3 ? (
       <CataclysmPanel
@@ -1784,24 +1776,18 @@ export default function App() {
   const eraTwoActiveContent = (
     <EraTwoActiveLayout
       whisperPanel={whisperPanel}
-      influenceMeter={eraTwoInfluenceMeter}
       doctrinePanel={doctrineGrowthPanel}
       progressPanel={progressPanel}
       whisperSummary={activeWhispersSummary}
-      influenceSummary={activeInfluenceSummary}
-      doctrineSummary={activeDoctrineSummary}
-      progressSummary={activeProgressSummary}
+      doctrineSummary={doctrineGrowthSummary}
     />
   );
 
   const eraTwoGrowthContent = (
     <EraTwoGrowthLayout
-      doctrinePanel={doctrineGrowthPanel}
-      progressPanel={progressPanel}
       domainPanel={domainPanel}
       rivalsPanel={doctrineRivalsPanel}
       thresholdPanel={eraGatePanel}
-      doctrineSummary={doctrineGrowthSummary}
       domainsSummary={domainsGrowthSummary}
       rivalsSummary={rivalsGrowthSummary}
       thresholdSummary={eraTwoThresholdSummary}

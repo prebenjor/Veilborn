@@ -459,15 +459,16 @@ Era II+:
 - the right omens sidebar has no expand control and shows a short rolling feed (max 6 entries)
 
 Era II:
-- `active` order: Whisper/Recruit -> Influence meter -> Doctrine (Acts) -> Doctrine Seeds
+- `active` order: Whisper/Recruit -> Doctrine (merged)
+- influence is displayed in the top stat bar only (no separate active-tab Influence container)
 - era-II whisper surface keeps controls/cadence only (no additional subtitle text)
-- `active` containers persist collapse state (`active_whispers_collapsed`, `active_influence_collapsed`, `active_doctrine_collapsed`, `active_progress_collapsed`)
-- `growth` order: Doctrine (merged) -> Domains -> Rivals -> Threshold
-- doctrine and doctrine-seeds content merge into one collapsible `Doctrine` container in `growth` with internal order:
+- `active` containers persist collapse state (`active_whispers_collapsed`, `active_doctrine_collapsed`)
+- doctrine and doctrine-seeds content merge into one collapsible `Doctrine` container in `active` with internal order:
   - Prophets/Cults
   - Lineage Memory
   - Acts (+Follower Rites when available)
-- all `growth` containers are collapsible and persist collapse state (`growth_doctrine_collapsed`, `growth_domains_collapsed`, `growth_rivals_collapsed`, `growth_threshold_collapsed`)
+- `growth` order: Domains -> Rivals -> Threshold
+- all `growth` containers are collapsible and persist collapse state (`growth_domains_collapsed`, `growth_rivals_collapsed`, `growth_threshold_collapsed`)
 - rivals render as a single-line summary when inactive and auto-expand when active
 - threshold renders at the bottom of `growth` (not in `active`)
 - threshold defaults to collapsed in Era II

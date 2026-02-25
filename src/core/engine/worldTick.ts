@@ -59,6 +59,22 @@ const PASSIVE_OMEN_LOW_CIV: readonly string[] = [
   "Even now, with the city faltering, they come.",
   "The collapse brought them. Ruin and faith have always shared a road."
 ];
+const RIVAL_SPAWN_OMENS: readonly string[] = [
+  "At the edge of the city, another altar lit itself and your faithful began to waver.",
+  "A new creed took root in the outer districts before your prophets could answer it.",
+  "Another rival voice rose from the city fringe and drew uncertain eyes.",
+  "The market quarter murmured a fresh doctrine into being."
+];
+const VEIL_COLLAPSE_OMENS: readonly string[] = [
+  "The Veil screamed open. Crowds scattered, and two prophetic voices went dark.",
+  "Reality tore at the seam. Followers fled and your circle thinned at once.",
+  "The boundary failed in plain sight; panic spread faster than prayer."
+];
+const CIV_RECOVERY_OMENS: readonly string[] = [
+  "From ash and hunger, a new city raised its first bell and dared to remember.",
+  "The shattered streets steadied, and people returned to the shrines by dusk.",
+  "A rebuilt quarter lit its lamps again, and order returned in cautious steps."
+];
 
 interface PassiveOmenSessionState {
   lastAt: number;
@@ -95,6 +111,14 @@ function cleanupRivals(rivals: RivalState[], nowMs: number): {
 }
 
 function appendSystemOmen(state: GameState, nowMs: number, text: string): GameState {
+  const recentEntries = state.omenLog.slice(0, 8);
+  const recentTexts = new Set(recentEntries.map((entry) => entry.text));
+  const recentFingerprints = new Set(recentEntries.map((entry) => toOmenFingerprint(entry.text)));
+  const nextFingerprint = toOmenFingerprint(text);
+  if (recentTexts.has(text) || recentFingerprints.has(nextFingerprint)) {
+    return state;
+  }
+
   return {
     ...state,
     omenLog: [
@@ -107,6 +131,43 @@ function appendSystemOmen(state: GameState, nowMs: number, text: string): GameSt
     ].slice(0, OMEN_LOG_MAX_ENTRIES),
     nextEventId: state.nextEventId + 1
   };
+}
+
+function toOmenFingerprint(text: string): string {
+  const normalized = text
+    .toLowerCase()
+    .replace(/\d+/g, "#")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sentenceParts = normalized
+    .split(/[.!?]/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return sentenceParts[sentenceParts.length - 1] ?? normalized;
+}
+
+function pickSystemOmenVariant(
+  state: GameState,
+  nowMs: number,
+  options: readonly string[],
+  fallback: string
+): string {
+  if (options.length <= 0) return fallback;
+
+  const recentEntries = state.omenLog.slice(0, 8);
+  const recentTexts = new Set(recentEntries.map((entry) => entry.text));
+  const recentFingerprints = new Set(recentEntries.map((entry) => toOmenFingerprint(entry.text)));
+  const baseIndex = Math.abs(Math.floor(nowMs / 1000) + state.nextEventId) % options.length;
+
+  for (let offset = 0; offset < options.length; offset += 1) {
+    const candidate = options[(baseIndex + offset) % options.length];
+    const fingerprint = toOmenFingerprint(candidate);
+    if (!recentTexts.has(candidate) && !recentFingerprints.has(fingerprint)) {
+      return candidate;
+    }
+  }
+
+  return fallback;
 }
 
 function choosePassiveOmenLine(
@@ -409,10 +470,16 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   };
 
   if (canSpawnRival) {
+    const rivalSpawnOmen = pickSystemOmenVariant(
+      nextState,
+      nowMs,
+      RIVAL_SPAWN_OMENS,
+      RIVAL_SPAWN_OMENS[0]
+    );
     nextState = appendSystemOmen(
       nextState,
       nowMs,
-      "At the edge of the city, another altar lit itself and your faithful began to waver."
+      rivalSpawnOmen
     );
   }
 
@@ -429,7 +496,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     nextState = appendSystemOmen(
       nextState,
       nowMs,
-      "The Veil screamed open. Crowds scattered, and two prophetic voices went dark."
+      pickSystemOmenVariant(nextState, nowMs, VEIL_COLLAPSE_OMENS, VEIL_COLLAPSE_OMENS[0])
     );
   }
 
@@ -446,7 +513,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     nextState = appendSystemOmen(
       nextState,
       nowMs,
-      "From ash and hunger, a new city raised its first bell and dared to remember."
+      pickSystemOmenVariant(nextState, nowMs, CIV_RECOVERY_OMENS, CIV_RECOVERY_OMENS[0])
     );
   }
 

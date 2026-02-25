@@ -295,9 +295,9 @@
       "notes": "Completed. Consolidated PF-02 and PF-03 scope into the era shell structure, anti-clutter flow, and strict reveal behavior.",
       "deliverables": [
         "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+constrained META content), Era III full ACTIVE/GROWTH/META",
-        "Era II tab contract: ACTIVE order is Whispers -> Influence meter -> Doctrine -> Doctrine Seeds; GROWTH order is Doctrine (merged) -> Domains -> Rivals -> Threshold",
+        "Era II tab contract: ACTIVE order is Whispers -> Doctrine (merged); Influence is shown in the top stat bar only; GROWTH order is Domains -> Rivals -> Threshold",
         "Era II ACTIVE containers are collapsible with persisted localStorage state",
-        "Doctrine and Doctrine Seeds merge into one collapsible Doctrine container in GROWTH with Prophets/Cults + Lineage above Acts",
+        "Doctrine and Doctrine Seeds merge into one collapsible Doctrine container in ACTIVE with Prophets/Cults + Lineage above Acts",
         "All GROWTH containers are collapsible with persisted localStorage state",
         "Era II rivals collapse to one-line status when inactive and expand to full controls when active",
         "Era II threshold sits at the bottom of GROWTH (not ACTIVE) and defaults to collapsed",
