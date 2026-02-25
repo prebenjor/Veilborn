@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { formatResource } from "../../core/ui/numberFormat";
 import { formatDurationCompact } from "../../core/ui/timeFormat";
 import type { WhisperMagnitude, WhisperTarget } from "../../core/state/gameState";
@@ -20,6 +19,7 @@ interface WhisperPanelProps {
   era: number;
   influence: number;
   whisperCost: number;
+  whisperPreview: string;
   whisperOptions: WhisperOptionView[];
   recruitCost: number;
   recruitPreview: string;
@@ -33,6 +33,7 @@ export function WhisperPanel({
   era,
   influence,
   whisperCost,
+  whisperPreview,
   whisperOptions,
   recruitCost,
   recruitPreview,
@@ -41,12 +42,15 @@ export function WhisperPanel({
   onWhisper,
   onRecruit
 }: WhisperPanelProps) {
-  const [hoveredAction, setHoveredAction] = useState<string | null>(null);
   const whisperDisabled = influence < whisperCost;
   const recruitDisabled = influence < recruitCost;
-  const hoveredWhisperOption = whisperOptions.find(
-    (option) => hoveredAction === `whisper:${option.target}:${option.magnitude}`
-  );
+
+  const getWhisperTooltip = (option: WhisperOptionView): string => {
+    if (option.failChance > 0) {
+      return `${option.label}: +${formatResource(option.successFollowers)} followers (${Math.round(option.failChance * 100)}% strain -> +${formatResource(option.strainedFollowers)})`;
+    }
+    return `${option.label}: +${formatResource(option.successFollowers)} followers`;
+  };
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -69,14 +73,9 @@ export function WhisperPanel({
               <button
                 key={optionKey}
                 type="button"
+                title={getWhisperTooltip(option)}
                 disabled={!option.canUse}
                 onClick={() => onWhisper(option.target, option.magnitude)}
-                onMouseEnter={() => setHoveredAction(optionKey)}
-                onMouseLeave={() =>
-                  setHoveredAction((previous) => (previous === optionKey ? null : previous))
-                }
-                onFocus={() => setHoveredAction(optionKey)}
-                onBlur={() => setHoveredAction((previous) => (previous === optionKey ? null : previous))}
                 className="rounded-xl border border-ember/60 px-3 py-2 text-left text-sm text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
               >
                 <p>{option.label}</p>
@@ -95,16 +94,9 @@ export function WhisperPanel({
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
+            title={`Whisper: ${whisperPreview}`}
             disabled={whisperDisabled}
             onClick={() => onWhisper("crowd", "base")}
-            onMouseEnter={() => setHoveredAction("whisper:crowd:base")}
-            onMouseLeave={() =>
-              setHoveredAction((previous) => (previous === "whisper:crowd:base" ? null : previous))
-            }
-            onFocus={() => setHoveredAction("whisper:crowd:base")}
-            onBlur={() =>
-              setHoveredAction((previous) => (previous === "whisper:crowd:base" ? null : previous))
-            }
             className="rounded-xl border border-ember/60 px-3 py-2 text-sm text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
           >
             Whisper ({formatResource(whisperCost)} Influence)
@@ -114,34 +106,14 @@ export function WhisperPanel({
       <div className="mt-2 flex flex-wrap gap-2">
         <button
           type="button"
+          title={`Recruit: ${recruitPreview}`}
           disabled={recruitDisabled}
           onClick={onRecruit}
-          onMouseEnter={() => setHoveredAction("recruit")}
-          onMouseLeave={() => setHoveredAction((previous) => (previous === "recruit" ? null : previous))}
-          onFocus={() => setHoveredAction("recruit")}
-          onBlur={() => setHoveredAction((previous) => (previous === "recruit" ? null : previous))}
           className="w-full rounded-xl border border-omen/60 px-4 py-3 text-base font-semibold uppercase tracking-[0.16em] text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
         >
           RECRUIT
         </button>
       </div>
-      {hoveredAction ? (
-        <p className="mt-2 text-xs text-veil/65">
-          {hoveredAction === "recruit"
-            ? `Recruit: ${recruitPreview}`
-            : hoveredWhisperOption
-              ? hoveredWhisperOption.failChance > 0
-                ? `${hoveredWhisperOption.label}: +${formatResource(
-                    hoveredWhisperOption.successFollowers
-                  )} followers (${Math.round(hoveredWhisperOption.failChance * 100)}% strain - +${formatResource(
-                    hoveredWhisperOption.strainedFollowers
-                  )})`
-                : `${hoveredWhisperOption.label}: +${formatResource(
-                    hoveredWhisperOption.successFollowers
-                  )} followers`
-              : null}
-        </p>
-      ) : null}
     </section>
   );
 }

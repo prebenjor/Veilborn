@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { formatResource } from "../../core/ui/numberFormat";
 
 interface OmenEntry {
@@ -55,8 +55,6 @@ export function EraOneLayout({
   onAnointProphet,
   onResolveDoubtChoice
 }: EraOneLayoutProps) {
-  const [hoveredAction, setHoveredAction] = useState<"whisper" | "recruit" | null>(null);
-
   return (
     <>
       <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -70,34 +68,23 @@ export function EraOneLayout({
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
+            title={`Whisper: ${whisperPreview}`}
             disabled={!canUseWhisper}
             onClick={onWhisper}
-            onMouseEnter={() => setHoveredAction("whisper")}
-            onMouseLeave={() => setHoveredAction((previous) => (previous === "whisper" ? null : previous))}
-            onFocus={() => setHoveredAction("whisper")}
-            onBlur={() => setHoveredAction((previous) => (previous === "whisper" ? null : previous))}
             className="rounded-xl border border-ember/60 px-3 py-2 text-sm text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
           >
             Whisper ({formatResource(whisperCost)} Influence)
           </button>
           <button
             type="button"
+            title={`Recruit: ${recruitPreview}`}
             disabled={!canUseRecruit}
             onClick={onRecruit}
-            onMouseEnter={() => setHoveredAction("recruit")}
-            onMouseLeave={() => setHoveredAction((previous) => (previous === "recruit" ? null : previous))}
-            onFocus={() => setHoveredAction("recruit")}
-            onBlur={() => setHoveredAction((previous) => (previous === "recruit" ? null : previous))}
             className="w-full rounded-xl border border-omen/60 px-4 py-3 text-base font-semibold uppercase tracking-[0.16em] text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
           >
             RECRUIT
           </button>
         </div>
-        {hoveredAction ? (
-          <p className="mt-2 text-xs text-veil/65">
-            {hoveredAction === "whisper" ? `Whisper: ${whisperPreview}` : `Recruit: ${recruitPreview}`}
-          </p>
-        ) : null}
         {devotionStacks > 0 ? (
           <p className="mt-2 flex items-center gap-2 text-xs text-veil/70">
             <span className="tracking-[0.2em]">

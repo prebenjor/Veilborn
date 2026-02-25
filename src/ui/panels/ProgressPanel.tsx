@@ -11,17 +11,6 @@ interface ProgressPanelProps {
   whisperFollowerRateMultiplier: number;
   nextProphetFollowers: number;
   nextCultBeliefCost: number;
-  lineageGeneration: number;
-  lineageTrustDebt: number;
-  lineageSkepticism: number;
-  lineageBetrayalScars: number;
-  lineageConversionModifier: number;
-  lineageRecentMarker: string | null;
-  lineageTraits: {
-    skeptical: number;
-    cautious: number;
-    zealous: number;
-  };
   canAnointProphet: boolean;
   canFormCult: boolean;
   onAnointProphet: () => void;
@@ -38,28 +27,12 @@ export function ProgressPanel({
   whisperFollowerRateMultiplier,
   nextProphetFollowers,
   nextCultBeliefCost,
-  lineageGeneration,
-  lineageTrustDebt,
-  lineageSkepticism,
-  lineageBetrayalScars,
-  lineageConversionModifier,
-  lineageRecentMarker,
-  lineageTraits,
   canAnointProphet,
   canFormCult,
   onAnointProphet,
   onFormCult
 }: ProgressPanelProps) {
   const showCultControls = shouldRevealCultControls(era as 1 | 2 | 3, belief, nextCultBeliefCost, cults);
-  const traitEntries = [
-    { key: "skeptical", label: "Skeptical lineage", value: lineageTraits.skeptical },
-    { key: "cautious", label: "Cautious lineage", value: lineageTraits.cautious },
-    { key: "zealous", label: "Zealous lineage", value: lineageTraits.zealous }
-  ];
-  const dominantTraitValue = Math.max(...traitEntries.map((entry) => entry.value));
-  const dominantTraits = traitEntries
-    .filter((entry) => Math.abs(entry.value - dominantTraitValue) < 0.0001)
-    .map((entry) => entry.label);
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -114,25 +87,6 @@ export function ProgressPanel({
         ) : null}
       </div>
 
-      {era >= 2 ? (
-        <article className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Lineage Memory</p>
-          <p className="mt-1 text-sm text-white">
-            Generation {formatResource(lineageGeneration)} {" \u00b7 "}x
-            {formatRate(lineageConversionModifier)} conversion
-          </p>
-          <p className="mt-1 text-xs text-veil/65">
-            Trust {formatResource(lineageTrustDebt)} {" \u00b7 "} Skepticism {formatResource(lineageSkepticism)} {" \u00b7 "}
-            Scars {formatResource(lineageBetrayalScars)}
-          </p>
-          <p className="mt-1 text-xs text-veil/65">{dominantTraits.join(" \u00b7 ")}</p>
-          <p className="mt-1 text-xs text-veil/60">
-            {lineageRecentMarker
-              ? `Latest memory: ${lineageRecentMarker}`
-              : "No lasting social memory has formed yet."}
-          </p>
-        </article>
-      ) : null}
     </section>
   );
 }

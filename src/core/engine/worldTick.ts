@@ -1,13 +1,6 @@
 import {
   CADENCE_PROMPT_INTERVAL_MS,
   CIV_HEALTH_MAX,
-  LINEAGE_CIV_RECOVERY_SKEPTICISM_RECOVERY,
-  LINEAGE_CIV_RECOVERY_TRUST_RECOVERY,
-  LINEAGE_HISTORY_LIMIT,
-  LINEAGE_SKEPTICISM_MAX,
-  LINEAGE_TRUST_DEBT_MAX,
-  LINEAGE_VEIL_COLLAPSE_SKEPTICISM,
-  LINEAGE_VEIL_COLLAPSE_TRUST_DEBT,
   VEIL_COLLAPSE_FOLLOWER_RETENTION,
   VEIL_COLLAPSE_IMMUNITY_SECONDS,
   VEIL_COLLAPSE_PROPHET_LOSS,
@@ -19,7 +12,6 @@ import {
   OMEN_LOG_MAX_ENTRIES,
   type ActivityState,
   type GameState,
-  type HistoryMarkerKind,
   type RivalState
 } from "../state/gameState";
 import {
@@ -213,50 +205,6 @@ function choosePassiveOmenLine(
   }
 
   return nextLine;
-}
-
-function clampLineageMetric(value: number, max: number): number {
-  return Math.max(0, Math.min(max, value));
-}
-
-function appendLineageMarker(
-  state: GameState,
-  nowMs: number,
-  kind: HistoryMarkerKind,
-  text: string,
-  trustDebtDelta: number,
-  skepticismDelta: number,
-  betrayalScarsDelta: number
-): GameState {
-  const trustDebt = clampLineageMetric(state.lineage.trustDebt + trustDebtDelta, LINEAGE_TRUST_DEBT_MAX);
-  const skepticism = clampLineageMetric(
-    state.lineage.skepticism + skepticismDelta,
-    LINEAGE_SKEPTICISM_MAX
-  );
-  const betrayalScars = Math.max(0, state.lineage.betrayalScars + betrayalScarsDelta);
-
-  return {
-    ...state,
-    lineage: {
-      ...state.lineage,
-      trustDebt,
-      skepticism,
-      betrayalScars,
-      history: [
-        {
-          id: `hist-${state.lineage.nextMarkerId}`,
-          at: nowMs,
-          runId: state.meta.runId,
-          kind,
-          text,
-          trustDebtDelta,
-          skepticismDelta
-        },
-        ...state.lineage.history
-      ].slice(0, LINEAGE_HISTORY_LIMIT),
-      nextMarkerId: state.lineage.nextMarkerId + 1
-    }
-  };
 }
 
 export function advanceWorld(state: GameState, nowMs: number): GameState {
@@ -484,15 +432,6 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   }
 
   if (shouldVeilCollapse) {
-    nextState = appendLineageMarker(
-      nextState,
-      nowMs,
-      "veil_collapse",
-      "The Veil collapse entered family memory as proof the gods can betray their own faithful.",
-      LINEAGE_VEIL_COLLAPSE_TRUST_DEBT,
-      LINEAGE_VEIL_COLLAPSE_SKEPTICISM,
-      1
-    );
     nextState = appendSystemOmen(
       nextState,
       nowMs,
@@ -501,15 +440,6 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   }
 
   if (civilizationRecovered) {
-    nextState = appendLineageMarker(
-      nextState,
-      nowMs,
-      "civ_rebuild",
-      "A rebuilt civilization softened old fear, though the scar remained in its stories.",
-      -LINEAGE_CIV_RECOVERY_TRUST_RECOVERY,
-      -LINEAGE_CIV_RECOVERY_SKEPTICISM_RECOVERY,
-      0
-    );
     nextState = appendSystemOmen(
       nextState,
       nowMs,

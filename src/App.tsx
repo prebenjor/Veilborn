@@ -69,8 +69,6 @@ import {
   getInfluenceRegenBreakdown,
   getGhostInfluenceTotals,
   getDomainPoisonRunsRemaining,
-  getLineageConversionFactors,
-  getLineageTraitDistribution,
   getMiracleBeliefGain,
   getMiracleCivDamage,
   getMiracleInfluenceCost,
@@ -917,9 +915,6 @@ export default function App() {
   const eraTwoGate = getEraTwoGateStatus(gameState);
   const unravelingGate = getUnravelingGateStatus(gameState);
   const ascensionEchoGain = getAscensionEchoGain(gameState.stats.totalBeliefEarned);
-  const lineageConversionFactors = getLineageConversionFactors(gameState);
-  const lineageTraits = getLineageTraitDistribution(gameState);
-  const lineageRecentMarker = gameState.lineage.history[0]?.text ?? null;
   const uiReveal = getUiRevealState(gameState);
   const pantheonUnlocked = isPantheonUnlocked(gameState);
   const pantheonAllianceFactors = getPantheonAllianceFactors(gameState);
@@ -1783,6 +1778,7 @@ export default function App() {
       era={gameState.era}
       influence={gameState.resources.influence}
       whisperCost={whisperCost}
+      whisperPreview={whisperPreview}
       recruitCost={RECRUIT_INFLUENCE_COST}
       recruitPreview={recruitPreview}
       cadencePromptActive={gameState.activity.cadencePromptActive}
@@ -1879,13 +1875,6 @@ export default function App() {
       whisperFollowerRateMultiplier={whisperFollowerRateMultiplier}
       nextProphetFollowers={nextProphetFollowers}
       nextCultBeliefCost={nextCultBeliefCost}
-      lineageGeneration={gameState.lineage.generation}
-      lineageTrustDebt={gameState.lineage.trustDebt}
-      lineageSkepticism={gameState.lineage.skepticism}
-      lineageBetrayalScars={gameState.lineage.betrayalScars}
-      lineageConversionModifier={lineageConversionFactors.totalModifier}
-      lineageRecentMarker={lineageRecentMarker}
-      lineageTraits={lineageTraits}
       canAnointProphet={canCreateProphet}
       canFormCult={canCreateCult}
       onAnointProphet={onAnointProphet}

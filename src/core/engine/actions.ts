@@ -1,26 +1,11 @@
 import {
   ECHO_TREE_MAX_RANK,
   CIV_COLLAPSE_FOLLOWER_RETENTION,
-  LINEAGE_ACTION_RECOVERY_ACT,
-  LINEAGE_ACTION_RECOVERY_RECRUIT,
-  LINEAGE_ACTION_RECOVERY_WHISPER,
-  LINEAGE_ASCENSION_SKEPTICISM_DECAY,
-  LINEAGE_ASCENSION_TRUST_DECAY,
-  LINEAGE_CIV_COLLAPSE_SKEPTICISM,
-  LINEAGE_CIV_COLLAPSE_TRUST_DEBT,
-  LINEAGE_HISTORY_LIMIT,
-  LINEAGE_PANTHEON_BETRAYAL_SKEPTICISM,
-  LINEAGE_PANTHEON_BETRAYAL_TRUST_DEBT,
-  LINEAGE_SKEPTICISM_MAX,
-  LINEAGE_SUPPRESS_SKEPTICISM,
-  LINEAGE_SUPPRESS_TRUST_DEBT,
-  LINEAGE_TRUST_DEBT_MAX,
   PANTHEON_ALLY_COUNT,
   PANTHEON_BETRAYAL_BELIEF_MIN,
   PANTHEON_BETRAYAL_BELIEF_SECONDS,
   PANTHEON_DOMAIN_POISON_RUNS,
   PANTHEON_UNLOCK_COMPLETED_RUNS,
-  type HistoryMarkerKind,
   type PantheonAlly,
   RIVAL_SUPPRESS_INFLUENCE_COST,
   CADENCE_ACTION_BELIEF_BONUS,
@@ -84,9 +69,6 @@ import {
   getEraOneGateStatus,
   getEraTwoGateStatus,
   getFollowersForNextProphet,
-  getLineageConversionFactors,
-  getLineageConversionModifier,
-  getLineageInheritanceWeights,
   getMatchingDomainPairs,
   getDomainSynergy,
   getFollowerRiteCost,
@@ -146,12 +128,6 @@ interface CadenceBonus {
   followerBonus: number;
 }
 
-interface LineageDelta {
-  trustDebt: number;
-  skepticism: number;
-  betrayalScars: number;
-}
-
 export interface WhisperActionOptions {
   target?: WhisperTarget;
   magnitude?: WhisperMagnitude;
@@ -163,32 +139,6 @@ export interface ImportGhostSignaturesResult {
   importedCount: number;
   error: string | null;
 }
-
-const DESCENDANT_NAME_PREFIXES = [
-  "Aren",
-  "Bel",
-  "Cael",
-  "Drae",
-  "Ery",
-  "Fane",
-  "Galen",
-  "Ivor",
-  "Kael",
-  "Lysa",
-  "Miren",
-  "Neral"
-] as const;
-
-const DESCENDANT_NAME_SUFFIXES = [
-  "of the Hollow",
-  "of Ashwater",
-  "of the Eastern Vale",
-  "of Broken Bells",
-  "of the Salt Road",
-  "of the Lantern Step",
-  "of Pale Reeds",
-  "of the Black Ford"
-] as const;
 
 const PANTHEON_NAME_PREFIXES = [
   "Aster",
@@ -516,145 +466,6 @@ function getDominantDevotionPathForMemory(state: GameState): DevotionPath {
   const topPath = ranked[0];
   const topScore = getDevotionMomentumValue(state.devotionMomentum, topPath);
   return topScore >= DEVOTION_PATH_EMERGE_THRESHOLD ? topPath : "none";
-}
-
-function clampLineageMetric(value: number, max: number): number {
-  return Math.max(0, Math.min(max, value));
-}
-
-function applyLineageDelta(state: GameState, delta: Partial<LineageDelta>): GameState {
-  const trustDebt = clampLineageMetric(
-    state.lineage.trustDebt + (delta.trustDebt ?? 0),
-    LINEAGE_TRUST_DEBT_MAX
-  );
-  const skepticism = clampLineageMetric(
-    state.lineage.skepticism + (delta.skepticism ?? 0),
-    LINEAGE_SKEPTICISM_MAX
-  );
-  const betrayalScars = Math.max(0, state.lineage.betrayalScars + (delta.betrayalScars ?? 0));
-
-  if (
-    trustDebt === state.lineage.trustDebt &&
-    skepticism === state.lineage.skepticism &&
-    betrayalScars === state.lineage.betrayalScars
-  ) {
-    return state;
-  }
-
-  return {
-    ...state,
-    lineage: {
-      ...state.lineage,
-      trustDebt,
-      skepticism,
-      betrayalScars
-    }
-  };
-}
-
-function appendHistoryMarker(
-  state: GameState,
-  nowMs: number,
-  kind: HistoryMarkerKind,
-  text: string,
-  deltas: Partial<LineageDelta> = {}
-): GameState {
-  const withDelta = applyLineageDelta(state, deltas);
-  const marker = {
-    id: `hist-${withDelta.lineage.nextMarkerId}`,
-    at: nowMs,
-    runId: withDelta.meta.runId,
-    kind,
-    text,
-    trustDebtDelta: deltas.trustDebt ?? 0,
-    skepticismDelta: deltas.skepticism ?? 0
-  };
-
-  return {
-    ...withDelta,
-    lineage: {
-      ...withDelta.lineage,
-      history: [marker, ...withDelta.lineage.history].slice(0, LINEAGE_HISTORY_LIMIT),
-      nextMarkerId: withDelta.lineage.nextMarkerId + 1
-    }
-  };
-}
-
-function getConversionFlavorText(state: GameState, modifier: number): string | undefined {
-  const recent = state.lineage.history[0];
-  if (modifier >= 1.05) {
-    return "Inherited zeal carried the omen farther than expected.";
-  }
-
-  if (modifier < 0.85) {
-    if (recent?.kind === "civ_collapse" || recent?.kind === "veil_collapse") {
-      return "Descendants still recount the collapse and hesitate at the threshold.";
-    }
-    if (state.lineage.betrayalScars > 0) {
-      return "Old betrayals linger, and listeners test every word for falsehood.";
-    }
-    return "Ancestral doubt slowed the spread of your sign.";
-  }
-
-  return undefined;
-}
-
-function pickInheritedTrait(state: GameState, rngState: number): RandomPick<GameState["mortals"][number]["trait"]> {
-  const weights = getLineageInheritanceWeights(state);
-  const roll = nextRandom(rngState);
-  const thresholdSkeptical = weights.skeptical;
-  const thresholdCautious = weights.skeptical + weights.cautious;
-
-  if (roll.value < thresholdSkeptical) {
-    return { rngState: roll.rngState, value: "skeptical" };
-  }
-
-  if (roll.value < thresholdCautious) {
-    return { rngState: roll.rngState, value: "cautious" };
-  }
-
-  return { rngState: roll.rngState, value: "zealous" };
-}
-
-function createDescendantName(rngState: number, generation: number): RandomPick<string> {
-  const a = pickOne(rngState, DESCENDANT_NAME_PREFIXES);
-  const b = pickOne(a.rngState, DESCENDANT_NAME_SUFFIXES);
-  return {
-    rngState: b.rngState,
-    value: `${a.value} ${b.value} (Gen ${generation})`
-  };
-}
-
-function addLineageDescendant(state: GameState, nowMs: number): GameState {
-  const parent = state.mortals[state.nextEventId % state.mortals.length];
-  const nextGeneration = state.lineage.generation + 1;
-  const traitRoll = pickInheritedTrait(state, state.rngState);
-  const nameRoll = createDescendantName(traitRoll.rngState, nextGeneration);
-  const descendant = {
-    id: `mortal-${state.nextEventId}`,
-    name: nameRoll.value,
-    trait: traitRoll.value,
-    generation: nextGeneration,
-    parentId: parent?.id ?? null
-  };
-
-  const withDescendant = {
-    ...state,
-    rngState: nameRoll.rngState,
-    mortals: [descendant, ...state.mortals].slice(0, 24),
-    lineage: {
-      ...state.lineage,
-      generation: nextGeneration
-    }
-  };
-
-  return appendHistoryMarker(
-    withDescendant,
-    nowMs,
-    "prophet_lineage",
-    `${descendant.name} inherited a ${descendant.trait} temperament from older bloodlines.`,
-    {}
-  );
 }
 
 function createPantheonName(rngState: number): RandomPick<string> {
@@ -1406,7 +1217,6 @@ export function performWhisper(state: GameState, nowMs: number, options?: Whispe
   const failRoll = rollChance(state.rngState, whisperFailChance);
   const strainedOutcome = failRoll.value;
   const cadence = getCadenceBonus(state);
-  const lineageFactors = getLineageConversionFactors(state);
   const followerPreview = getWhisperFollowerPreview(state, {
     target: normalizedOptions.target,
     magnitude: normalizedOptions.magnitude
@@ -1458,12 +1268,8 @@ export function performWhisper(state: GameState, nowMs: number, options?: Whispe
   };
 
   const devotionUpdate = withDevotionIncrementFromQualifyingAction(withWhisper);
-  const withRecoveredLineage = applyLineageDelta(devotionUpdate.state, {
-    trustDebt: -LINEAGE_ACTION_RECOVERY_WHISPER,
-    skepticism: -LINEAGE_ACTION_RECOVERY_WHISPER * 0.25
-  });
   const withDevotionMilestones = appendDevotionMilestoneOmens(
-    withRecoveredLineage,
+    devotionUpdate.state,
     nowMs,
     devotionUpdate.previousStacks,
     devotionUpdate.nextStacks
@@ -1473,13 +1279,7 @@ export function performWhisper(state: GameState, nowMs: number, options?: Whispe
     nowMs,
     withDevotionMilestones.era >= 3 ? { ardour: 1 } : {}
   );
-  const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
-  const detail = [
-    `${whisperLabel} ${outcomeText}; ${followerGain} followers answered before the next bell.`,
-    flavor
-  ]
-    .filter((entry): entry is string => Boolean(entry))
-    .join(" ");
+  const detail = `${whisperLabel} ${outcomeText}; ${followerGain} followers answered before the next bell.`;
   return appendOmen(
     withPeakFollowers(withDevotionPath, withDevotionPath.resources.followers),
     nowMs,
@@ -1500,10 +1300,9 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
   const recruitRandom = nextRandom(state.rngState);
   const randomFollowerBonus = Math.floor(recruitRandom.value * (RECRUIT_RANDOM_FOLLOWER_MAX + 1));
   const cadence = getCadenceBonus(state);
-  const lineageFactors = getLineageConversionFactors(state);
   const rawFollowerGain =
     (recruitBase + randomFollowerBonus + cadence.followerBonus) * devotionMultiplier;
-  const followerGain = Math.max(1, Math.floor(rawFollowerGain * lineageFactors.totalModifier));
+  const followerGain = Math.max(1, Math.floor(rawFollowerGain));
   const beliefGain = cadence.beliefBonus;
 
   const withRecruit = {
@@ -1527,12 +1326,8 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
   };
 
   const devotionUpdate = withDevotionIncrementFromQualifyingAction(withRecruit);
-  const withRecoveredLineage = applyLineageDelta(devotionUpdate.state, {
-    trustDebt: -LINEAGE_ACTION_RECOVERY_RECRUIT,
-    skepticism: -LINEAGE_ACTION_RECOVERY_RECRUIT * 0.35
-  });
   const withDevotionMilestones = appendDevotionMilestoneOmens(
-    withRecoveredLineage,
+    devotionUpdate.state,
     nowMs,
     devotionUpdate.previousStacks,
     devotionUpdate.nextStacks
@@ -1542,13 +1337,7 @@ export function performRecruit(state: GameState, nowMs: number): GameState {
     nowMs,
     withDevotionMilestones.era >= 3 ? { ardour: 1 } : {}
   );
-  const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
-  const detail = [
-    `${followerGain} followers answered before the watch changed shifts.`,
-    flavor
-  ]
-    .filter((entry): entry is string => Boolean(entry))
-    .join(" ");
+  const detail = `${followerGain} followers answered before the watch changed shifts.`;
   return appendOmen(
     withPeakFollowers(withDevotionPath, withDevotionPath.resources.followers),
     nowMs,
@@ -1745,8 +1534,7 @@ export function performProphetAnoint(state: GameState, nowMs: number): GameState
     nowMs,
     withDevotionMilestones.era >= 3 ? { ardour: 1 } : {}
   );
-  const withDescendant = addLineageDescendant(withDevotionPath, nowMs);
-  return appendOmen(withDescendant, nowMs, "prophet");
+  return appendOmen(withDevotionPath, nowMs, "prophet");
 }
 
 export function canFormCult(state: GameState): boolean {
@@ -1825,11 +1613,7 @@ export function performStartAct(state: GameState, type: ActType, nowMs: number):
     }
   };
 
-  const withLineageRecovery = applyLineageDelta(withAct, {
-    trustDebt: -LINEAGE_ACTION_RECOVERY_ACT,
-    skepticism: -LINEAGE_ACTION_RECOVERY_ACT * 0.25
-  });
-  const withDevotionPath = withDevotionMomentumDelta(withLineageRecovery, nowMs, { fervour: 2 });
+  const withDevotionPath = withDevotionMomentumDelta(withAct, nowMs, { fervour: 2 });
   return appendOmen(withDevotionPath, nowMs, "act", ACT_LABELS[type]);
 }
 
@@ -1876,11 +1660,7 @@ export function performFollowerRite(
     }
   };
 
-  const withLineageRecovery = applyLineageDelta(withRite, {
-    trustDebt: -LINEAGE_ACTION_RECOVERY_ACT * 1.4,
-    skepticism: -LINEAGE_ACTION_RECOVERY_ACT * 0.4
-  });
-  const withDevotionPath = withDevotionMomentumDelta(withLineageRecovery, nowMs, { accord: 1 });
+  const withDevotionPath = withDevotionMomentumDelta(withRite, nowMs, { accord: 1 });
 
   const detail = `${FOLLOWER_RITE_LABELS[type]} gathered ${followerGain} followers. Uses this run: ${nextUses}.`;
   return appendOmen(
@@ -1927,22 +1707,10 @@ export function performSuppressRival(state: GameState, nowMs: number): GameState
     }
   };
 
-  const withLineageMarker = appendHistoryMarker(
+  const withDevotionPath = withDevotionMomentumDelta(
     withSuppressedRival,
     nowMs,
-    "rival_suppressed",
-    "Word spread that you silenced a rival creed; old trust did not return unchanged.",
-    {
-      trustDebt: LINEAGE_SUPPRESS_TRUST_DEBT,
-      skepticism: LINEAGE_SUPPRESS_SKEPTICISM,
-      betrayalScars: 1
-    }
-  );
-
-  const withDevotionPath = withDevotionMomentumDelta(
-    withLineageMarker,
-    nowMs,
-    withLineageMarker.era >= 3 ? { reverence: 2 } : {}
+    withSuppressedRival.era >= 3 ? { reverence: 2 } : {}
   );
   return appendOmen(withDevotionPath, nowMs, "suppress");
 }
@@ -2017,20 +1785,6 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     }
   };
 
-  const withLineageImpact = civilizationCollapsed
-    ? appendHistoryMarker(
-        withMiracle,
-        nowMs,
-        "civ_collapse",
-        "The civilization broke under your hand, and descendants learned to doubt divine mercy.",
-        {
-          trustDebt: LINEAGE_CIV_COLLAPSE_TRUST_DEBT,
-          skepticism: LINEAGE_CIV_COLLAPSE_SKEPTICISM,
-          betrayalScars: 1
-        }
-      )
-    : withMiracle;
-
   const miracleDetailByTier: Record<MiracleTier, string> = {
     1: `${MIRACLE_NAMES[1]} touched a small district before dawn.`,
     2: `${MIRACLE_NAMES[2]} reordered merchants and magistrates alike.`,
@@ -2038,7 +1792,7 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     4: `${MIRACLE_NAMES[4]} opened an age-defining wound in history.`
   };
   const miracleDetail = miracleDetailByTier[tier];
-  const withDevotionPath = withDevotionMomentumDelta(withLineageImpact, nowMs, { fervour: 2 });
+  const withDevotionPath = withDevotionMomentumDelta(withMiracle, nowMs, { fervour: 2 });
   const withMiracleOmen = appendOmen(withDevotionPath, nowMs, "miracle", miracleDetail);
   if (!civilizationCollapsed) return withMiracleOmen;
   return appendOmen(withMiracleOmen, nowMs, "civCollapse");
@@ -2161,20 +1915,8 @@ export function performBetrayPantheonAlly(state: GameState, allyId: string, nowM
     }
   };
 
-  const withLineageMarker = appendHistoryMarker(
-    withBetrayal,
-    nowMs,
-    "pantheon_betrayal",
-    `You betrayed ${ally.name}; mortals now fear your pacts as temporary bargains.`,
-    {
-      trustDebt: LINEAGE_PANTHEON_BETRAYAL_TRUST_DEBT,
-      skepticism: LINEAGE_PANTHEON_BETRAYAL_SKEPTICISM,
-      betrayalScars: 2
-    }
-  );
-
   return appendOmen(
-    withLineageMarker,
+    withBetrayal,
     nowMs,
     "pantheonBetrayal",
     `${ally.name} was cast down, and ${DOMAIN_LABELS[ally.domain]} turned bitter across future cycles.`
@@ -2392,18 +2134,6 @@ export function performAscension(state: GameState, nowMs: number): GameState {
   const poisonApplied = withPendingPoisonApplied(poisonAdvanced);
   const pantheonUnlocksOnNextRun =
     poisonApplied.prestige.completedRuns + 1 >= PANTHEON_UNLOCK_COMPLETED_RUNS;
-  const carriedLineage = {
-    ...state.lineage,
-    trustDebt: clampLineageMetric(
-      state.lineage.trustDebt * LINEAGE_ASCENSION_TRUST_DECAY,
-      LINEAGE_TRUST_DEBT_MAX
-    ),
-    skepticism: clampLineageMetric(
-      state.lineage.skepticism * LINEAGE_ASCENSION_SKEPTICISM_DECAY,
-      LINEAGE_SKEPTICISM_MAX
-    ),
-    history: state.lineage.history.slice(0, LINEAGE_HISTORY_LIMIT)
-  };
   const remembranceBefore = poisonApplied.prestige.remembrance;
   const nextLifetimeBeliefEarned =
     remembranceBefore.lifetimeBeliefEarned + poisonApplied.stats.totalBeliefEarned;
@@ -2470,7 +2200,6 @@ export function performAscension(state: GameState, nowMs: number): GameState {
   let ascendedState: GameState = {
     ...resetState,
     prestige: nextPrestige,
-    lineage: carriedLineage,
     pantheon: {
       ...resetState.pantheon,
       unlocked: pantheonUnlocksOnNextRun
@@ -2490,16 +2219,8 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     }
   };
 
-  const withAscensionMemory = appendHistoryMarker(
-    ascendedState,
-    nowMs,
-    "ascension",
-    `The cycle reset, but bloodline memory carried ${Math.floor(carriedLineage.trustDebt)} trust-debt into the next age.`,
-    {}
-  );
-
   // Fresh runs should start with a clean active omen log surface.
-  return ensurePantheonInitialized(withAscensionMemory, nowMs);
+  return ensurePantheonInitialized(ascendedState, nowMs);
 }
 
 export function canAdvanceEraOneToTwo(state: GameState): boolean {
@@ -2559,11 +2280,10 @@ export function getRecruitPreview(state: GameState): string {
   const floor = RECRUIT_BASE_FOLLOWERS + state.prophets * RECRUIT_PROPHET_FOLLOWER_BONUS;
   const domainBonus = Math.floor(getTotalDomainLevel(state) / RECRUIT_DOMAIN_FOLLOWER_DIVISOR);
   const devotionMultiplier = getDevotionRecruitMultiplier(state);
-  const lineageModifier = getLineageConversionModifier(state);
-  const low = Math.max(1, Math.floor((floor + domainBonus) * devotionMultiplier * lineageModifier));
+  const low = Math.max(1, Math.floor((floor + domainBonus) * devotionMultiplier));
   const high = Math.max(
     low,
-    Math.floor((floor + domainBonus + RECRUIT_RANDOM_FOLLOWER_MAX) * devotionMultiplier * lineageModifier)
+    Math.floor((floor + domainBonus + RECRUIT_RANDOM_FOLLOWER_MAX) * devotionMultiplier)
   );
   return `${formatPreviewValue(low)}-${formatPreviewValue(high)} followers`;
 }
@@ -2582,7 +2302,6 @@ export function getWhisperPreview(state: GameState): string {
 
   const cadence = getCadenceBonus(state);
   const baseFollowerGain = WHISPER_FOLLOWER_GAIN + cadence.followerBonus;
-  const lineageModifier = getLineageConversionModifier(state);
-  const gain = Math.max(1, Math.floor(baseFollowerGain * lineageModifier));
+  const gain = Math.max(1, Math.floor(baseFollowerGain));
   return `${formatPreviewValue(gain)} followers`;
 }

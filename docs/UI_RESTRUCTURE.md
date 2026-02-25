@@ -58,7 +58,7 @@ Stats visibility rule:
   - Influence remains in the top stat bar; there is no separate `ACTIVE` Influence container.
   - Whispers in Era II keep the familiar Era I interaction style (no subtitle); cadence prompt and optional rival-drain nudge line may appear.
   - `ACTIVE` containers are collapsible with persisted state.
-  - Doctrine and Doctrine Seeds content are merged into one `DOCTRINE` container in `ACTIVE`, ordered as Prophets/Cults, Lineage, then Acts.
+  - Doctrine and Doctrine Seeds content are merged into one `DOCTRINE` container in `ACTIVE`, ordered as Prophets/Cults, then Acts.
   - `GROWTH` order: Domains -> Rivals -> Threshold.
   - All `GROWTH` containers are collapsible with persisted state.
   - Rivals collapse to a single-line summary when inactive and auto-expand when active.

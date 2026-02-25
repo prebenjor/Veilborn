@@ -160,18 +160,20 @@
     },
     {
       "id": "M8",
-      "title": "Social Memory and Lineages",
-      "status": "completed",
+      "title": "Social Memory and Lineages (Retired)",
+      "status": "superseded",
       "dependencies": [
         "M7"
       ],
+      "notes": "Lineage mechanics were removed from runtime in schema v19 to reduce hidden conversion modifiers and simplify progression clarity.",
       "deliverables": [
-        "Trait inheritance",
-        "Trust debt and skepticism modifiers",
-        "Historical markers in event outcomes"
+        "Retire lineage conversion, trust-debt, skepticism, betrayal-scar, and descendant inheritance mechanics from runtime",
+        "Remove lineage state from save schema and core simulation logic",
+        "Keep progression anchored to explicit systems (Devotion, Echo, Pantheon, Domains)"
       ],
       "validation": [
-        "Prior-run decisions alter future conversion dynamics"
+        "No lineage fields exist in active game state or formulas",
+        "Follower conversion no longer has hidden lineage modifiers"
       ]
     },
     {
@@ -297,7 +299,7 @@
         "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+constrained META content), Era III full ACTIVE/GROWTH/META",
         "Era II tab contract: ACTIVE order is Whispers -> Doctrine (merged); Influence is shown in the top stat bar only; GROWTH order is Domains -> Rivals -> Threshold",
         "Era II ACTIVE containers are collapsible with persisted localStorage state",
-        "Doctrine and Doctrine Seeds merge into one collapsible Doctrine container in ACTIVE with Prophets/Cults + Lineage above Acts",
+        "Doctrine and Doctrine Seeds merge into one collapsible Doctrine container in ACTIVE with Prophets/Cults above Acts",
         "All GROWTH containers are collapsible with persisted localStorage state",
         "Era II rivals collapse to one-line status when inactive and expand to full controls when active",
         "Era II threshold sits at the bottom of GROWTH (not ACTIVE) and defaults to collapsed",
@@ -438,7 +440,7 @@
         "M13",
         "M20"
       ],
-      "notes": "Completed path differentiation and lineage memory pass. Era II behavior now resolves Fervour/Accord emergence, Era III supports all four paths (Fervour/Accord/Reverence/Ardour), path shifts are omen-announced, run-to-run dominant-path memory seeds next-run momentum, and stats surface shows current path + stacks.",
+      "notes": "Completed path differentiation and devotion-memory pass. Era II behavior resolves Fervour/Accord emergence, Era III supports all four paths (Fervour/Accord/Reverence/Ardour), path shifts are omen-announced, run-to-run dominant-path memory seeds next-run momentum, and stats surface shows current path + stacks.",
       "design_docs": [
         "docs/DEVOTION_SYSTEM.md"
       ],
@@ -447,7 +449,7 @@
         "Era III named path crystallization: Fervour, Accord, Reverence, Ardour with distinct mechanical effects",
         "Path switching requires sustained behavior change over time (not instant)",
         "Omen log integration names path shifts in-world",
-        "Run 2+ lineage Devotion memory grants one free starting stack toward prior dominant path threshold",
+        "Run 2+ devotion memory grants one free starting stack toward prior dominant path threshold",
         "Stats page shows Devotion path label and stack count",
         "MANIFESTO.md and docs/GAME_REFERENCE.md include full path-system formulas when implemented"
       ],
@@ -455,7 +457,7 @@
         "Era II path emergence tracks act-vs-cult behavior ratios correctly",
         "Era III path effects are distinct and meaningfully affect play without dominating it",
         "Path switching is possible but requires sustained behavior change",
-        "Lineage memory applies correctly in run 2+",
+        "Devotion memory applies correctly in run 2+",
         "Devotion never decays and does not punish inactivity",
         "All four Era III paths are viable builds"
       ]
@@ -470,10 +472,10 @@
       ],
       "notes": "Rivals in current runtime are a passive drain with a single suppress action. They have no identity, no strategic depth, and no reason to engage with beyond paying 200 Influence. This milestone replaces the current rival system with a competing-faith model that has narrative identity and meaningful player decisions. Rivals should feel like actual threats with character, not resource timers. Full design reference: docs/RIVAL_IDENTITY.md (to be written).",
       "deliverables": [
-        "Each rival spawns with a procedurally generated name, a dominant domain, and one in-world sentence describing their doctrine - drawn from the same domain and lineage systems the player uses",
+        "Each rival spawns with a procedurally generated name, a dominant domain, and one in-world sentence describing their doctrine - drawn from the same domain and social systems the player uses",
         "Rival strength scales with their dominant domain level relative to the player's - rivals adapt to the player's current power rather than scaling purely from B/s",
         "Three response options replace the single suppress button: Suppress (Influence cost, eliminates rival), Ignore (rival grows over time, higher drain but eventual collapse), Engage (Belief cost, chance to convert rival's followers to player cult)",
-        "Engage outcome is probabilistic based on player Devotion state and lineage - Fervour path gets better Engage odds, Accord path gets better Suppress cost",
+        "Engage outcome is probabilistic based on player Devotion state and path - Fervour path gets better Engage odds, Accord path gets better Suppress cost",
         "Rival identity persists in omen log: named rivals reference their prior appearance if suppressed and re-spawning",
         "Rivals visible in Era II and III following existing era gate; Era II rivals feel like local competition, Era III rivals feel like organized opposition",
         "Rival panel UI updated: shows rival name, dominant domain, current strength as relative threat level (not raw number), estimated follower drain rate, and three response buttons",

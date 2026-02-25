@@ -126,11 +126,11 @@ Era I whisper profile:
 - No fail chance, no target cooldown
 
 Era II+ whisper targets:
-- `Prophets`: surcharge `+8`, follower multiplier `1.4`, fail chance `0.08`
-- `Cults`: surcharge `+12`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`
+- `Prophets`: surcharge `+18`, follower multiplier `1.4`, fail chance `0.08`
+- `Cults`: surcharge `+30`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`
 - Passive follower-rate impact from last whisper target:
-  - `Prophets`: `+14%`
-  - `Cults`: `+21%`
+  - `Prophets`: `+6%`
+  - `Cults`: `+9%`
 
 Whisper cost by profile:
 
@@ -144,9 +144,9 @@ Whisper follower outcomes:
 
 `baseFollowersRaw = (1 + cadenceFollowerBonus) * targetMultiplier * magnitudeMultiplier * (1 + whisperEchoYieldBonus)`
 
-`successFollowers = floor(baseFollowersRaw * lineageModifier)`
+`successFollowers = floor(baseFollowersRaw)`
 
-`strainedFollowers = floor(baseFollowersRaw * 0.6 * lineageModifier)` (runtime uses strain multiplier before lineage rounding)
+`strainedFollowers = floor(baseFollowersRaw * 0.6)` (runtime uses strain multiplier before rounding)
 
 Whisper strain/fail chance:
 
@@ -168,8 +168,6 @@ Recruit:
 Cadence prompt:
 - Trigger after `45s` inactivity
 - Next action bonus: `+5 belief`, `+1 follower`
-
-Lineage conversion modifier applies to whisper/recruit follower gains.
 
 ### Devotion (Path System Active)
 
@@ -197,7 +195,7 @@ Path differentiation:
 - Era III candidates: `Fervour`, `Accord`, `Reverence`, `Ardour`
 - Emergence threshold: top momentum `>= 4`
 - Switching threshold: challenger `>= 7` and lead over active path `>= 3`
-- Run 2+ lineage memory: dominant prior-run path starts next run with `+1` momentum toward that path
+- Run 2+ devotion memory: dominant prior-run path starts next run with `+1` momentum toward that path
 
 Momentum sources:
 - `Fervour`: start act `+2`, cast miracle `+2` (Era III)
@@ -344,7 +342,6 @@ Follower gain multiplier includes:
 - total domain level
 - civilization health
 - veil zone
-- lineage conversion modifier
 
 ### Veil and Collapse
 
@@ -461,16 +458,6 @@ Overflow rank model:
 Domain carry:
 - `domain_carry` is currently a planned upgrade path and not active in runtime.
 
-### Lineage Memory
-
-Persistent lineage dimensions:
-- trust debt
-- skepticism
-- betrayal scars
-- trait inheritance (skeptical/cautious/zealous)
-
-System events can add/reduce lineage debt and affect conversion modifier.
-
 ### Pantheon (Run 2+)
 
 Implemented:
@@ -527,7 +514,6 @@ Era II:
 - `active` containers persist collapse state (`active_whispers_collapsed`, `active_doctrine_collapsed`)
 - doctrine and doctrine-seeds content merge into one collapsible `Doctrine` container in `active` with internal order:
   - Prophets/Cults
-  - Lineage Memory
   - Acts (+Follower Rites when available)
 - `growth` order: Domains -> Rivals -> Threshold
 - all `growth` containers are collapsible and persist collapse state (`growth_domains_collapsed`, `growth_rivals_collapsed`, `growth_threshold_collapsed`)

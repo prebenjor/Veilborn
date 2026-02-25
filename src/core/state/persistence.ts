@@ -2,9 +2,6 @@ import {
   CIV_HEALTH_MAX,
   ECHO_TREE_MAX_RANK,
   GAME_STATE_SCHEMA_VERSION,
-  LINEAGE_HISTORY_LIMIT,
-  LINEAGE_SKEPTICISM_MAX,
-  LINEAGE_TRUST_DEBT_MAX,
   PANTHEON_UNLOCK_COMPLETED_RUNS,
   OFFLINE_BELIEF_EFFICIENCY,
   OFFLINE_INFLUENCE_RETURN_RATIO,
@@ -34,11 +31,7 @@ import {
   type EchoTreeId,
   type EchoBonuses,
   type GameState,
-  type HistoryMarker,
-  type HistoryMarkerKind,
-  type LineageState,
   type Mortal,
-  type MortalTrait,
   type OmenEntry,
   type FinalChoice,
   type FollowerRiteType,
@@ -130,11 +123,6 @@ function readBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
-function readTrait(value: unknown, fallback: MortalTrait): MortalTrait {
-  if (value === "skeptical" || value === "zealous" || value === "cautious") return value;
-  return fallback;
-}
-
 function readDomainId(value: unknown): DomainId | null {
   if (
     value === "fire" ||
@@ -188,22 +176,6 @@ function readFinalChoice(value: unknown, fallback: FinalChoice): FinalChoice {
   return fallback;
 }
 
-function readHistoryMarkerKind(value: unknown): HistoryMarkerKind | null {
-  if (
-    value === "origin" ||
-    value === "prophet_lineage" ||
-    value === "rival_suppressed" ||
-    value === "pantheon_betrayal" ||
-    value === "civ_collapse" ||
-    value === "veil_collapse" ||
-    value === "civ_rebuild" ||
-    value === "ascension"
-  ) {
-    return value;
-  }
-  return null;
-}
-
 function readPantheonDisposition(value: unknown): PantheonAlly["disposition"] | null {
   if (value === "neutral" || value === "allied" || value === "betrayed") return value;
   return null;
@@ -217,10 +189,7 @@ function sanitizeMortals(value: unknown, fallback: Mortal[]): Mortal[] {
       if (!isRecord(entry)) return null;
       return {
         id: readString(entry.id, `mortal-${index + 1}`),
-        name: readString(entry.name, "Unnamed Listener"),
-        trait: readTrait(entry.trait, "cautious"),
-        generation: Math.max(1, Math.floor(readNumber(entry.generation, 1))),
-        parentId: readNullableString(entry.parentId, null)
+        name: readString(entry.name, "Unnamed Listener")
       } satisfies Mortal;
     })
     .filter((entry): entry is Mortal => Boolean(entry));
@@ -262,44 +231,6 @@ function sanitizeOmenLog(value: unknown, fallback: OmenEntry[]): OmenEntry[] {
     .filter((entry): entry is OmenEntry => Boolean(entry));
 
   return sanitized.length > 0 ? sanitized.slice(0, OMEN_LOG_MAX_ENTRIES) : fallback;
-}
-
-function sanitizeLineageHistory(value: unknown, fallback: HistoryMarker[]): HistoryMarker[] {
-  if (!Array.isArray(value)) return fallback;
-
-  const sanitized = value
-    .map((entry, index) => {
-      if (!isRecord(entry)) return null;
-      const kind = readHistoryMarkerKind(entry.kind);
-      if (!kind) return null;
-      return {
-        id: readString(entry.id, `hist-${index}`),
-        at: Math.max(0, readNumber(entry.at, Date.now())),
-        runId: readString(entry.runId, "run-unknown"),
-        kind,
-        text: readString(entry.text, "Memory held."),
-        trustDebtDelta: readNumber(entry.trustDebtDelta, 0),
-        skepticismDelta: readNumber(entry.skepticismDelta, 0)
-      } satisfies HistoryMarker;
-    })
-    .filter((entry): entry is HistoryMarker => Boolean(entry));
-
-  return sanitized.length > 0 ? sanitized.slice(0, LINEAGE_HISTORY_LIMIT) : fallback;
-}
-
-function sanitizeLineage(value: unknown, fallback: LineageState): LineageState {
-  if (!isRecord(value)) return fallback;
-  return {
-    generation: Math.max(1, Math.floor(readNumber(value.generation, fallback.generation))),
-    trustDebt: Math.max(0, Math.min(LINEAGE_TRUST_DEBT_MAX, readNumber(value.trustDebt, fallback.trustDebt))),
-    skepticism: Math.max(
-      0,
-      Math.min(LINEAGE_SKEPTICISM_MAX, readNumber(value.skepticism, fallback.skepticism))
-    ),
-    betrayalScars: Math.max(0, Math.floor(readNumber(value.betrayalScars, fallback.betrayalScars))),
-    history: sanitizeLineageHistory(value.history, fallback.history),
-    nextMarkerId: Math.max(1, Math.floor(readNumber(value.nextMarkerId, fallback.nextMarkerId)))
-  };
 }
 
 function sanitizeActiveActs(value: unknown, fallback: ActiveAct[]): ActiveAct[] {
@@ -800,13 +731,11 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const rawStats = isRecord(rawState.stats) ? rawState.stats : {};
   const rawDoctrine = isRecord(rawState.doctrine) ? rawState.doctrine : {};
   const rawCataclysm = isRecord(rawState.cataclysm) ? rawState.cataclysm : {};
-  const rawLineage = isRecord(rawState.lineage) ? rawState.lineage : {};
   const rawPantheon = isRecord(rawState.pantheon) ? rawState.pantheon : {};
   const rawGhost = isRecord(rawState.ghost) ? rawState.ghost : {};
   const normalizedEchoBonuses = sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses);
   const normalizedPrestige = sanitizePrestige(rawState.prestige, fallback.prestige, normalizedEchoBonuses);
   const syncedEchoBonuses = getEchoBonusesFromTreeRanks(normalizedPrestige.treeRanks);
-  const normalizedLineage = sanitizeLineage(rawLineage, fallback.lineage);
   const normalizedPantheon = sanitizePantheon(rawPantheon, fallback.pantheon);
   const normalizedGhost = sanitizeGhostState(rawGhost, fallback.ghost);
   const pantheonUnlocked =
@@ -864,7 +793,6 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
     doctrine: sanitizeDoctrine(rawDoctrine, fallback.doctrine),
     cataclysm: sanitizeCataclysm(rawCataclysm, fallback.cataclysm),
     prestige: normalizedPrestige,
-    lineage: normalizedLineage,
     pantheon: {
       ...normalizedPantheon,
       unlocked: pantheonUnlocked
@@ -923,7 +851,8 @@ const MIGRATORS: Record<number, Migrator> = {
   15: sanitizeState,
   16: sanitizeState,
   17: sanitizeState,
-  18: sanitizeState
+  18: sanitizeState,
+  19: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

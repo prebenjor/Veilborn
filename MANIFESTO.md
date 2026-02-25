@@ -117,7 +117,7 @@ Era II+ implementation (current runtime):
 - Era III path candidates: `Fervour`, `Accord`, `Reverence`, `Ardour`.
 - Path emergence: top momentum `>= 4`.
 - Path switching: challenger momentum `>= 7` and lead over active path `>= 3`.
-- Run 2+ lineage memory: the dominant prior-run path starts the next run with `+1` momentum in that path.
+- Run 2+ devotion memory: the dominant prior-run path starts the next run with `+1` momentum in that path.
 
 Momentum sources:
 - `Fervour`: start act `+2`, cast miracle `+2` (Era III)
@@ -158,8 +158,8 @@ Implementation-expanded regen stack:
 Costs:
 - Whisper base cost: `10` flat.
 - Era II+ whisper targets:
-  - Prophets: surcharge `+8`, follower multiplier `1.4`, fail chance `0.08`, passive follower-rate bonus `+14%`
-  - Cults: surcharge `+12`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`, passive follower-rate bonus `+21%`
+  - Prophets: surcharge `+18`, follower multiplier `1.4`, fail chance `0.08`, passive follower-rate bonus `+6%`
+  - Cults: surcharge `+30`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`, passive follower-rate bonus `+9%`
 - Whisper profile cost:
 
 `whisper_cost = ceil(base_whisper_cost + target_surcharge + one_time_delta)`
@@ -168,7 +168,7 @@ Costs:
 
 `fail_chance = clamp(base_fail * 0.96^completed_runs - whisper_echo_fail_reduction - cult_fail_reduction, 0, 0.95)`
 
-`strained_followers = floor(base_followers_raw * 0.6 * lineage_modifier)`
+`strained_followers = floor(base_followers_raw * 0.6)`
 
 - Recruit: `25` flat.
 - Act: `20-150` by tier, with Echo discount factor `0.85`.
@@ -266,7 +266,7 @@ Constants:
 
 Rite follower gain:
 
-`rite_followers = base_followers[type] * infrastructure_mult * (civHealth/100) * rite_veil_mult * lineage_conversion_modifier`
+`rite_followers = base_followers[type] * infrastructure_mult * (civHealth/100) * rite_veil_mult`
 
 `base_followers[procession] = 180`
 
@@ -543,7 +543,7 @@ Expanded roadmap commitments:
 - `M18` New Game+ Convergence Mode adds run 8+ structural novelty without breaking the 45-minute floor or final-choice ambiguity.
 - `M19` Documentation and Wiki Foundation formalizes `docs/GAME_REFERENCE.md` and future wiki publication workflow.
 - `M20` Era UI Restructure and Disclosure Consolidation captures ACTIVE/GROWTH/META structure, progressive era theming, and anti-clutter layout scope previously split across PFs.
-- `M21` Devotion Path System expands Era I Devotion into Era II/III path differentiation with lineage memory carryover.
+- `M21` Devotion Path System expands Era I Devotion into Era II/III path differentiation with run-to-run devotion memory carryover.
 
 Expanded PF commitments (additions beyond `PF-01` to `PF-07`):
 - `PF-08` through `PF-28` are adopted, including onboarding veil pacing, number legibility, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, remembrance condition tracking, miracle reserve flow, desktop shell refinements, and whisper-evolution/echo-sink expansion.
@@ -564,7 +564,7 @@ Rules:
 - First-contact explanation: when a new meter appears, attach one concise in-world explanation so players know what changed and why it matters.
 - Density budget: prioritize single-screen decision-making. Move long-form details to compact drawers, tabs, or a dedicated stats page.
 - Era II tab split is strict: `ACTIVE` contains Whisper/Recruit, Influence pressure, Doctrine (Acts), and Doctrine Seeds; `GROWTH` contains a merged Doctrine container plus Domains, Rivals, and Threshold progress surfaces.
-- In `GROWTH`, Doctrine + Doctrine Seeds are consolidated under one collapsible `Doctrine` container with Prophets/Cults and Lineage above Acts.
+- In `GROWTH`, Doctrine + Doctrine Seeds are consolidated under one collapsible `Doctrine` container with Prophets/Cults above Acts.
 - In Era II+, `ACTIVE`, `GROWTH`, and `META` use collapsible containers with persisted collapsed/expanded state.
 - `GROWTH` containers persist collapsed/expanded state between sessions.
 - Era II rivals may collapse to a one-line status when inactive; expand to full controls only when active.

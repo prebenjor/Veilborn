@@ -146,18 +146,18 @@ Definition of Done:
 - Run 2 feels structurally different, not just numerically faster.
 - Echo spending decisions create distinct build paths.
 
-## M8 - Social Memory and Lineages
+## M8 - Social Memory and Lineages (Retired)
 
-Objective: Persistent consequence across generations and runs.
+Objective: Remove lineage mechanics that introduced hidden conversion penalties and unclear run-to-run carryover.
 
 Deliverables:
-- Mortal trait inheritance.
-- Betrayal skepticism and trust-debt modifiers.
-- Historical markers surfaced in events and conversion outcomes.
+- Remove lineage conversion multipliers from whisper/recruit/follower-rite outcomes.
+- Remove lineage state fields and history markers from active runtime/save schema.
+- Keep progression legible through explicit systems (Devotion, Echo, Pantheon, Domains).
 
 Definition of Done:
-- Prior decisions measurably alter future generation behavior.
-- World state feels historical, not stateless.
+- No lineage variables remain in core runtime formulas.
+- New runs and migrated saves operate without lineage state.
 
 ## M9 - Pantheon Layer (Run 2+)
 
@@ -318,7 +318,7 @@ Objective: Expand the Era I Devotion foundation into behavior-shaped Era II/III 
 
 Notes:
 - Era I foundation (stacks, recruit amplification, omen milestones, persistence/reset rules) is implemented.
-- This milestone covers only path differentiation and lineage carryover behavior.
+- This milestone covers only path differentiation and devotion-memory carryover behavior.
 - Full architecture reference: `docs/DEVOTION_SYSTEM.md`.
 - Prioritized before M14 so pace tuning calibrates against final Devotion-era mechanics.
 - Status: completed.
@@ -332,7 +332,7 @@ Deliverables:
 - Distinct per-path mechanical effects (acts/miracles, cults/domains, Veil resilience, prophet throughput).
 - Path switching requires sustained behavioral change (not instantaneous).
 - Omen log announces path shifts in-world.
-- Run 2+ lineage memory grants one starting stack toward prior dominant path.
+- Run 2+ devotion memory grants one starting stack toward prior dominant path.
 - Stats surface displays current devotion path and stack state.
 - `MANIFESTO.md` and `docs/GAME_REFERENCE.md` updated for full path formulas when implemented.
 
@@ -340,7 +340,7 @@ Definition of Done:
 - Era II path emergence tracks player behavior reliably.
 - Era III paths are distinct, viable, and none is strictly dominant.
 - Path switching is possible with sustained behavior change.
-- Lineage path memory applies correctly on run 2+.
+- Devotion path memory applies correctly on run 2+.
 - Devotion remains non-decaying and inactivity-safe.
 
 ## M15 - Save Integrity and Recovery
