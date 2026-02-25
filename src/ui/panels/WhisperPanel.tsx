@@ -8,6 +8,7 @@ interface WhisperOptionView {
   magnitude: WhisperMagnitude;
   label: string;
   cost: number;
+  passiveFollowerGainBonusPercent: number;
   canUse: boolean;
   cooldownSeconds: number;
   failChance: number;
@@ -80,6 +81,9 @@ export function WhisperPanel({
               >
                 <p>{option.label}</p>
                 <p className="mt-1 text-[11px] text-veil/70">
+                  +{formatResource(option.passiveFollowerGainBonusPercent)}% passive follower gain
+                </p>
+                <p className="mt-1 text-[11px] text-veil/70">
                   {formatResource(option.cost)} Influence
                   {isCoolingDown ? ` - ready in ${formatDurationCompact(option.cooldownSeconds)}` : ""}
                 </p>
@@ -116,9 +120,9 @@ export function WhisperPanel({
           onMouseLeave={() => setHoveredAction((previous) => (previous === "recruit" ? null : previous))}
           onFocus={() => setHoveredAction("recruit")}
           onBlur={() => setHoveredAction((previous) => (previous === "recruit" ? null : previous))}
-          className="rounded-xl border border-omen/60 px-3 py-2 text-sm text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+          className="w-full rounded-xl border border-omen/60 px-4 py-3 text-base font-semibold uppercase tracking-[0.16em] text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
         >
-          Recruit ({formatResource(recruitCost)} Influence)
+          RECRUIT
         </button>
       </div>
       {hoveredAction ? (

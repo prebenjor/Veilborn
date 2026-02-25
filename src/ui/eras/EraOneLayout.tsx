@@ -16,7 +16,6 @@ interface ActiveDoubtEventView {
 
 interface EraOneLayoutProps {
   whisperCost: number;
-  recruitCost: number;
   whisperPreview: string;
   recruitPreview: string;
   devotionStacks: number;
@@ -38,7 +37,6 @@ interface EraOneLayoutProps {
 
 export function EraOneLayout({
   whisperCost,
-  recruitCost,
   whisperPreview,
   recruitPreview,
   devotionStacks,
@@ -90,9 +88,9 @@ export function EraOneLayout({
             onMouseLeave={() => setHoveredAction((previous) => (previous === "recruit" ? null : previous))}
             onFocus={() => setHoveredAction("recruit")}
             onBlur={() => setHoveredAction((previous) => (previous === "recruit" ? null : previous))}
-            className="rounded-xl border border-omen/60 px-3 py-2 text-sm text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+            className="w-full rounded-xl border border-omen/60 px-4 py-3 text-base font-semibold uppercase tracking-[0.16em] text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
           >
-            Recruit ({formatResource(recruitCost)} Influence)
+            RECRUIT
           </button>
         </div>
         {hoveredAction ? (

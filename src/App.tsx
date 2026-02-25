@@ -77,6 +77,7 @@ import {
   getMiracleReserveCap,
   getMiracleVeilCost,
   getPassiveFollowerRate,
+  getWhisperFollowerRateMultiplierForTarget,
   getWhisperFollowerRateMultiplier,
   getRivalSpawnIntervalMs,
   getTotalRivalStrength,
@@ -124,7 +125,6 @@ import {
   RIVAL_DRAIN_RATE,
   RIVAL_SUPPRESS_INFLUENCE_COST,
   RECRUIT_INFLUENCE_COST,
-  WHISPER_WINDOW_MS,
   WORLD_TICK_MS,
   type ActType,
   type ArchitectureBeliefRule,
@@ -203,6 +203,7 @@ interface WhisperOptionView {
   magnitude: WhisperMagnitude;
   label: string;
   cost: number;
+  passiveFollowerGainBonusPercent: number;
   canUse: boolean;
   cooldownSeconds: number;
   failChance: number;
@@ -278,9 +279,9 @@ const ECHO_TREE_META: Array<{
       "Reserve Lattice II: +60 miracle reserve cap",
       "Reserve Lattice III: +60 miracle reserve cap",
       "Reserve Lattice IV: +60 miracle reserve cap",
-      "Omen Bastion I: boosted whisper fail chance -1.0%",
-      "Omen Bastion II: boosted whisper fail chance -1.0%",
-      "Omen Bastion III: boosted whisper fail chance -1.0%"
+      "Omen Bastion I: cult-target whisper fail chance -1.0%",
+      "Omen Bastion II: cult-target whisper fail chance -1.0%",
+      "Omen Bastion III: cult-target whisper fail chance -1.0%"
     ]
   }
 ];
@@ -302,38 +303,22 @@ const FOLLOWER_RITE_META: Record<
   }
 };
 
-const ERA_TWO_WHISPER_PROFILES: Array<{
+const ERA_TWO_PLUS_WHISPER_PROFILES: Array<{
   target: WhisperTarget;
   magnitude: WhisperMagnitude;
   label: string;
 }> = [
-  { target: "crowd", magnitude: "base", label: "Crowd" },
   { target: "prophets", magnitude: "base", label: "Prophets" },
   { target: "cults", magnitude: "base", label: "Cults" }
-];
-
-const ERA_THREE_WHISPER_PROFILES: Array<{
-  target: WhisperTarget;
-  magnitude: WhisperMagnitude;
-  label: string;
-}> = [
-  ...ERA_TWO_WHISPER_PROFILES,
-  { target: "crowd", magnitude: "boosted", label: "Open Proclamation" },
-  { target: "prophets", magnitude: "boosted", label: "Sacred Charge" },
-  { target: "cults", magnitude: "boosted", label: "Doctrine Wave" }
 ];
 
 function getWhisperFollowerRateSourceLabel(
   target: WhisperTarget,
   magnitude: WhisperMagnitude,
   era: EraValue
-): string {
-  if (era >= 3 && magnitude === "boosted") {
-    if (target === "crowd") return "Open Proclamation";
-    if (target === "prophets") return "Sacred Charge";
-    return "Doctrine Wave";
-  }
-  if (target === "crowd") return "Crowd";
+): string | null {
+  void magnitude;
+  if (era < 2 || target === "crowd") return null;
   if (target === "prophets") return "Prophets";
   return "Cults";
 }
@@ -880,18 +865,22 @@ export default function App() {
     gameState,
     nowMs,
     {
-      target: "crowd",
+      target: gameState.era >= 2 ? "prophets" : "crowd",
       magnitude: "base"
     },
     whisperCostDelta
   );
-  const whisperProfiles = gameState.era >= 3 ? ERA_THREE_WHISPER_PROFILES : ERA_TWO_WHISPER_PROFILES;
+  const whisperProfiles = ERA_TWO_PLUS_WHISPER_PROFILES;
   const whisperOptions: WhisperOptionView[] =
     gameState.era >= 2
       ? whisperProfiles.map((profile) => {
           const cost = getWhisperCostForProfile(gameState, nowMs, profile, whisperCostDelta);
           const preview = getWhisperFollowerPreview(gameState, profile);
           const failChance = getWhisperFailChance(gameState, profile);
+          const passiveRateMultiplier = getWhisperFollowerRateMultiplierForTarget(
+            gameState,
+            profile.target
+          );
           const cooldownSeconds = Math.max(
             0,
             Math.ceil((getWhisperTargetCooldownEndsAt(gameState, profile.target) - nowMs) / 1000)
@@ -901,6 +890,10 @@ export default function App() {
             magnitude: profile.magnitude,
             label: profile.label,
             cost,
+            passiveFollowerGainBonusPercent: Math.max(
+              0,
+              Math.round((passiveRateMultiplier - 1) * 100)
+            ),
             canUse: canWhisper(gameState, nowMs, {
               target: profile.target,
               magnitude: profile.magnitude,
@@ -1079,11 +1072,6 @@ export default function App() {
 
   const elapsedSeconds = Math.floor(gameState.simulation.totalElapsedMs / 1000);
   const secondsSinceLastEvent = Math.max(0, (nowMs - gameState.activity.lastEventAt) / 1000);
-  const whisperCycleElapsed = Math.max(0, nowMs - gameState.activity.whisperWindowStartedAt);
-  const whisperResetInSeconds = Math.max(
-    0,
-    Math.ceil((WHISPER_WINDOW_MS - (whisperCycleElapsed % WHISPER_WINDOW_MS)) / 1000)
-  );
   const era = gameState.era;
   const availableTabs = getAvailableTabs(era);
   const safeActiveTab = getSafeTab(activeTab, availableTabs);
@@ -1145,7 +1133,7 @@ export default function App() {
       : whisperCost;
   const activeWhispersSummary =
     canUseWhisper || canUseRecruit
-      ? `Whisper ${formatResource(cheapestWhisperCost)}+ \u00b7 Recruit ${formatResource(RECRUIT_INFLUENCE_COST)}`
+      ? `Whisper ${formatResource(cheapestWhisperCost)}+ \u00b7 Recruit`
       : "Influence is recovering.";
   const activeCataclysmSummary = `${formatResource(gameState.resources.veil)} \u00b7 ${veilStability.label} \u00b7 civ ${formatResource(gameState.cataclysm.civilizationHealth)}`;
   const metaOverviewSummary = `Era ${formatResource(era)} \u00b7 ${formatResource(gameState.prestige.completedRuns)} completed runs`;
@@ -1977,7 +1965,6 @@ export default function App() {
   const eraOneContent = (
     <EraOneLayout
       whisperCost={whisperCost}
-      recruitCost={RECRUIT_INFLUENCE_COST}
       whisperPreview={whisperPreview}
       recruitPreview={recruitPreview}
       devotionStacks={devotionStacks}
@@ -2093,8 +2080,6 @@ export default function App() {
     totalTicks: gameState.simulation.totalTicks,
     totalBeliefEarned: gameState.stats.totalBeliefEarned,
     secondsSinceLastEvent,
-    whispersInWindow: gameState.activity.whispersInWindow,
-    whisperResetInSeconds,
     beliefBreakdown,
     influenceBreakdown: influenceRegenBreakdown,
     shrinesBuilt: gameState.doctrine.shrinesBuilt,

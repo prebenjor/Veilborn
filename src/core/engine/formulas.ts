@@ -125,11 +125,7 @@ import {
   WHISPER_BASE_FAIL_CHANCE,
   WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER,
   WHISPER_FOLLOWER_GAIN,
-  WHISPER_BOOSTED_COST_MULTIPLIER,
-  WHISPER_BOOSTED_FAIL_CHANCE,
-  WHISPER_BOOSTED_FOLLOWER_MULTIPLIER,
   WHISPER_CULTS_BASE_COOLDOWN_MS,
-  WHISPER_CULTS_BOOSTED_COOLDOWN_MS,
   WHISPER_FAIL_FOLLOWER_MULTIPLIER,
   WHISPER_ASCENSION_FAIL_MULTIPLIER,
   WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS,
@@ -142,9 +138,7 @@ import {
   WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK,
   WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX,
   WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK,
-  WHISPER_COST_SCALAR,
   WHISPER_WINDOW_MS,
-  WHISPER_TARGETS,
   CADENCE_ACTION_FOLLOWER_BONUS,
   type ActType,
   type ActivityState,
@@ -643,19 +637,17 @@ function getFollowerRiteVeilZoneMultiplier(veil: number): number {
   return FOLLOWER_RITE_VEIL_OPTIMAL_MULTIPLIER;
 }
 
-export function getWhisperFollowerRateMultiplier(state: GameState): number {
-  if (state.era < 2) return 1;
-  const profile = normalizeWhisperProfile(state, {
-    target: state.activity.lastWhisperTarget,
-    magnitude: state.activity.lastWhisperMagnitude
-  });
-  const targetMultiplier = WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER[profile.target];
-  const magnitudeMultiplier =
-    state.era >= 3 && profile.magnitude === "boosted"
-      ? WHISPER_BOOSTED_FOLLOWER_MULTIPLIER[profile.target]
-      : 1;
-  const combinedMultiplier = targetMultiplier * magnitudeMultiplier;
+export function getWhisperFollowerRateMultiplierForTarget(
+  state: GameState,
+  target: WhisperTarget
+): number {
+  if (state.era < 2 || target === "crowd") return 1;
+  const combinedMultiplier = WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER[target];
   return Math.max(1, 1 + (combinedMultiplier - 1) * WHISPER_PASSIVE_FOLLOWER_RATE_EFFECT);
+}
+
+export function getWhisperFollowerRateMultiplier(state: GameState): number {
+  return getWhisperFollowerRateMultiplierForTarget(state, state.activity.lastWhisperTarget);
 }
 
 export function getPassiveFollowerRate(state: GameState, nowMs: number): number {
@@ -926,7 +918,8 @@ export function normalizeWhisperCycle(activity: ActivityState, nowMs: number): N
 }
 
 function getWhisperCostFromCount(whispersInWindow: number): number {
-  return Math.ceil(WHISPER_BASE_COST * Math.pow(WHISPER_COST_SCALAR, whispersInWindow));
+  void whispersInWindow;
+  return WHISPER_BASE_COST;
 }
 
 export function getWhisperCost(state: GameState, nowMs: number): number {
@@ -946,8 +939,10 @@ function normalizeWhisperProfile(
   }
 
   const target =
-    profile?.target && WHISPER_TARGETS.includes(profile.target) ? profile.target : "crowd";
-  const magnitude = state.era >= 3 && profile?.magnitude === "boosted" ? "boosted" : "base";
+    profile?.target && (profile.target === "prophets" || profile.target === "cults")
+      ? profile.target
+      : "prophets";
+  const magnitude = "base";
   return {
     target,
     magnitude
@@ -963,12 +958,9 @@ export function getWhisperTargetCooldownMs(
   target: WhisperTarget,
   magnitude: WhisperMagnitude
 ): number {
+  void magnitude;
   if (state.era < 2 || target !== "cults") return 0;
-  const baseCooldownMs =
-    magnitude === "boosted" && state.era >= 3
-      ? WHISPER_CULTS_BOOSTED_COOLDOWN_MS
-      : WHISPER_CULTS_BASE_COOLDOWN_MS;
-  return Math.max(0, baseCooldownMs - getWhisperEchoCooldownReductionMs(state));
+  return Math.max(0, WHISPER_CULTS_BASE_COOLDOWN_MS - getWhisperEchoCooldownReductionMs(state));
 }
 
 export function isWhisperTargetOnCooldown(
@@ -991,11 +983,10 @@ function getWhisperTargetFollowerMultiplier(
   target: WhisperTarget,
   magnitude: WhisperMagnitude
 ): number {
+  void magnitude;
   const baseTargetMultiplier = state.era >= 2 ? WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER[target] : 1;
-  const magnitudeMultiplier =
-    magnitude === "boosted" && state.era >= 3 ? WHISPER_BOOSTED_FOLLOWER_MULTIPLIER[target] : 1;
   const echoYieldMultiplier = 1 + getWhisperEchoYieldBonus(state);
-  return baseTargetMultiplier * magnitudeMultiplier * echoYieldMultiplier;
+  return baseTargetMultiplier * echoYieldMultiplier;
 }
 
 function getWhisperFollowerGainRaw(
@@ -1021,20 +1012,14 @@ export function getWhisperFailChance(
   const normalized = normalizeWhisperProfile(state, profile);
   if (state.era < 2) return 0;
 
-  const baseChance =
-    normalized.magnitude === "boosted" && state.era >= 3
-      ? WHISPER_BOOSTED_FAIL_CHANCE[normalized.target]
-      : WHISPER_BASE_FAIL_CHANCE[normalized.target];
+  const baseChance = WHISPER_BASE_FAIL_CHANCE[normalized.target];
   const ascensionMultiplier = Math.pow(
     WHISPER_ASCENSION_FAIL_MULTIPLIER,
     Math.max(0, state.prestige.completedRuns)
   );
   const baseReduction = getWhisperEchoFailReduction(state);
-  const boostedReduction =
-    normalized.magnitude === "boosted" && state.era >= 3
-      ? getWhisperEchoBoostedFailReduction(state)
-      : 0;
-  return Math.max(0, Math.min(0.95, baseChance * ascensionMultiplier - baseReduction - boostedReduction));
+  const cultReduction = normalized.target === "cults" ? getWhisperEchoBoostedFailReduction(state) : 0;
+  return Math.max(0, Math.min(0.95, baseChance * ascensionMultiplier - baseReduction - cultReduction));
 }
 
 export function getWhisperCostForProfile(
@@ -1043,18 +1028,11 @@ export function getWhisperCostForProfile(
   profile?: Partial<WhisperActionProfile>,
   oneTimeCostDelta = 0
 ): number {
+  void nowMs;
   const normalized = normalizeWhisperProfile(state, profile);
-  const normalizedCycle = normalizeWhisperCycle(state.activity, nowMs);
-  const baseCycleCost = getWhisperCostFromCount(normalizedCycle.whispersInWindow);
+  const baseCycleCost = WHISPER_BASE_COST;
   const targetSurcharge = getWhisperTargetCostSurcharge(state, normalized.target);
-  const magnitudeMultiplier =
-    normalized.magnitude === "boosted" && state.era >= 3
-      ? WHISPER_BOOSTED_COST_MULTIPLIER[normalized.target]
-      : 1;
-  return Math.max(
-    1,
-    Math.ceil((baseCycleCost + targetSurcharge + oneTimeCostDelta) * magnitudeMultiplier)
-  );
+  return Math.max(1, Math.ceil(baseCycleCost + targetSurcharge + oneTimeCostDelta));
 }
 
 export function getWhisperFollowerPreview(

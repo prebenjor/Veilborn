@@ -1352,20 +1352,20 @@ function normalizeWhisperActionOptions(
     };
   }
 
+  const target =
+    options?.target === "prophets" || options?.target === "cults"
+      ? options.target
+      : "prophets";
   return {
-    target: options?.target ?? "crowd",
-    magnitude: state.era >= 3 && options?.magnitude === "boosted" ? "boosted" : "base",
+    target,
+    magnitude: "base",
     costOverride: options?.costOverride
   };
 }
 
 function getWhisperActionLabel(target: WhisperTarget, magnitude: WhisperMagnitude): string {
-  if (magnitude === "boosted") {
-    if (target === "crowd") return "Open Proclamation";
-    if (target === "prophets") return "Sacred Charge";
-    return "Doctrine Wave";
-  }
-  if (target === "crowd") return "Crowd";
+  void magnitude;
+  if (target === "crowd") return "Whisper";
   if (target === "prophets") return "Prophets";
   return "Cults";
 }

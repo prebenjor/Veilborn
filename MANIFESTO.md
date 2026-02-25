@@ -156,22 +156,17 @@ Implementation-expanded regen stack:
 - `resonant_word = +2.0` flat if Echo upgrade is owned
 
 Costs:
-- Whisper base cycle: `baseCycleCost = ceil(10 * 1.4^whispersInWindow)` (4-minute reset window).
-- Era II whisper targets:
-  - Crowd: surcharge `+0`, follower multiplier `1.0`, fail chance `0.00`
-  - Prophets: surcharge `+8`, follower multiplier `1.4`, fail chance `0.08`
-  - Cults: surcharge `+12`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`
-- Era III boosted whisper variants:
-  - Open Proclamation (Crowd): cost `x2.5`, follower multiplier `x2.0`, fail chance `0.06`
-  - Sacred Charge (Prophets): cost `x2.5`, follower multiplier `x2.5`, fail chance `0.14`
-  - Doctrine Wave (Cults): cost `x3.0`, follower multiplier `x3.0`, fail chance `0.20`, cooldown `90s`
+- Whisper base cost: `10` flat.
+- Era II+ whisper targets:
+  - Prophets: surcharge `+8`, follower multiplier `1.4`, fail chance `0.08`, passive follower-rate bonus `+14%`
+  - Cults: surcharge `+12`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`, passive follower-rate bonus `+21%`
 - Whisper profile cost:
 
-`whisper_cost = ceil((baseCycleCost + target_surcharge + one_time_delta) * magnitude_multiplier)`
+`whisper_cost = ceil(base_whisper_cost + target_surcharge + one_time_delta)`
 
 - Whisper strain model:
 
-`fail_chance = clamp(base_fail * 0.96^completed_runs - whisper_echo_fail_reduction - boosted_fail_reduction, 0, 0.95)`
+`fail_chance = clamp(base_fail * 0.96^completed_runs - whisper_echo_fail_reduction - cult_fail_reduction, 0, 0.95)`
 
 `strained_followers = floor(base_followers_raw * 0.6 * lineage_modifier)`
 
@@ -191,8 +186,6 @@ Miracle Reserve (Era III):
 `miracle_reserve_cap = 600 + 20*prophets + 30*cults + 4*shrines + 25*max(0,avg_domain_level-4) + 150 if start_inf + 60*max(0,cataclysm_tree_rank-5)`
 
 `miracle_reserve_cap` is clamped to `5000`.
-
-The 4-minute whisper reset defines the short-cycle cadence and supports periodic check-ins.
 
 ## Domain System
 
@@ -403,7 +396,7 @@ Overflow sink model:
 - Overflow rank is `max(0, rank - 5)` and drives late-game sinks:
   - Whispers tree overflow: follower-yield bonus and fail-chance reduction
   - Doctrine tree overflow: whisper surcharge reduction and cult-target cooldown reduction
-  - Cataclysm tree overflow: boosted-whisper fail reduction and miracle reserve cap growth
+  - Cataclysm tree overflow: cult-target whisper fail reduction and miracle reserve cap growth
 
 ## Era Gates
 

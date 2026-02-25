@@ -16,8 +16,6 @@ interface StatsDrawerProps {
     followerPerSecond: number;
   };
   secondsSinceLastEvent: number;
-  whispersInWindow: number;
-  whisperResetInSeconds: number;
   influenceBreakdown: {
     totalPerSecond: number;
     basePerSecond: number;
@@ -87,8 +85,6 @@ export function StatsDrawer({
   totalBeliefEarned,
   beliefBreakdown,
   secondsSinceLastEvent,
-  whispersInWindow,
-  whisperResetInSeconds,
   influenceBreakdown,
   shrinesBuilt,
   miracleReserve,
@@ -154,10 +150,6 @@ export function StatsDrawer({
         <dd>{formatResource(totalBeliefEarned)}</dd>
         <dt>Since Last Event</dt>
         <dd>{formatDurationCompact(secondsSinceLastEvent)}</dd>
-        <dt>Whispers This Cycle</dt>
-        <dd>{formatResource(whispersInWindow)}</dd>
-        <dt>Whisper Reset In</dt>
-        <dd>{formatDurationCompact(whisperResetInSeconds)}</dd>
       </dl>
 
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
