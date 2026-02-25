@@ -158,8 +158,8 @@ Implementation-expanded regen stack:
 Costs:
 - Whisper base cost: `10` flat.
 - Era II+ whisper targets:
-  - Prophets: surcharge `+18`, follower multiplier `1.4`, fail chance `0.08`, passive follower-rate bonus `+6%`
-  - Cults: surcharge `+30`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`, passive follower-rate bonus `+9%`
+  - Prophets: surcharge `+50`, follower multiplier `1.25`, fail chance `0.08`, cooldown `60s`, passive follower-rate bonus `+3%`
+  - Cults: surcharge `+80`, follower multiplier `1.4`, fail chance `0.12`, cooldown `90s`, passive follower-rate bonus `+5%`
 - Whisper profile cost:
 
 `whisper_cost = ceil(base_whisper_cost + target_surcharge + one_time_delta)`
@@ -395,7 +395,7 @@ Overflow sink model:
 - Core branch unlocks remain concentrated in the first 5 ranks.
 - Overflow rank is `max(0, rank - 5)` and drives late-game sinks:
   - Whispers tree overflow: follower-yield bonus and fail-chance reduction
-  - Doctrine tree overflow: whisper surcharge reduction and cult-target cooldown reduction
+  - Doctrine tree overflow: whisper surcharge reduction and target cooldown reduction
   - Cataclysm tree overflow: cult-target whisper fail reduction and miracle reserve cap growth
 
 ## Era Gates

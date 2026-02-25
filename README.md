@@ -2,6 +2,25 @@
 
 Incremental browser game based on `MANIFESTO.md` (Revision B).
 
+## Current Runtime Notes
+
+- Lineage mechanics were removed from runtime and save schema (no hidden lineage conversion modifiers).
+- Era II+ whisper targeting uses `Prophets` and `Cults` (no crowd/boosted target variants in later eras).
+- Current whisper target tuning:
+  - `Prophets`: `+50` surcharge, `+3%` passive follower-rate effect, cooldown-gated.
+  - `Cults`: `+80` surcharge, `+5%` passive follower-rate effect, cooldown-gated.
+- Doctrine in active flow is focused on Prophets/Cults and Acts (no lineage section).
+
+## Docs Source of Truth
+
+- Vision and canonical constants: `MANIFESTO.md`
+- Formula/runtime implementation reference: `docs/GAME_REFERENCE.md`
+- Milestone and PF execution ledger: `docs/roadmap.json`
+- Human-readable roadmap summary: `docs/ROADMAP.md`
+- UI composition/disclosure structure: `docs/UI_RESTRUCTURE.md`
+
+When mechanics/formulas change, update all affected docs in the same change set.
+
 ## Stack
 
 - React + TypeScript + Vite

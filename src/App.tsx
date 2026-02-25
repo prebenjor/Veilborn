@@ -255,13 +255,13 @@ const ECHO_TREE_META: Array<{
       "Act return floor: 1.0x -> 1.5x",
       "Act costs: x0.85",
       "Era II Belief gate multiplier: x0.75",
-      "Cost Discipline I: target surcharges -2%",
-      "Cost Discipline II: target surcharges -2%",
-      "Cost Discipline III: target surcharges -2%",
-      "Doctrine Relay I: Cult-target cooldown -4s",
-      "Doctrine Relay II: Cult-target cooldown -4s",
-      "Doctrine Relay III: Cult-target cooldown -4s",
-      "Doctrine Relay IV: Cult-target cooldown -4s"
+      "Narrow Channel I: target surcharges -1%",
+      "Narrow Channel II: target surcharges -1%",
+      "Narrow Channel III: target surcharges -1%",
+      "Doctrine Relay I: target cooldown -2s",
+      "Doctrine Relay II: target cooldown -2s",
+      "Doctrine Relay III: target cooldown -2s",
+      "Doctrine Relay IV: target cooldown -2s"
     ]
   },
   {
@@ -2151,7 +2151,11 @@ export default function App() {
           beliefPerSecond={beliefPerSecond}
           influence={gameState.resources.influence}
           influenceCap={influenceCap}
+          influencePerSecond={influenceRegenBreakdown.totalPerSecond}
           followers={gameState.resources.followers}
+          followerPerSecond={passiveFollowerRate}
+          followerRateSource={whisperFollowerRateSource}
+          followerRateMultiplier={whisperFollowerRateMultiplier}
           veil={gameState.resources.veil}
           veilStability={veilStability}
         />

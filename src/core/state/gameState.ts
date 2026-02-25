@@ -58,13 +58,13 @@ export type WhisperMagnitude = "base" | "boosted";
 export const WHISPER_TARGETS: WhisperTarget[] = ["crowd", "prophets", "cults"];
 export const WHISPER_BASE_COST_SURCHARGE: Record<WhisperTarget, number> = {
   crowd: 0,
-  prophets: 18,
-  cults: 30
+  prophets: 50,
+  cults: 80
 };
 export const WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER: Record<WhisperTarget, number> = {
   crowd: 1,
-  prophets: 1.4,
-  cults: 1.6
+  prophets: 1.25,
+  cults: 1.4
 };
 export const WHISPER_BOOSTED_COST_MULTIPLIER: Record<WhisperTarget, number> = {
   crowd: 2.5,
@@ -88,16 +88,17 @@ export const WHISPER_BOOSTED_FAIL_CHANCE: Record<WhisperTarget, number> = {
 };
 export const WHISPER_FAIL_FOLLOWER_MULTIPLIER = 0.6;
 export const WHISPER_ASCENSION_FAIL_MULTIPLIER = 0.96;
-export const WHISPER_CULTS_BASE_COOLDOWN_MS = 45 * 1000;
+export const WHISPER_PROPHETS_BASE_COOLDOWN_MS = 60 * 1000;
+export const WHISPER_CULTS_BASE_COOLDOWN_MS = 90 * 1000;
 export const WHISPER_CULTS_BOOSTED_COOLDOWN_MS = 90 * 1000;
 export const WHISPER_ECHO_FAIL_REDUCTION_PER_RANK = 0.015;
 export const WHISPER_ECHO_FAIL_REDUCTION_MAX = 0.24;
 export const WHISPER_ECHO_YIELD_BONUS_PER_RANK = 0.02;
 export const WHISPER_ECHO_YIELD_BONUS_MAX = 0.24;
-export const WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK = 0.02;
-export const WHISPER_ECHO_SURCHARGE_REDUCTION_MAX = 0.2;
-export const WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS = 4000;
-export const WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS = 32000;
+export const WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK = 0.01;
+export const WHISPER_ECHO_SURCHARGE_REDUCTION_MAX = 0.1;
+export const WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS = 2000;
+export const WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS = 16000;
 export const WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK = 0.01;
 export const WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX = 0.1;
 export const RECRUIT_INFLUENCE_COST = 25;
@@ -125,7 +126,7 @@ export const PASSIVE_FOLLOWER_RATE_PER_CULT = 0.35;
 export const PASSIVE_FOLLOWER_RATE_PER_SHRINE = 0.25;
 export const PASSIVE_FOLLOWER_RATE_PER_PROPHET = 0.05;
 export const PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO = 0.02;
-export const WHISPER_PASSIVE_FOLLOWER_RATE_EFFECT = 0.15;
+export const WHISPER_PASSIVE_FOLLOWER_RATE_EFFECT = 0.12;
 export const PASSIVE_FOLLOWER_VEIL_SAFE_MULTIPLIER = 0.8;
 export const PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER = 1.1;
 export const PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER = 1.25;

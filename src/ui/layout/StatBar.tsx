@@ -7,7 +7,11 @@ interface StatBarProps {
   beliefPerSecond: number;
   influence: number;
   influenceCap: number;
+  influencePerSecond: number;
   followers: number;
+  followerPerSecond: number;
+  followerRateSource?: string | null;
+  followerRateMultiplier?: number;
   veil: number;
   veilStability: VeilStabilityView;
 }
@@ -18,7 +22,11 @@ export function StatBar({
   beliefPerSecond,
   influence,
   influenceCap,
+  influencePerSecond,
   followers,
+  followerPerSecond,
+  followerRateSource = null,
+  followerRateMultiplier = 1,
   veil,
   veilStability
 }: StatBarProps) {
@@ -38,10 +46,21 @@ export function StatBar({
         <p className="mt-2 text-xl text-white">
           {formatResource(influence)} / {formatResource(influenceCap)}
         </p>
+        <p className="mt-1 text-xs text-veil/65">{formatRate(influencePerSecond)} / sec</p>
       </article>
       <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
         <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
         <p className="mt-2 text-xl text-white">{formatResource(followers)}</p>
+        {era >= 2 ? (
+          <>
+            <p className="mt-1 text-xs text-veil/65">{formatRate(followerPerSecond)} / sec</p>
+            {followerRateSource ? (
+              <p className="mt-1 text-xs text-veil/55">
+                {followerRateSource} x{formatRate(followerRateMultiplier)}
+              </p>
+            ) : null}
+          </>
+        ) : null}
       </article>
       {era >= 3 ? (
         <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">

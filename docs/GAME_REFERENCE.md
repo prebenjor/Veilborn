@@ -126,11 +126,11 @@ Era I whisper profile:
 - No fail chance, no target cooldown
 
 Era II+ whisper targets:
-- `Prophets`: surcharge `+18`, follower multiplier `1.4`, fail chance `0.08`
-- `Cults`: surcharge `+30`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`
+- `Prophets`: surcharge `+50`, follower multiplier `1.25`, fail chance `0.08`, cooldown `60s`
+- `Cults`: surcharge `+80`, follower multiplier `1.4`, fail chance `0.12`, cooldown `90s`
 - Passive follower-rate impact from last whisper target:
-  - `Prophets`: `+6%`
-  - `Cults`: `+9%`
+  - `Prophets`: `+3%`
+  - `Cults`: `+5%`
 
 Whisper cost by profile:
 
@@ -138,7 +138,7 @@ Whisper cost by profile:
 
 Notes:
 - `oneTimeDelta` is used by temporary event effects (for example, next-whisper modifiers).
-- Doctrine echo overflow can reduce target surcharge (up to 20%).
+- Doctrine echo overflow can reduce target surcharge (up to 10%).
 
 Whisper follower outcomes:
 
@@ -155,9 +155,9 @@ Whisper strain/fail chance:
 If strained, whisper still resolves but uses `strainedFollowers` instead of `successFollowers`.
 
 Whisper cooldowns:
-- Only `Cults` target has cooldown.
+- `Prophets` and `Cults` targets both have cooldowns.
 - Cooldown ends are stored per target in session state.
-- Doctrine echo overflow reduces cult-target cooldown by `4s` per overflow rank (max `32s`).
+- Doctrine echo overflow reduces target cooldown by `2s` per overflow rank (max `16s`).
 
 Recruit:
 - Cost: `25 Influence` (flat)
@@ -452,7 +452,7 @@ Overflow rank model:
 - Core branch unlocks remain concentrated in the first 5 ranks.
 - Overflow rank is `max(0, rank - 5)` and drives late-game sink bonuses:
   - `whispers` overflow: whisper follower yield bonus (`+2%` per rank, max `+24%`) and fail chance reduction (`-1.5%` per rank, max `-24%`)
-  - `doctrine` overflow: whisper target surcharge reduction (`-2%` per rank, max `-20%`) and cult-target cooldown reduction (`-4s` per rank, max `-32s`)
+  - `doctrine` overflow: whisper target surcharge reduction (`-1%` per rank, max `-10%`) and target cooldown reduction (`-2s` per rank, max `-16s`)
   - `cataclysm` overflow: cult-target whisper fail reduction (`-1%` per rank, max `-10%`) and miracle reserve cap increase (`+60` per overflow rank)
 
 Domain carry:

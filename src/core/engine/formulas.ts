@@ -123,6 +123,7 @@ import {
   WHISPER_BASE_FAIL_CHANCE,
   WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER,
   WHISPER_FOLLOWER_GAIN,
+  WHISPER_PROPHETS_BASE_COOLDOWN_MS,
   WHISPER_CULTS_BASE_COOLDOWN_MS,
   WHISPER_FAIL_FOLLOWER_MULTIPLIER,
   WHISPER_ASCENSION_FAIL_MULTIPLIER,
@@ -933,8 +934,10 @@ export function getWhisperTargetCooldownMs(
   magnitude: WhisperMagnitude
 ): number {
   void magnitude;
-  if (state.era < 2 || target !== "cults") return 0;
-  return Math.max(0, WHISPER_CULTS_BASE_COOLDOWN_MS - getWhisperEchoCooldownReductionMs(state));
+  if (state.era < 2 || target === "crowd") return 0;
+  const baseCooldownMs =
+    target === "cults" ? WHISPER_CULTS_BASE_COOLDOWN_MS : WHISPER_PROPHETS_BASE_COOLDOWN_MS;
+  return Math.max(0, baseCooldownMs - getWhisperEchoCooldownReductionMs(state));
 }
 
 export function isWhisperTargetOnCooldown(
