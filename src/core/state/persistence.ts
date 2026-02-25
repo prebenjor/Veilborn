@@ -802,6 +802,7 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
     era: readNumber(rawState.era, fallback.era) >= 3 ? 3 : readNumber(rawState.era, fallback.era) >= 2 ? 2 : 1,
     mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
     domains: sanitizeDomains(rawState.domains, fallback.domains),
+    acolytes: Math.max(0, Math.floor(readNumber(rawState.acolytes, fallback.acolytes))),
     prophets: Math.max(0, Math.floor(readNumber(rawState.prophets, fallback.prophets))),
     cults: Math.max(0, Math.floor(readNumber(rawState.cults, fallback.cults))),
     devotionStacks: Math.max(
@@ -852,7 +853,8 @@ const MIGRATORS: Record<number, Migrator> = {
   16: sanitizeState,
   17: sanitizeState,
   18: sanitizeState,
-  19: sanitizeState
+  19: sanitizeState,
+  20: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

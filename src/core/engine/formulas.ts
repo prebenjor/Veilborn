@@ -96,6 +96,12 @@ import {
   PROPHET_THRESHOLD_BASE,
   PROPHET_THRESHOLD_ECHO_BASE,
   PROPHET_THRESHOLD_SCALAR,
+  ACOLYTE_THRESHOLD_BASE,
+  ACOLYTE_THRESHOLD_SCALAR,
+  PROPHET_ACOLYTE_REQUIREMENT_BASE,
+  PROPHET_ACOLYTE_REQUIREMENT_STEP,
+  CULT_PROPHET_REQUIREMENT_BASE,
+  CULT_PROPHET_REQUIREMENT_STEP,
   RECRUIT_BASE_FOLLOWERS,
   RECRUIT_DOMAIN_FOLLOWER_DIVISOR,
   RECRUIT_PROPHET_FOLLOWER_BONUS,
@@ -198,6 +204,13 @@ export interface BeliefGenerationBreakdown {
   prophetPerSecond: number;
   cultPerSecond: number;
   followerPerSecond: number;
+}
+
+export interface PassiveFollowerRateBreakdown {
+  totalPerSecond: number;
+  prophetPerSecond: number;
+  cultPerSecond: number;
+  shrinePerSecond: number;
 }
 
 export interface FollowerRiteCost {
@@ -627,12 +640,22 @@ export function getWhisperFollowerRateMultiplier(state: GameState): number {
   return getWhisperFollowerRateMultiplierForTarget(state, state.activity.lastWhisperTarget);
 }
 
-export function getPassiveFollowerRate(state: GameState, nowMs: number): number {
+export function getPassiveFollowerRateBreakdown(
+  state: GameState,
+  nowMs: number
+): PassiveFollowerRateBreakdown {
   void nowMs;
-  if (state.era < 2) return 0;
+  if (state.era < 2) {
+    return {
+      totalPerSecond: 0,
+      prophetPerSecond: 0,
+      cultPerSecond: 0,
+      shrinePerSecond: 0
+    };
+  }
 
   const whisperFollowerRateMultiplier = getWhisperFollowerRateMultiplier(state);
-  const prophetRatePerSecond =
+  const prophetBaseRatePerSecond =
     (state.era >= 3
       ? PASSIVE_FOLLOWER_RATE_PER_PROPHET
       : PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO) *
@@ -640,20 +663,44 @@ export function getPassiveFollowerRate(state: GameState, nowMs: number): number 
     whisperFollowerRateMultiplier;
 
   if (state.era < 3) {
-    return Math.max(0, prophetRatePerSecond);
+    const prophetPerSecond = Math.max(0, prophetBaseRatePerSecond);
+    return {
+      totalPerSecond: prophetPerSecond,
+      prophetPerSecond,
+      cultPerSecond: 0,
+      shrinePerSecond: 0
+    };
   }
 
-  if (state.cataclysm.civilizationHealth <= 0) return 0;
+  if (state.cataclysm.civilizationHealth <= 0) {
+    return {
+      totalPerSecond: 0,
+      prophetPerSecond: 0,
+      cultPerSecond: 0,
+      shrinePerSecond: 0
+    };
+  }
 
-  const baseRate =
-    PASSIVE_FOLLOWER_RATE_PER_CULT * state.cults +
-    PASSIVE_FOLLOWER_RATE_PER_SHRINE * state.doctrine.shrinesBuilt +
-    prophetRatePerSecond;
-  if (baseRate <= 0) return 0;
-
+  const cultBaseRatePerSecond =
+    PASSIVE_FOLLOWER_RATE_PER_CULT * state.cults * whisperFollowerRateMultiplier;
+  const shrineBaseRatePerSecond = PASSIVE_FOLLOWER_RATE_PER_SHRINE * state.doctrine.shrinesBuilt;
   const civHealthMultiplier = Math.max(0, state.cataclysm.civilizationHealth / 100);
   const veilZoneMultiplier = getPassiveFollowerVeilZoneMultiplier(state.resources.veil);
-  return Math.max(0, baseRate * civHealthMultiplier * veilZoneMultiplier);
+  const globalMultiplier = civHealthMultiplier * veilZoneMultiplier;
+  const prophetPerSecond = Math.max(0, prophetBaseRatePerSecond * globalMultiplier);
+  const cultPerSecond = Math.max(0, cultBaseRatePerSecond * globalMultiplier);
+  const shrinePerSecond = Math.max(0, shrineBaseRatePerSecond * globalMultiplier);
+
+  return {
+    totalPerSecond: prophetPerSecond + cultPerSecond + shrinePerSecond,
+    prophetPerSecond,
+    cultPerSecond,
+    shrinePerSecond
+  };
+}
+
+export function getPassiveFollowerRate(state: GameState, nowMs: number): number {
+  return getPassiveFollowerRateBreakdown(state, nowMs).totalPerSecond;
 }
 
 export function getFollowerRiteUses(state: GameState, type: FollowerRiteType): number {
@@ -1036,6 +1083,18 @@ export function getWhisperFollowerPreview(
 export function getFollowersForNextProphet(state: GameState): number {
   const base = state.echoBonuses.prophetThreshold ? PROPHET_THRESHOLD_ECHO_BASE : PROPHET_THRESHOLD_BASE;
   return Math.ceil(base * Math.pow(PROPHET_THRESHOLD_SCALAR, state.prophets));
+}
+
+export function getFollowersForNextAcolyte(state: GameState): number {
+  return Math.ceil(ACOLYTE_THRESHOLD_BASE * Math.pow(ACOLYTE_THRESHOLD_SCALAR, state.acolytes));
+}
+
+export function getAcolytesForNextProphet(state: GameState): number {
+  return PROPHET_ACOLYTE_REQUIREMENT_BASE + Math.floor(state.prophets / PROPHET_ACOLYTE_REQUIREMENT_STEP);
+}
+
+export function getProphetsForNextCult(state: GameState): number {
+  return CULT_PROPHET_REQUIREMENT_BASE + Math.floor(state.cults / CULT_PROPHET_REQUIREMENT_STEP);
 }
 
 export function getCultFormationCost(state: GameState): number {

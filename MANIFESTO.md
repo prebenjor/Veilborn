@@ -209,11 +209,31 @@ Meta-progression anchor:
 
 ## Cult and Act System
 
+Acolyte ordination:
+
+`followers_needed_for_next_acolyte = 18 * 1.45^acolytes`
+
+Prophet anointing:
+
+`followers_needed_for_next_prophet = prophet_base * 1.6^prophets`
+
+`prophet_base = 50`, or `20` with Echo upgrade.
+
+`acolytes_needed_for_next_prophet = 2 + floor(prophets / 3)`
+
+Anointing a prophet consumes both follower and acolyte requirements.
+
 Cult formation cost:
 
 `cult_cost = cult_cost_base * 2^(cults_owned)`
 
 `cult_cost_base = 500`, or `350` with Echo upgrade.
+
+Cult leadership requirement:
+
+`prophets_needed_for_next_cult = 1 + floor(cults_owned / 2)`
+
+Founding a cult consumes the required prophets.
 
 Reference values with base 500:
 - Cult 1: 500
@@ -563,8 +583,8 @@ Rules:
 - Early HUD minimalism: Era I top-level HUD should stay sparse. Metrics like Veil Thickness and Domain totals appear only after they are mechanically relevant and explained once.
 - First-contact explanation: when a new meter appears, attach one concise in-world explanation so players know what changed and why it matters.
 - Density budget: prioritize single-screen decision-making. Move long-form details to compact drawers, tabs, or a dedicated stats page.
-- Era II tab split is strict: `ACTIVE` contains Whisper/Recruit, Influence pressure, Doctrine (Acts), and Doctrine Seeds; `GROWTH` contains a merged Doctrine container plus Domains, Rivals, and Threshold progress surfaces.
-- In `GROWTH`, Doctrine + Doctrine Seeds are consolidated under one collapsible `Doctrine` container with Prophets/Cults above Acts.
+- Era II tab split is strict: `ACTIVE` contains Whisper/Recruit, Influence pressure, and Doctrine progression surfaces (Prophets/Cults); `GROWTH` contains Domains, Rivals, and Threshold progress surfaces.
+- Era III doctrine expands to include cult rites as an active-control layer.
 - In Era II+, `ACTIVE`, `GROWTH`, and `META` use collapsible containers with persisted collapsed/expanded state.
 - `GROWTH` containers persist collapsed/expanded state between sessions.
 - Era II rivals may collapse to a one-line status when inactive; expand to full controls only when active.

@@ -226,6 +226,10 @@ Resolution model:
 
 ### Prophet and Cult Economy
 
+Acolyte threshold:
+
+`followersNeededForNextAcolyte = 18 * 1.45^acolytes`
+
 Prophet threshold:
 
 `followersNeeded = base * 1.6^prophets`
@@ -233,12 +237,24 @@ Prophet threshold:
 - base `50`
 - base `20` with `prophetThreshold` echo bonus
 
+Prophet acolyte requirement:
+
+`acolytesNeeded = 2 + floor(prophets / 3)`
+
+Anointing a prophet consumes both follower and acolyte requirements.
+
 Cult formation cost:
 
 `cost = base * 2^cults`
 
 - base `500`
 - base `350` with `cultCostBase` echo bonus
+
+Cult prophet requirement:
+
+`prophetsNeeded = 1 + floor(cults / 2)`
+
+Founding a cult consumes the required prophets.
 
 ### Domain Investment
 
@@ -254,7 +270,7 @@ Bulk investing:
 - `+1`, `+10%`, `+25%`, `+50%`, `Max`
 - Previewed spend and projected levels
 
-### Acts (Doctrine)
+### Cult Rites (Era III Doctrine)
 
 Act types:
 - `shrine`: cost `20`, duration `30s`, base mult `2.5`
@@ -276,6 +292,10 @@ Act floor:
 
 Act slot cap:
 - `max(1, cults)`
+
+Availability:
+- Rite controls are unlocked in Era III only.
+- Era II doctrine surface does not expose rite actions.
 
 ### Rivals
 
@@ -514,7 +534,7 @@ Era II:
 - `active` containers persist collapse state (`active_whispers_collapsed`, `active_doctrine_collapsed`)
 - doctrine and doctrine-seeds content merge into one collapsible `Doctrine` container in `active` with internal order:
   - Prophets/Cults
-  - Acts (+Follower Rites when available)
+  - Cult Rites and Follower Rites are Era III-only (not shown in Era II)
 - `growth` order: Domains -> Rivals -> Threshold
 - all `growth` containers are collapsible and persist collapse state (`growth_domains_collapsed`, `growth_rivals_collapsed`, `growth_threshold_collapsed`)
 - rivals render as a single-line summary when inactive and auto-expand when active

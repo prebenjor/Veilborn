@@ -10,8 +10,6 @@ interface StatBarProps {
   influencePerSecond: number;
   followers: number;
   followerPerSecond: number;
-  followerRateSource?: string | null;
-  followerRateMultiplier?: number;
   veil: number;
   veilStability: VeilStabilityView;
 }
@@ -25,8 +23,6 @@ export function StatBar({
   influencePerSecond,
   followers,
   followerPerSecond,
-  followerRateSource = null,
-  followerRateMultiplier = 1,
   veil,
   veilStability
 }: StatBarProps) {
@@ -52,14 +48,7 @@ export function StatBar({
         <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
         <p className="mt-2 text-xl text-white">{formatResource(followers)}</p>
         {era >= 2 ? (
-          <>
-            <p className="mt-1 text-xs text-veil/65">{formatRate(followerPerSecond)} / sec</p>
-            {followerRateSource ? (
-              <p className="mt-1 text-xs text-veil/55">
-                {followerRateSource} x{formatRate(followerRateMultiplier)}
-              </p>
-            ) : null}
-          </>
+          <p className="mt-1 text-xs text-veil/65">{formatRate(followerPerSecond)} / sec</p>
         ) : null}
       </article>
       {era >= 3 ? (

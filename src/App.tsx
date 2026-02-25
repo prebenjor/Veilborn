@@ -5,6 +5,7 @@ import {
   canAdvanceEraOneToTwo,
   canAdvanceEraTwoToThree,
   canAnointProphet,
+  canOrdainAcolyte,
   canBetrayPantheonAlly,
   canWhisper,
   canCastMiracle,
@@ -35,6 +36,7 @@ import {
   performDomainInvestments,
   performPurchaseEchoTreeRank,
   performProphetAnoint,
+  performAcolyteOrdain,
   performRecruit,
   performSetArchitectureBeliefRule,
   performSetArchitectureCivilizationRule,
@@ -64,7 +66,9 @@ import {
   getEchoTreeNextCost,
   getFollowerRiteCost,
   getFollowerRiteFollowerGain,
+  getFollowersForNextAcolyte,
   getFollowersForNextProphet,
+  getAcolytesForNextProphet,
   getInfluenceCap,
   getInfluenceRegenBreakdown,
   getGhostInfluenceTotals,
@@ -74,7 +78,7 @@ import {
   getMiracleInfluenceCost,
   getMiracleReserveCap,
   getMiracleVeilCost,
-  getPassiveFollowerRate,
+  getPassiveFollowerRateBreakdown,
   getWhisperFollowerRateMultiplierForTarget,
   getWhisperFollowerRateMultiplier,
   getRivalSpawnIntervalMs,
@@ -91,7 +95,8 @@ import {
   getWhisperCostForProfile,
   getWhisperFailChance,
   getWhisperFollowerPreview,
-  getWhisperTargetCooldownEndsAt
+  getWhisperTargetCooldownEndsAt,
+  getProphetsForNextCult
 } from "./core/engine/formulas";
 import {
   getRemembranceConditionViews,
@@ -849,7 +854,8 @@ export default function App() {
   const beliefPerSecond = beliefBreakdown.totalPerSecond;
   const influenceCap = getInfluenceCap(gameState);
   const influenceRegenBreakdown = getInfluenceRegenBreakdown(gameState);
-  const passiveFollowerRate = getPassiveFollowerRate(gameState, nowMs);
+  const passiveFollowerRateBreakdown = getPassiveFollowerRateBreakdown(gameState, nowMs);
+  const passiveFollowerRate = passiveFollowerRateBreakdown.totalPerSecond;
   const whisperFollowerRateMultiplier = getWhisperFollowerRateMultiplier(gameState);
   const whisperFollowerRateSource =
     gameState.era >= 2
@@ -909,8 +915,11 @@ export default function App() {
   const recruitPreview = getRecruitPreview(gameState);
   const devotionStacks = getDevotionStacks(gameState);
   const devotionPathLabel = getDevotionPathLabel(getDevotionPath(gameState));
+  const nextAcolyteFollowers = getFollowersForNextAcolyte(gameState);
   const nextProphetFollowers = getFollowersForNextProphet(gameState);
+  const nextProphetAcolytes = getAcolytesForNextProphet(gameState);
   const nextCultBeliefCost = getCultFormationCost(gameState);
+  const nextCultProphets = getProphetsForNextCult(gameState);
   const eraOneGate = getEraOneGateStatus(gameState);
   const eraTwoGate = getEraTwoGateStatus(gameState);
   const unravelingGate = getUnravelingGateStatus(gameState);
@@ -939,6 +948,7 @@ export default function App() {
           costOverride: whisperCost
         });
   const canUseRecruit = canRecruit(gameState);
+  const canCreateAcolyte = canOrdainAcolyte(gameState);
   const canCreateProphet = canAnointProphet(gameState);
   const canCreateCult = canFormCult(gameState);
   const canAdvanceEraOne = canAdvanceEraOneToTwo(gameState);
@@ -1031,7 +1041,10 @@ export default function App() {
       : 0;
   const hasActiveRivals = gameState.doctrine.rivals.length > 0;
   const canUseSuppressRival = canSuppressRival(gameState);
-  const doctrineGrowthSummary = `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults \u00b7 ${formatResource(activeActs.length)} of ${formatResource(actSlotCap)} acts active`;
+  const doctrineGrowthSummary =
+    gameState.era >= 3
+      ? `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults \u00b7 ${formatResource(activeActs.length)} of ${formatResource(actSlotCap)} rites active`
+      : `${formatResource(gameState.prophets)} prophets \u00b7 ${formatResource(gameState.cults)} cults`;
   const domainsGrowthSummary = `Active synergy x${formatResource(domainSynergy, 2)} \u00b7 ${formatResource(gameState.matchingDomainPairs)} matched pairs`;
   const rivalsGrowthSummary = hasActiveRivals
     ? `${formatResource(gameState.doctrine.rivals.length)} active \u00b7 strength ${formatResource(rivalStrength)}`
@@ -1286,6 +1299,16 @@ export default function App() {
     const actionAt = Date.now();
     setGameState((prev) => {
       const next = performProphetAnoint(prev, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "anoint_prophet", actionAt);
+      return next;
+    });
+  };
+
+  const onOrdainAcolyte = () => {
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performAcolyteOrdain(prev, actionAt);
       if (next === prev) return prev;
       recordTelemetryAction(next, "anoint_prophet", actionAt);
       return next;
@@ -1741,7 +1764,7 @@ export default function App() {
       canSuppressRival={canUseSuppressRival}
       suppressCost={RIVAL_SUPPRESS_INFLUENCE_COST}
       onSuppressRival={onSuppressRival}
-      showActs
+      showActs={gameState.era >= 3}
       showRivals={false}
     />
   ) : null;
@@ -1868,15 +1891,22 @@ export default function App() {
     <ProgressPanel
       belief={gameState.resources.belief}
       era={gameState.era}
+      acolytes={gameState.acolytes}
       prophets={gameState.prophets}
       cults={gameState.cults}
-      followerGainRatePerSecond={passiveFollowerRate}
+      prophetFollowerGainRatePerSecond={passiveFollowerRateBreakdown.prophetPerSecond}
+      cultFollowerGainRatePerSecond={passiveFollowerRateBreakdown.cultPerSecond}
       whisperFollowerRateSource={whisperFollowerRateSource}
       whisperFollowerRateMultiplier={whisperFollowerRateMultiplier}
+      nextAcolyteFollowers={nextAcolyteFollowers}
       nextProphetFollowers={nextProphetFollowers}
+      nextProphetAcolytes={nextProphetAcolytes}
       nextCultBeliefCost={nextCultBeliefCost}
+      nextCultProphets={nextCultProphets}
+      canOrdainAcolyte={canCreateAcolyte}
       canAnointProphet={canCreateProphet}
       canFormCult={canCreateCult}
+      onOrdainAcolyte={onOrdainAcolyte}
       onAnointProphet={onAnointProphet}
       onFormCult={onFormCult}
     />
@@ -1958,8 +1988,12 @@ export default function App() {
       cadencePromptActive={gameState.activity.cadencePromptActive}
       canUseWhisper={canUseWhisper}
       canUseRecruit={canUseRecruit}
+      acolytes={gameState.acolytes}
+      nextAcolyteFollowers={nextAcolyteFollowers}
+      canCreateAcolyte={canCreateAcolyte}
       prophets={gameState.prophets}
       nextProphetFollowers={nextProphetFollowers}
+      nextProphetAcolytes={nextProphetAcolytes}
       canCreateProphet={canCreateProphet}
       omenTitle={uiReveal.omenTitle}
       visibleOmens={visibleOmens}
@@ -1967,6 +2001,7 @@ export default function App() {
       eraGatePanel={eraGatePanel}
       onWhisper={onWhisper}
       onRecruit={onRecruit}
+      onOrdainAcolyte={onOrdainAcolyte}
       onAnointProphet={onAnointProphet}
       onResolveDoubtChoice={onResolveDoubtChoice}
     />
@@ -2075,6 +2110,7 @@ export default function App() {
     miracleReserveCap,
     currentInfluence: gameState.resources.influence,
     currentFollowers: gameState.resources.followers,
+    currentAcolytes: gameState.acolytes,
     devotionStacks,
     devotionPathLabel,
     passiveFollowerRate,
@@ -2121,7 +2157,7 @@ export default function App() {
         initial={reducedMotion ? false : { opacity: 0, y: 16 }}
         animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={reducedMotion ? { duration: 0 } : { duration: 0.45 }}
-        className="veil-content relative mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-24 pt-8 lg:px-8"
+        className="veil-content relative mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 pb-24 pt-8 lg:px-8"
       >
         <header className="veil-header space-y-2">
           <p className="text-xs uppercase tracking-[0.35em] text-veil/70">Veilborn</p>
@@ -2154,8 +2190,6 @@ export default function App() {
           influencePerSecond={influenceRegenBreakdown.totalPerSecond}
           followers={gameState.resources.followers}
           followerPerSecond={passiveFollowerRate}
-          followerRateSource={whisperFollowerRateSource}
-          followerRateMultiplier={whisperFollowerRateMultiplier}
           veil={gameState.resources.veil}
           veilStability={veilStability}
         />

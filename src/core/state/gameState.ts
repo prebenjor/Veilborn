@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 19;
+export const GAME_STATE_SCHEMA_VERSION = 20;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -134,6 +134,12 @@ export const PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER = 1.25;
 export const PROPHET_THRESHOLD_BASE = 50;
 export const PROPHET_THRESHOLD_ECHO_BASE = 20;
 export const PROPHET_THRESHOLD_SCALAR = 1.6;
+export const ACOLYTE_THRESHOLD_BASE = 18;
+export const ACOLYTE_THRESHOLD_SCALAR = 1.45;
+export const PROPHET_ACOLYTE_REQUIREMENT_BASE = 2;
+export const PROPHET_ACOLYTE_REQUIREMENT_STEP = 3;
+export const CULT_PROPHET_REQUIREMENT_BASE = 1;
+export const CULT_PROPHET_REQUIREMENT_STEP = 2;
 
 export const CULT_COST_BASE = 500;
 export const CULT_COST_ECHO_BASE = 350;
@@ -538,6 +544,7 @@ export interface GameState {
   era: 1 | 2 | 3;
   mortals: Mortal[];
   domains: DomainProgress[];
+  acolytes: number;
   prophets: number;
   cults: number;
   devotionStacks: number;
@@ -771,6 +778,7 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       }
     ],
     domains: createDefaultDomains(),
+    acolytes: 0,
     prophets: 0,
     cults: 0,
     devotionStacks: 0,

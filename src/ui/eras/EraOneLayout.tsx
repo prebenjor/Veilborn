@@ -22,8 +22,12 @@ interface EraOneLayoutProps {
   cadencePromptActive: boolean;
   canUseWhisper: boolean;
   canUseRecruit: boolean;
+  acolytes: number;
+  nextAcolyteFollowers: number;
+  canCreateAcolyte: boolean;
   prophets: number;
   nextProphetFollowers: number;
+  nextProphetAcolytes: number;
   canCreateProphet: boolean;
   omenTitle: string;
   visibleOmens: OmenEntry[];
@@ -31,6 +35,7 @@ interface EraOneLayoutProps {
   eraGatePanel: ReactNode;
   onWhisper: () => void;
   onRecruit: () => void;
+  onOrdainAcolyte: () => void;
   onAnointProphet: () => void;
   onResolveDoubtChoice: (choice: "a" | "b") => void;
 }
@@ -43,8 +48,12 @@ export function EraOneLayout({
   cadencePromptActive,
   canUseWhisper,
   canUseRecruit,
+  acolytes,
+  nextAcolyteFollowers,
+  canCreateAcolyte,
   prophets,
   nextProphetFollowers,
+  nextProphetAcolytes,
   canCreateProphet,
   omenTitle,
   visibleOmens,
@@ -52,6 +61,7 @@ export function EraOneLayout({
   eraGatePanel,
   onWhisper,
   onRecruit,
+  onOrdainAcolyte,
   onAnointProphet,
   onResolveDoubtChoice
 }: EraOneLayoutProps) {
@@ -101,16 +111,30 @@ export function EraOneLayout({
         <div className="mt-4 border-t border-white/10 pt-3">
           <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Prophets</p>
           <p className="mt-1 text-sm text-white">
-            {formatResource(prophets)} active {"\u00b7"} {formatResource(nextProphetFollowers)} followers to next
+            {formatResource(prophets)} active {"\u00b7"} {formatResource(nextProphetFollowers)} followers +{" "}
+            {formatResource(nextProphetAcolytes)} acolytes to next
           </p>
-          <button
-            type="button"
-            disabled={!canCreateProphet}
-            onClick={onAnointProphet}
-            className="mt-2 rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
-          >
-            Anoint Prophet
-          </button>
+          <p className="mt-1 text-xs text-veil/65">
+            Acolytes {formatResource(acolytes)} {"\u00b7"} next at {formatResource(nextAcolyteFollowers)} followers
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!canCreateAcolyte}
+              onClick={onOrdainAcolyte}
+              className="rounded-lg border border-white/30 px-2 py-1 text-xs text-veil/85 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+            >
+              Ordain Acolyte
+            </button>
+            <button
+              type="button"
+              disabled={!canCreateProphet}
+              onClick={onAnointProphet}
+              className="rounded-lg border border-omen/60 px-2 py-1 text-xs text-omen transition hover:bg-omen/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+            >
+              Anoint Prophet
+            </button>
+          </div>
         </div>
       </section>
       {eraGatePanel}

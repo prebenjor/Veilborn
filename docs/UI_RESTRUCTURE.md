@@ -58,14 +58,14 @@ Stats visibility rule:
   - Influence remains in the top stat bar; there is no separate `ACTIVE` Influence container.
   - Whispers in Era II keep the familiar Era I interaction style (no subtitle); cadence prompt and optional rival-drain nudge line may appear.
   - `ACTIVE` containers are collapsible with persisted state.
-  - Doctrine and Doctrine Seeds content are merged into one `DOCTRINE` container in `ACTIVE`, ordered as Prophets/Cults, then Acts.
+  - Doctrine and Doctrine Seeds content are merged into one `DOCTRINE` container in `ACTIVE`; Era II shows progression surfaces (Prophets/Cults) but no rite controls.
   - `GROWTH` order: Domains -> Rivals -> Threshold.
   - All `GROWTH` containers are collapsible with persisted state.
   - Rivals collapse to a single-line summary when inactive and auto-expand when active.
   - Threshold is not rendered in `ACTIVE`; it sits at the bottom of `GROWTH`, collapsed by default.
   - Meta tab label is always `Meta` (no `Meta (Lite)` suffix).
 - Era III: full `ACTIVE`, `GROWTH`, `GATE`, `META`.
-- Era III `ACTIVE` order: Whispers -> Doctrine (merged) -> Cataclysm.
+- Era III `ACTIVE` order: Whispers -> Doctrine (merged, includes cult rites) -> Cataclysm.
 - Era III `GROWTH` order: Domains -> Rivals.
 - Era III `GATE` tab contains the unraveling progression panel and replaces the old persistent strip.
 - Era II+ `META` containers are collapsible with persisted state.

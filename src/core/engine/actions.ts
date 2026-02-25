@@ -68,7 +68,10 @@ import {
   getDomainXpNeeded,
   getEraOneGateStatus,
   getEraTwoGateStatus,
+  getAcolytesForNextProphet,
+  getFollowersForNextAcolyte,
   getFollowersForNextProphet,
+  getProphetsForNextCult,
   getMatchingDomainPairs,
   getDomainSynergy,
   getFollowerRiteCost,
@@ -1501,19 +1504,24 @@ export function performDomainInvestments(
 }
 
 export function canAnointProphet(state: GameState): boolean {
-  return state.resources.followers >= getFollowersForNextProphet(state);
+  return (
+    state.resources.followers >= getFollowersForNextProphet(state) &&
+    state.acolytes >= getAcolytesForNextProphet(state)
+  );
 }
 
 export function performProphetAnoint(state: GameState, nowMs: number): GameState {
-  const threshold = getFollowersForNextProphet(state);
-  if (state.resources.followers < threshold) return state;
+  const followerThreshold = getFollowersForNextProphet(state);
+  const acolyteThreshold = getAcolytesForNextProphet(state);
+  if (state.resources.followers < followerThreshold || state.acolytes < acolyteThreshold) return state;
 
   const withProphet = {
     ...state,
     prophets: state.prophets + 1,
+    acolytes: state.acolytes - acolyteThreshold,
     resources: {
       ...state.resources,
-      followers: state.resources.followers - threshold
+      followers: state.resources.followers - followerThreshold
     },
     activity: resolveActivityAfterAction(state.activity, nowMs),
     meta: {
@@ -1537,20 +1545,50 @@ export function performProphetAnoint(state: GameState, nowMs: number): GameState
   return appendOmen(withDevotionPath, nowMs, "prophet");
 }
 
+export function canOrdainAcolyte(state: GameState): boolean {
+  return state.resources.followers >= getFollowersForNextAcolyte(state);
+}
+
+export function performAcolyteOrdain(state: GameState, nowMs: number): GameState {
+  const followerThreshold = getFollowersForNextAcolyte(state);
+  if (state.resources.followers < followerThreshold) return state;
+
+  const withAcolyte = {
+    ...state,
+    acolytes: state.acolytes + 1,
+    resources: {
+      ...state.resources,
+      followers: state.resources.followers - followerThreshold
+    },
+    activity: resolveActivityAfterAction(state.activity, nowMs),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  return appendOmen(withAcolyte, nowMs, "prophet", "An acolyte took the vow and stood among the faithful.");
+}
+
 export function canFormCult(state: GameState): boolean {
   if (state.era < 2) return false;
-  return state.resources.belief >= getCultFormationCost(state);
+  return (
+    state.resources.belief >= getCultFormationCost(state) &&
+    state.prophets >= getProphetsForNextCult(state)
+  );
 }
 
 export function performCultFormation(state: GameState, nowMs: number): GameState {
   if (state.era < 2) return state;
   const cost = getCultFormationCost(state);
-  if (state.resources.belief < cost) return state;
+  const prophetCost = getProphetsForNextCult(state);
+  if (state.resources.belief < cost || state.prophets < prophetCost) return state;
   const synergy = getDomainSynergy(state);
 
   const withCult = {
     ...state,
     cults: state.cults + 1,
+    prophets: state.prophets - prophetCost,
     resources: {
       ...state.resources,
       belief: state.resources.belief - cost
@@ -1571,7 +1609,7 @@ export function getActSlotCap(state: GameState): number {
 }
 
 export function canStartAct(state: GameState, type: ActType): boolean {
-  if (state.era < 2) return false;
+  if (state.era < 3) return false;
   if (state.cults <= 0) return false;
   if (state.doctrine.activeActs.length >= getActSlotCap(state)) return false;
   return state.resources.influence >= getActCost(state, type);

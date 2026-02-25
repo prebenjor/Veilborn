@@ -116,7 +116,7 @@ export function DoctrinePanel({
       >
         {showActs ? (
           <article className="rounded-xl border border-white/10 bg-black/25 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Acts</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Cult Rites</p>
             <p className="mt-1 text-sm text-white">
               {formatResource(slotsUsed)} of {formatResource(actSlotCap)} slots active
             </p>
@@ -124,75 +124,79 @@ export function DoctrinePanel({
               Cult output {formatResource(cultOutput)}/s - synergy x{formatResource(domainSynergy, 2)}
             </p>
 
-            {slotsUsed > 0 ? (
-              <div className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-veil/65">Running Acts</p>
-                <div className="mt-1 space-y-1">
-                  {runningActs.slice(0, 5).map((act) => (
-                    <p key={act.id} className="text-[11px] text-veil/70">
-                      {ACT_LABELS[act.type]} - {formatDurationCompact(act.remainingSeconds)} left
-                    </p>
-                  ))}
-                  {runningActs.length > 5 ? (
-                    <p className="text-[11px] text-veil/60">+{formatResource(runningActs.length - 5)} more running</p>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
+            <div className="mt-2 grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <div className="space-y-2">
+                {sortedActs.map((act) => {
+                  const projectedBelief = actProjectedBelief[act.type];
+                  const deEmphasized = projectedBelief < strongestProjected * 0.55;
+                  const runningForType = activeActsByType[act.type];
+                  const runningCount = runningForType.length;
+                  const nextResolveIn =
+                    runningCount > 0
+                      ? Math.max(0, Math.min(...runningForType.map((entry) => entry.remainingSeconds)))
+                      : 0;
 
-            <div className="mt-2 space-y-2">
-              {sortedActs.map((act) => {
-                const projectedBelief = actProjectedBelief[act.type];
-                const deEmphasized = projectedBelief < strongestProjected * 0.55;
-                const runningForType = activeActsByType[act.type];
-                const runningCount = runningForType.length;
-                const nextResolveIn =
-                  runningCount > 0
-                    ? Math.max(0, Math.min(...runningForType.map((entry) => entry.remainingSeconds)))
-                    : 0;
-
-                return (
-                  <div
-                    key={act.type}
-                    className={
-                      runningCount > 0
-                        ? "rounded-lg border border-ember/35 bg-ember/5 p-2"
-                        : deEmphasized
-                          ? "rounded-lg border border-white/10 bg-black/20 p-2 opacity-70"
-                          : "rounded-lg border border-white/10 bg-black/20 p-2"
-                    }
-                  >
-                    <p className="text-xs text-veil/80">{act.label}</p>
-                    <p className="text-[11px] text-veil/60">{act.hint}</p>
-                    <p className="mt-1 text-[11px] text-veil/60">
-                      {formatResource(actCosts[act.type])} Influence, {formatDurationCompact(actDurations[act.type])}
-                    </p>
-                    <p className="mt-1 text-[11px] text-veil/60">
-                      {formatProjected(projectedBelief)} Belief
-                      {actResonantBonus > 0 ? ` - resonant +${formatResource(actResonantBonus, 2)}` : ""}
-                    </p>
-                    {runningCount > 0 ? (
-                      <p className="mt-1 text-[11px] text-ember/80">
-                        {formatResource(runningCount)} running - next resolves in {formatDurationCompact(nextResolveIn)}
-                      </p>
-                    ) : null}
-                    <button
-                      type="button"
-                      disabled={!canStartAct[act.type]}
-                      onClick={() => onStartAct(act.type)}
-                      className="mt-1 rounded-lg border border-ember/60 px-2 py-1 text-xs text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+                  return (
+                    <div
+                      key={act.type}
+                      className={
+                        runningCount > 0
+                          ? "rounded-lg border border-ember/35 bg-ember/5 p-2"
+                          : deEmphasized
+                            ? "rounded-lg border border-white/10 bg-black/20 p-2 opacity-70"
+                            : "rounded-lg border border-white/10 bg-black/20 p-2"
+                      }
                     >
-                      {canStartAct[act.type]
-                        ? runningCount > 0
-                          ? "Start Another"
-                          : "Start"
-                        : runningCount > 0
-                          ? "Running"
-                          : "Start"}
-                    </button>
+                      <p className="text-xs text-veil/80">{act.label}</p>
+                      <p className="text-[11px] text-veil/60">{act.hint}</p>
+                      <p className="mt-1 text-[11px] text-veil/60">
+                        {formatResource(actCosts[act.type])} Influence, {formatDurationCompact(actDurations[act.type])}
+                      </p>
+                      <p className="mt-1 text-[11px] text-veil/60">
+                        {formatProjected(projectedBelief)} Belief
+                        {actResonantBonus > 0 ? ` - resonant +${formatResource(actResonantBonus, 2)}` : ""}
+                      </p>
+                      {runningCount > 0 ? (
+                        <p className="mt-1 text-[11px] text-ember/80">
+                          {formatResource(runningCount)} running - next resolves in {formatDurationCompact(nextResolveIn)}
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={!canStartAct[act.type]}
+                        onClick={() => onStartAct(act.type)}
+                        className="mt-1 rounded-lg border border-ember/60 px-2 py-1 text-xs text-ember transition hover:bg-ember/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30"
+                      >
+                        {canStartAct[act.type]
+                          ? runningCount > 0
+                            ? "Start Another"
+                            : "Start"
+                          : runningCount > 0
+                            ? "Running"
+                            : "Start"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <aside className="rounded-lg border border-white/10 bg-black/20 p-2 h-fit lg:sticky lg:top-2">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-veil/65">Active Rites</p>
+                {slotsUsed > 0 ? (
+                  <div className="mt-1 space-y-1">
+                    {runningActs.slice(0, 8).map((act) => (
+                      <p key={act.id} className="text-[11px] text-veil/70">
+                        {ACT_LABELS[act.type]} - {formatDurationCompact(act.remainingSeconds)} left
+                      </p>
+                    ))}
+                    {runningActs.length > 8 ? (
+                      <p className="text-[11px] text-veil/60">+{formatResource(runningActs.length - 8)} more running</p>
+                    ) : null}
                   </div>
-                );
-              })}
+                ) : (
+                  <p className="mt-1 text-[11px] text-veil/60">No rites in motion.</p>
+                )}
+              </aside>
             </div>
 
             {era >= 3 && followerRites.length > 0 ? (

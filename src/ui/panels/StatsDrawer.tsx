@@ -31,6 +31,7 @@ interface StatsDrawerProps {
   miracleReserveCap: number;
   currentInfluence: number;
   currentFollowers: number;
+  currentAcolytes: number;
   devotionStacks: number;
   devotionPathLabel: string;
   passiveFollowerRate: number;
@@ -91,6 +92,7 @@ export function StatsDrawer({
   miracleReserveCap,
   currentInfluence,
   currentFollowers,
+  currentAcolytes,
   devotionStacks,
   devotionPathLabel,
   passiveFollowerRate,
@@ -179,6 +181,8 @@ export function StatsDrawer({
         <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1">
           <dt>Current</dt>
           <dd>{formatResource(currentFollowers)}</dd>
+          <dt>Acolytes</dt>
+          <dd>{formatResource(currentAcolytes)}</dd>
           {isEraThree ? (
             <>
               <dt>Arriving passively</dt>
