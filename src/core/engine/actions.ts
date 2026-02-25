@@ -2407,38 +2407,8 @@ export function performAscension(state: GameState, nowMs: number): GameState {
     {}
   );
 
-  // Carry-over narration should remain in history but stay out of the new run's active omen surface.
-  const carryoverOmenAt = Math.max(0, nowMs - 1);
-
-  const withAscensionOmen = appendOmen(
-    withAscensionMemory,
-    carryoverOmenAt,
-    "ascension",
-    "You carried remembrance through the fracture into a younger world."
-  );
-
-  const withDevotionMemoryOmen =
-    nextPrestige.dominantDevotionPath === "none"
-      ? withAscensionOmen
-      : appendOmen(
-          withAscensionOmen,
-          carryoverOmenAt,
-          "devotion",
-          `A trace of ${getDevotionPathLabel(nextPrestige.dominantDevotionPath)} survived the fracture.`
-        );
-
-  const withPantheon = ensurePantheonInitialized(withDevotionMemoryOmen, carryoverOmenAt);
-  if (initializedGhost.activeInfluences.length <= 0) {
-    return withPantheon;
-  }
-
-  const lead = initializedGhost.activeInfluences[0];
-  return appendOmen(
-    withPantheon,
-    carryoverOmenAt,
-    "ghostEcho",
-    `${lead.title} followed you through the fracture.`
-  );
+  // Fresh runs should start with a clean active omen log surface.
+  return ensurePantheonInitialized(withAscensionMemory, nowMs);
 }
 
 export function canAdvanceEraOneToTwo(state: GameState): boolean {

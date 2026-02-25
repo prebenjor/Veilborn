@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { formatResource } from "../../core/ui/numberFormat";
 
 interface OmenEntry {
@@ -31,9 +31,15 @@ export function PersistentRightPanel({
   onResolveDoubtChoice,
   statsContent
 }: PersistentRightPanelProps) {
+  const [omensExpanded, setOmensExpanded] = useState(false);
+  const [statsExpanded, setStatsExpanded] = useState(false);
+  const previewCount = era === 1 ? 8 : 10;
+  const canExpandOmens = omenEntries.length > previewCount;
+  const visibleOmens = omensExpanded || !canExpandOmens ? omenEntries : omenEntries.slice(0, previewCount);
+
   return (
-    <aside className="hidden rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-veil/80 shadow-veil backdrop-blur-sm min-[800px]:sticky min-[800px]:top-8 min-[800px]:flex min-[800px]:h-[calc(100vh-4rem)] min-[800px]:w-[240px] min-[800px]:shrink-0 min-[800px]:flex-col lg:w-[300px]">
-      <section className="flex min-h-0 flex-[3] flex-col">
+    <aside className="hidden rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-veil/80 shadow-veil backdrop-blur-sm min-[800px]:sticky min-[800px]:top-8 min-[800px]:flex min-[800px]:w-[240px] min-[800px]:shrink-0 min-[800px]:flex-col lg:w-[300px]">
+      <section className="flex flex-col">
         <h2 className="text-xs uppercase tracking-[0.25em] text-veil/80">{omenTitle}</h2>
         {era === 1 && activeDoubtEvent ? (
           <div className="mt-2 rounded-lg border border-white/20 bg-black/30 p-3">
@@ -60,16 +66,36 @@ export function PersistentRightPanel({
             </div>
           </div>
         ) : null}
-        <ul className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 text-[12px] text-veil/75">
-          {omenEntries.map((entry) => (
+        <ul className="mt-2 space-y-1 pr-1 text-[12px] text-veil/75">
+          {visibleOmens.map((entry) => (
             <li key={entry.id}>{entry.text}</li>
           ))}
         </ul>
+        {canExpandOmens ? (
+          <button
+            type="button"
+            onClick={() => setOmensExpanded((current) => !current)}
+            className="mt-2 self-start rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+          >
+            {omensExpanded
+              ? "Collapse murmurs"
+              : `Expand murmurs (${formatResource(omenEntries.length - visibleOmens.length)} more)`}
+          </button>
+        ) : null}
       </section>
 
       <div className="my-4 border-t border-white/10" />
 
-      <section className="min-h-0 flex-[2] overflow-y-auto pr-1">{statsContent}</section>
+      <section className="pr-1">
+        <button
+          type="button"
+          onClick={() => setStatsExpanded((current) => !current)}
+          className="rounded border border-white/20 px-2 py-0.5 text-[10px] tracking-[0.16em] text-veil/75 transition hover:border-veil/70 hover:text-white"
+        >
+          {statsExpanded ? "HIDE STATS" : "SHOW STATS"}
+        </button>
+        {statsExpanded ? <div className="mt-2">{statsContent}</div> : null}
+      </section>
     </aside>
   );
 }
