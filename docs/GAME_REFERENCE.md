@@ -76,15 +76,10 @@ Components:
 
 - `prophetOutput = 2 + totalDomainLevel * 0.1`
 - `domainMultiplier = 1 + totalDomainLevel * 0.15`
-- `faithDecay = max(floor, 0.95^(minutesSinceLastEventAdjusted))`
 - `cultOutput = prophets * followers * 0.08 * domainSynergy`
 - `domainSynergy = (1 + 0.25 * matchingPairs) * architecture/final-choice/ghost adjustments`
 - `veilBonus = 1 + ((100 - veil) * 0.008)`
 - `followerTrickle = followers * 0.002`
-
-Faith floor:
-- base `0.0`
-- `0.8` with echo bonus `faithFloor`
 
 ### Influence Economy
 
@@ -176,7 +171,7 @@ Path effects (stack + momentum scaled):
 - `Fervour`: act return multiplier and Era III miracle gain multiplier
 - `Accord`: cult output multiplier and Era III domain synergy bonus
 - `Reverence`: Era III veil erosion reduction multiplier
-- `Ardour`: Era III prophet output multiplier and faith-decay pressure reduction
+- `Ardour`: Era III prophet output multiplier
 
 ### Era I Moments of Doubt
 
@@ -273,7 +268,7 @@ Suppress:
 
 Active in era `3` only, and disabled if civilization health `<= 0`.
 
-`rate = (0.35*cults + 0.25*shrines + 0.05*prophets) * faithDecay * (civHealth/100) * veilZoneMult`
+`rate = (0.35*cults + 0.25*shrines + 0.05*prophets) * (civHealth/100) * veilZoneMult`
 
 Veil zone multiplier:
 - veil `>55`: `0.8`
@@ -308,7 +303,6 @@ Follower gain multiplier includes:
 - cult count, shrine count, prophet count
 - matching domain pairs
 - total domain level
-- faith decay
 - civilization health
 - veil zone
 - lineage conversion modifier
@@ -394,12 +388,12 @@ Unraveling:
 
 Ascension echo gain:
 
-`floor(sqrt(totalBeliefEarned / 150000))`
+`floor(sqrt(totalBeliefEarned / 750000))`
 
 Echo trees:
 - `whispers`, `doctrine`, `cataclysm`
 - max rank `5`
-- rank costs: `1, 2, 3, 5, 8`
+- rank costs: `2, 5, 9, 14, 20`
 - post-ascension Era I includes a `Legacy Echoes` quick-spend panel so Echoes can be invested before returning to Era III
 
 Domain carry:
@@ -432,7 +426,6 @@ Implemented:
 - active ghost influence deltas:
   - domain synergy
   - rival spawn interval
-  - faith decay pressure
 
 Core game remains complete without imported signatures.
 
@@ -442,15 +435,6 @@ Implemented:
 - architecture rule selectors (belief/civilization/domain)
 - remembrance letter tracking and unlock sync
 - final choice invocation path
-
-### Audio System
-
-Tone.js audio engine implemented with:
-- per-domain layers (fire/death/harvest/storm/memory/void)
-- instability-driven detune/dropout/filtering
-- era + domain-level driven tempo range
-- low-veil drone in era III
-- mute + silent fallback + preference persistence
 
 ### UI and Era Disclosure
 
@@ -521,7 +505,7 @@ Stats surface:
 - devotion path + stack line (path appears in Era II+)
 - influence source breakdown
 - run history (includes cadence summary and era pacing durations for ascended runs)
-- audio controls
+- save archive controls (export/import/restore snapshot)
 - optional unlockable Dev Tools section for local pacing tests:
   - gate priming (Era I / Era II)
   - jump to Era II / Era III

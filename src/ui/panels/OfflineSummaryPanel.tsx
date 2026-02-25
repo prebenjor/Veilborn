@@ -45,8 +45,6 @@ export function OfflineSummaryPanel({ summary, onDismiss }: OfflineSummaryPanelP
         <dd>{formatSignedResource(summary.followersDelta)}</dd>
         <dt>Influence on return</dt>
         <dd>{formatResource(summary.influenceAfter)}</dd>
-        <dt>Faith decay now</dt>
-        <dd>{`x${formatResource(summary.faithDecayMultiplier, 2)}`}</dd>
       </dl>
     </section>
   );

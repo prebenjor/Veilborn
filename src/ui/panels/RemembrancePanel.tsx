@@ -29,8 +29,8 @@ const BELIEF_RULE_OPTIONS: Array<{
   description: string;
 }> = [
   { id: "orthodox", label: "Orthodox", description: "Balanced Belief output." },
-  { id: "fervor", label: "Fervor", description: "Higher Belief, harsher faith decay." },
-  { id: "litany", label: "Litany", description: "Lower Belief, gentler faith decay." }
+  { id: "fervor", label: "Fervor", description: "Higher Belief output." },
+  { id: "litany", label: "Litany", description: "Lower Belief output." }
 ];
 
 const CIV_RULE_OPTIONS: Array<{

@@ -61,7 +61,7 @@ Objective: Implement active numerical model from manifesto.
 
 Deliverables:
 - Belief generation stack (uncapped).
-- Faith decay with Echo floor behavior.
+- Belief flow without idle-decay penalties.
 - Influence cap/regen and action costs.
 - Prophet threshold scaling and cult cost scaling.
 - Domain XP/level/investment formulas.
@@ -121,7 +121,6 @@ Deliverables:
 - Offline delta simulation with 8h cap and 85% Belief efficiency.
 - Offline rules:
   - Influence resets to 50% max.
-  - Faith decay applies.
   - Rival drain at 50%.
   - No rival spawns.
   - No miracle/collapse processing.
@@ -139,9 +138,9 @@ Objective: Prestige loop with meaningful run-to-run transformation.
 
 Deliverables:
 - Ascension reset pipeline.
-- Echo gain calculation using Revision B divisor (150000).
-- Echo trees and Fibonacci rank costs.
-- Early bottleneck-fix upgrades (start_inf, prophet_threshold, faith_floor, etc.).
+- Echo gain calculation using current divisor (750000).
+- Echo trees and stepped rank costs.
+- Early bottleneck-fix upgrades (start_inf, prophet_threshold, resonant_word, etc.).
 
 Definition of Done:
 - Run 2 feels structurally different, not just numerically faster.
@@ -190,6 +189,10 @@ Definition of Done:
 ## M11 - Audio as System Feedback
 
 Objective: Convert domain and stability state into audible signal.
+
+Notes:
+- Historical milestone retained for record.
+- Audio surfaces were later removed from active runtime UX.
 
 Deliverables:
 - Tone.js layer mapping domains to instruments.
@@ -324,7 +327,7 @@ Deliverables:
   - Cult-heavy behavior pulls toward `Accord`
 - Era III path crystallization into:
   - `Fervour`, `Accord`, `Reverence`, `Ardour`
-- Distinct per-path mechanical effects (acts/miracles, cults/domains, Veil resilience, faith stability).
+- Distinct per-path mechanical effects (acts/miracles, cults/domains, Veil resilience, prophet throughput).
 - Path switching requires sustained behavioral change (not instantaneous).
 - Omen log announces path shifts in-world.
 - Run 2+ lineage memory grants one starting stack toward prior dominant path.
@@ -416,7 +419,7 @@ Notes:
 
 Deliverables:
 - Convergence flag unlocked after completing Remembrance path once.
-- Ghost interference layer: imported or locally-generated prior-run signatures passively alter domain synergy, faith decay timing, and rival spawn patterns in the active run.
+- Ghost interference layer: imported or locally-generated prior-run signatures passively alter domain synergy, belief pressure timing, and rival spawn patterns in the active run.
 - Accumulated betrayal/alliance history produces Pantheon disposition modifiers that compound across Convergence runs.
 - Convergence-only omen log entries that reference prior-run events by name.
 - Convergence does not alter core formulas or gate conditions; pressure is narrative and systemic, not numerical inflation.

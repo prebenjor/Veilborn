@@ -51,9 +51,6 @@ import {
   PASSIVE_FOLLOWER_VEIL_DANGER_MULTIPLIER,
   PASSIVE_FOLLOWER_VEIL_OPTIMAL_MULTIPLIER,
   PASSIVE_FOLLOWER_VEIL_SAFE_MULTIPLIER,
-  FAITH_DECAY_BASE,
-  FAITH_DECAY_ECHO_FLOOR,
-  FAITH_DECAY_FLOOR,
   GHOST_BONUS_BASE,
   INFLUENCE_BASE_CAP,
   INFLUENCE_BASE_REGEN_PER_SECOND,
@@ -171,7 +168,6 @@ export interface PantheonAllianceFactors {
 export interface GhostInfluenceTotals {
   domainSynergyDelta: number;
   rivalSpawnDelta: number;
-  faithDecayDelta: number;
 }
 
 export interface InfluenceRegenBreakdown {
@@ -243,7 +239,6 @@ interface DevotionPathModifiers {
   cultOutputMultiplier: number;
   domainSynergyBonus: number;
   prophetOutputMultiplier: number;
-  faithDecayMinutesMultiplier: number;
   veilErosionMultiplier: number;
 }
 
@@ -262,7 +257,6 @@ function getDefaultDevotionPathModifiers(): DevotionPathModifiers {
     cultOutputMultiplier: 1,
     domainSynergyBonus: 0,
     prophetOutputMultiplier: 1,
-    faithDecayMinutesMultiplier: 1,
     veilErosionMultiplier: 1
   };
 }
@@ -320,10 +314,6 @@ function getDevotionPathModifiers(state: GameState): DevotionPathModifiers {
 
   if (path === "ardour") {
     modifiers.prophetOutputMultiplier = (1 + stacks * 0.03) * momentumScale;
-    modifiers.faithDecayMinutesMultiplier = Math.max(
-      0.52,
-      1 - stacks * 0.1 - Math.min(0.12, momentumScore * 0.004)
-    );
     return modifiers;
   }
 
@@ -346,12 +336,6 @@ function getFinalChoiceCivilizationModifier(state: GameState): number {
   if (state.prestige.remembrance.finalChoice === "remember") return 0.88;
   if (state.prestige.remembrance.finalChoice === "forget") return 1.12;
   return 1;
-}
-
-function getFinalChoiceFaithPressure(state: GameState): number {
-  if (state.prestige.remembrance.finalChoice === "remember") return 0.06;
-  if (state.prestige.remembrance.finalChoice === "forget") return -0.06;
-  return 0;
 }
 
 export function isArchitectureUnlocked(state: GameState): boolean {
@@ -382,7 +366,7 @@ export function getArchitectureCivilizationModifier(state: GameState): number {
 const WHISPERS_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
   "startInf",
   "prophetThreshold",
-  "faithFloor",
+  "resonantWord",
   "era1Gate",
   "rivalWeaken"
 ];
@@ -412,7 +396,6 @@ const TREE_UNLOCKS: Record<EchoTreeId, Array<keyof EchoBonuses>> = {
 export function getEchoBonusesFromTreeRanks(treeRanks: EchoTreeRanks): EchoBonuses {
   const bonuses: EchoBonuses = {
     startInf: false,
-    faithFloor: false,
     prophetThreshold: false,
     resonantWord: false,
     cultCostBase: false,
@@ -436,9 +419,6 @@ export function getEchoBonusesFromTreeRanks(treeRanks: EchoTreeRanks): EchoBonus
       bonuses[unlocks[i]] = true;
     }
   }
-
-  // Resonant Word unlocks at rank 3 on the whispers tree (cost: 3 echoes).
-  bonuses.resonantWord = Math.max(0, Math.min(ECHO_TREE_MAX_RANK, treeRanks.whispers)) >= 3;
 
   return bonuses;
 }
@@ -546,25 +526,6 @@ export function getDomainMultiplier(totalDomainLevel: number): number {
   return 1 + DOMAIN_MULTIPLIER_SCALE * totalDomainLevel;
 }
 
-export function getFaithDecay(state: GameState, nowMs: number): number {
-  const minutesSinceLastEvent = Math.max(0, (nowMs - state.activity.lastEventAt) / 60000);
-  const ghostInfluence = getGhostInfluenceTotals(state);
-  let architecturePressure = 0;
-  if (isArchitectureUnlocked(state)) {
-    if (state.prestige.architecture.beliefRule === "fervor") architecturePressure += 0.08;
-    if (state.prestige.architecture.beliefRule === "litany") architecturePressure -= 0.08;
-  }
-  architecturePressure += getFinalChoiceFaithPressure(state);
-
-  const adjustedMinutes =
-    minutesSinceLastEvent *
-    Math.max(0.25, 1 + ghostInfluence.faithDecayDelta + architecturePressure) *
-    getDevotionPathModifiers(state).faithDecayMinutesMultiplier;
-  const baseDecay = Math.pow(FAITH_DECAY_BASE, adjustedMinutes);
-  const floor = state.echoBonuses.faithFloor ? FAITH_DECAY_ECHO_FLOOR : FAITH_DECAY_FLOOR;
-  return Math.max(floor, baseDecay);
-}
-
 export function getDomainSynergy(state: GameState): number {
   const devotionModifiers = getDevotionPathModifiers(state);
   const baseSynergy =
@@ -593,6 +554,7 @@ function getFollowerRiteVeilZoneMultiplier(veil: number): number {
 }
 
 export function getPassiveFollowerRate(state: GameState, nowMs: number): number {
+  void nowMs;
   if (state.era < 3) return 0;
   if (state.cataclysm.civilizationHealth <= 0) return 0;
 
@@ -602,10 +564,9 @@ export function getPassiveFollowerRate(state: GameState, nowMs: number): number 
     PASSIVE_FOLLOWER_RATE_PER_PROPHET * state.prophets;
   if (baseRate <= 0) return 0;
 
-  const faithDecay = getFaithDecay(state, nowMs);
   const civHealthMultiplier = Math.max(0, state.cataclysm.civilizationHealth / 100);
   const veilZoneMultiplier = getPassiveFollowerVeilZoneMultiplier(state.resources.veil);
-  return Math.max(0, baseRate * faithDecay * civHealthMultiplier * veilZoneMultiplier);
+  return Math.max(0, baseRate * civHealthMultiplier * veilZoneMultiplier);
 }
 
 export function getFollowerRiteUses(state: GameState, type: FollowerRiteType): number {
@@ -630,6 +591,7 @@ export function getFollowerRiteFollowerGain(
   type: FollowerRiteType,
   nowMs: number
 ): number {
+  void nowMs;
   if (state.era < 3) return 0;
   if (state.cults <= 0) return 0;
   if (state.cataclysm.civilizationHealth <= 0) return 0;
@@ -642,7 +604,6 @@ export function getFollowerRiteFollowerGain(
     state.prophets * FOLLOWER_RITE_PER_PROPHET_SCALE +
     state.matchingDomainPairs * FOLLOWER_RITE_PER_DOMAIN_PAIR_SCALE +
     getTotalDomainLevel(state) * FOLLOWER_RITE_PER_DOMAIN_LEVEL_SCALE;
-  const faithDecay = getFaithDecay(state, nowMs);
   const civHealthMultiplier = Math.max(0, Math.min(1, state.cataclysm.civilizationHealth / 100));
   const veilMultiplier = getFollowerRiteVeilZoneMultiplier(state.resources.veil);
   const lineageMultiplier = getLineageConversionModifier(state);
@@ -651,7 +612,6 @@ export function getFollowerRiteFollowerGain(
     Math.floor(
       baseFollowers *
         infrastructureMultiplier *
-        faithDecay *
         civHealthMultiplier *
         veilMultiplier *
         lineageMultiplier
@@ -699,13 +659,13 @@ function getFollowerBeliefTrickle(state: GameState): number {
 }
 
 export function getBeliefGenerationBreakdown(state: GameState, nowMs: number): BeliefGenerationBreakdown {
+  void nowMs;
   const totalDomainLevel = getTotalDomainLevel(state);
   const prophetOutput = getProphetOutput(totalDomainLevel, state);
   const domainMultiplier = getDomainMultiplier(totalDomainLevel);
-  const faithDecay = getFaithDecay(state, nowMs);
   const domainSynergy = getDomainSynergy(state);
 
-  const prophetStack = state.prophets * prophetOutput * domainMultiplier * faithDecay;
+  const prophetStack = state.prophets * prophetOutput * domainMultiplier;
   const cultStack = getCultOutput(state) * domainSynergy;
   const followerTrickle = getFollowerBeliefTrickle(state);
 
@@ -1120,8 +1080,7 @@ export function getGhostInfluenceTotals(state: GameState): GhostInfluenceTotals 
   if (state.ghost.activeInfluences.length <= 0) {
     return {
       domainSynergyDelta: 0,
-      rivalSpawnDelta: 0,
-      faithDecayDelta: 0
+      rivalSpawnDelta: 0
     };
   }
 
@@ -1129,20 +1088,17 @@ export function getGhostInfluenceTotals(state: GameState): GhostInfluenceTotals 
     (accumulator, influence) => {
       accumulator.domainSynergyDelta += influence.domainSynergyDelta;
       accumulator.rivalSpawnDelta += influence.rivalSpawnDelta;
-      accumulator.faithDecayDelta += influence.faithDecayDelta;
       return accumulator;
     },
     {
       domainSynergyDelta: 0,
-      rivalSpawnDelta: 0,
-      faithDecayDelta: 0
+      rivalSpawnDelta: 0
     }
   );
 
   return {
     domainSynergyDelta: Math.max(-0.25, Math.min(0.25, totals.domainSynergyDelta)),
-    rivalSpawnDelta: Math.max(-0.3, Math.min(0.3, totals.rivalSpawnDelta)),
-    faithDecayDelta: Math.max(-0.2, Math.min(0.2, totals.faithDecayDelta))
+    rivalSpawnDelta: Math.max(-0.3, Math.min(0.3, totals.rivalSpawnDelta))
   };
 }
 

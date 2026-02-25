@@ -56,7 +56,7 @@
       ],
       "deliverables": [
         "Uncapped Belief generation formula stack",
-        "Faith decay and floor behavior",
+        "Belief flow without idle-decay penalties",
         "Influence cap/regen/cost formulas",
         "Prophet threshold and cult cost scaling",
         "Domain XP and investment formulas"
@@ -131,7 +131,7 @@
       "deliverables": [
         "8h capped offline simulation",
         "85% offline Belief efficiency",
-        "Offline rules for Influence/Veil/Rivals/Faith",
+        "Offline rules for Influence/Veil/Rivals",
         "Return summary (lore + deltas)"
       ],
       "validation": [
@@ -149,7 +149,7 @@
       ],
       "deliverables": [
         "Ascension reset pipeline",
-        "Echo gain formula (divisor 150000)",
+        "Echo gain formula (divisor 750000)",
         "Fibonacci-cost Echo trees",
         "Early bottleneck-fix upgrades"
       ],
@@ -215,6 +215,7 @@
       "dependencies": [
         "M5"
       ],
+      "notes": "Historical milestone retained for record. Audio surfaces were later removed from active runtime UX.",
       "deliverables": [
         "Tone.js domain layers",
         "Instability detune/dropout",
@@ -395,7 +396,7 @@
       "notes": "Run 8+ needs structural novelty beyond compression speed. Convergence is not a difficulty mode — it is a layered game state where prior-run echoes interact in ways that alter the run's shape. Design must not break the 45-minute floor or the ambiguous final choice.",
       "deliverables": [
         "Convergence flag unlocked after completing Remembrance path once",
-        "Ghost interference layer: imported or locally-generated prior-run signatures passively alter domain synergy, faith decay timing, and rival spawn patterns in the active run",
+        "Ghost interference layer: imported or locally-generated prior-run signatures passively alter domain synergy, belief pressure timing, and rival spawn patterns in the active run",
         "Accumulated betrayal/alliance history produces Pantheon disposition modifiers that compound across Convergence runs",
         "Convergence-only omen log entries that reference prior-run events by name",
         "Convergence does not alter core formulas or gate conditions — pressure is narrative and systemic, not numerical inflation",
@@ -599,15 +600,13 @@
     },
     {
       "id": "PF-10",
-      "title": "Faith Decay Visual Indicator",
-      "status": "queued",
+      "title": "Retired: Faith Decay Visual Indicator",
+      "status": "superseded",
       "execute_after": "M20",
+      "notes": "Faith decay system removed from runtime. Do not implement this item.",
       "scope": [
-        "Add a per-prophet or global decay indicator that shows the current faith_decay multiplier",
-        "Visual should pulse or shift color as decay approaches penalty threshold, not just display a raw number",
-        "Indicator must appear only after faith decay has been mechanically explained to the player (Era I, first decay event)",
-        "Tooltip on hover: show time since last event and current multiplier value",
-        "Keep indicator compact; it must not dominate the HUD"
+        "Faith decay mechanic was removed from runtime",
+        "Any future indicator work should target active mechanics only"
       ]
     },
     {
@@ -684,7 +683,7 @@
         "Offline return summary should lead with a single evocative in-world sentence before showing deltas",
         "Deltas presented in order of narrative weight: followers, prophets, veil change, belief gained",
         "Avoid showing raw seconds elapsed; use human-readable duration (e.g., '3 hours, 14 minutes')",
-        "If faith decay dropped significantly offline, surface that prominently as a priority action for return",
+        "If Veil stability or follower flow changed significantly offline, surface that prominently as a priority action for return",
         "Summary screen should be dismissible with one tap/click and not reappear until next offline session"
       ]
     },

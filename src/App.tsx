@@ -78,7 +78,6 @@ import {
   getPassiveFollowerRate,
   getRivalSpawnIntervalMs,
   getTotalRivalStrength,
-  getTotalDomainLevel,
   getUnravelingGateStatus,
   getPantheonAllianceFactors,
   hasPantheonBetrayalHook,
@@ -113,7 +112,6 @@ import {
   type DoubtEventView,
   type DoubtSessionState
 } from "./core/engine/doubtEvents";
-import { useVeilAudio } from "./core/audio/useVeilAudio";
 import {
   DOMAIN_LABELS,
   MIRACLE_TIERS,
@@ -216,33 +214,33 @@ const ECHO_TREE_META: Array<{
     id: "whispers",
     label: "Whisper Roots",
     unlocks: [
-      "Start Influence",
-      "Prophet Threshold",
-      "Faith Floor + Resonant Word",
-      "Era I Gate Ease",
-      "Rival Weaken"
+      "Start each run with +50 Influence",
+      "Lower Prophet threshold: 50 -> 20 followers",
+      "Resonant Word: +2.0 Influence/s",
+      "Era I Belief gate multiplier: x0.70",
+      "Rivals weakened by 20%"
     ]
   },
   {
     id: "doctrine",
     label: "Doctrine Roots",
     unlocks: [
-      "Cult Cost Base",
-      "Rival Delay",
-      "Act Floor",
-      "Act Discount",
-      "Era II Gate Ease"
+      "Lower Cult base cost: 500 -> 350",
+      "Rival spawn interval: +60s",
+      "Act return floor: 1.0x -> 1.5x",
+      "Act costs: x0.85",
+      "Era II Belief gate multiplier: x0.75"
     ]
   },
   {
     id: "cataclysm",
     label: "Cataclysm Roots",
     unlocks: [
-      "Veil Regen",
-      "Miracle Veil Discount",
-      "Collapse Threshold",
-      "Collapse Immunity",
-      "Civilization Rebuild"
+      "Veil base regen: 1/120s -> 1/80s",
+      "Whisper of Providence Veil cost: 10 -> 5",
+      "Veil collapse threshold: 15 -> 8",
+      "Veil collapse immunity: 30s",
+      "Civilization rebuild timer: x0.60"
     ]
   }
 ];
@@ -829,32 +827,7 @@ export default function App() {
   const canAdvanceEraOne = canAdvanceEraOneToTwo(gameState);
   const canAdvanceEraTwo = canAdvanceEraTwoToThree(gameState);
   const canUseAscend = canAscend(gameState);
-  const totalDomainLevel = getTotalDomainLevel(gameState);
   const domainSynergy = getDomainSynergy(gameState);
-
-  const { controls: audioControls, enableAudio, disableAudio, toggleMute, useSilentFallback } =
-    useVeilAudio({
-      era: gameState.era,
-      veil: gameState.resources.veil,
-      civilizationHealth: gameState.cataclysm.civilizationHealth,
-      civilizationCollapsed: gameState.cataclysm.civilizationCollapsed,
-      rivalCount: gameState.doctrine.rivals.length,
-      totalDomainLevel,
-      domains: gameState.domains.reduce(
-        (accumulator, domain) => {
-          accumulator[domain.id] = domain.level;
-          return accumulator;
-        },
-        {
-          fire: 0,
-          death: 0,
-          harvest: 0,
-          storm: 0,
-          memory: 0,
-          void: 0
-        } satisfies Record<DomainId, number>
-      )
-    });
 
   const echoTreeViews = ECHO_TREE_META
     .filter((tree) => {
@@ -871,7 +844,8 @@ export default function App() {
         rank,
         nextCost,
         canPurchase: canPurchaseEchoTreeRank(gameState, tree.id),
-        unlockedBonuses: tree.unlocks.slice(0, rank)
+        unlockedBonuses: tree.unlocks.slice(0, rank),
+        nextBonus: rank < tree.unlocks.length ? tree.unlocks[rank] : null
       };
     });
 
@@ -1910,24 +1884,19 @@ export default function App() {
       echoes={gameState.prestige.echoes}
       lifetimeEchoes={gameState.prestige.lifetimeEchoes}
       completedRuns={gameState.prestige.completedRuns}
+      totalBeliefEarned={gameState.stats.totalBeliefEarned}
       ascensionEchoGain={ascensionEchoGain}
       canAscend={canUseAscend}
       treeViews={echoTreeViews}
       ghostLocalCount={gameState.ghost.localSignatures.length}
       ghostImportedCount={gameState.ghost.importedSignatures.length}
       ghostImportStatus={ghostImportStatus}
-      saveImportStatus={saveImportStatus}
-      saveImportWarnings={saveImportWarnings}
-      snapshotLabel={formatSnapshotLabel(snapshotMeta)}
       ghostInfluenceTotals={ghostInfluenceTotals}
       ghostInfluences={gameState.ghost.activeInfluences}
       onPurchaseTree={onPurchaseEchoTreeRank}
       onAscend={onAscend}
       onExportGhostSignatures={onExportGhostSignatures}
       onImportGhostSignatures={onImportGhostSignatures}
-      onExportSave={onExportSave}
-      onImportSave={onImportSave}
-      onRestoreSnapshot={onRestoreSnapshot}
     />
   ) : (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
@@ -1999,12 +1968,13 @@ export default function App() {
     passiveFollowerRate,
     rivalFollowerDrainPerSecond: rivalDrainPerSecond,
     runHistory: telemetryRunSummaries,
+    snapshotLabel: formatSnapshotLabel(snapshotMeta),
+    saveImportStatus,
+    saveImportWarnings,
     telemetryStatus,
-    audioControls,
-    onEnableAudio: enableAudio,
-    onDisableAudio: disableAudio,
-    onToggleAudioMute: toggleMute,
-    onUseAudioFallback: useSilentFallback,
+    onExportSave,
+    onImportSave,
+    onRestoreSnapshot,
     onExportTelemetry,
     onDumpTelemetryToConsole,
     devToolsEnabled,

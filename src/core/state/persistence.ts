@@ -58,7 +58,6 @@ import {
   getCivilizationRegenPerSecond,
   getCultOutput,
   getEchoBonusesFromTreeRanks,
-  getFaithDecay,
   getInfluenceCap,
   getMiracleReserveCap,
   getPassiveFollowerRate,
@@ -86,7 +85,6 @@ export interface OfflineProgressSummary {
   veilDelta: number;
   followersDelta: number;
   influenceAfter: number;
-  faithDecayMultiplier: number;
   veilFloorHit: boolean;
 }
 
@@ -492,8 +490,7 @@ function sanitizeGhostInfluences(value: unknown, fallback: GhostInfluence[]): Gh
         description: readString(entry.description, "An old echo lingers."),
         dominantDomain,
         domainSynergyDelta: readNumber(entry.domainSynergyDelta, 0),
-        rivalSpawnDelta: readNumber(entry.rivalSpawnDelta, 0),
-        faithDecayDelta: readNumber(entry.faithDecayDelta, 0)
+        rivalSpawnDelta: readNumber(entry.rivalSpawnDelta, 0)
       } satisfies GhostInfluence;
     })
     .filter((entry): entry is GhostInfluence => Boolean(entry));
@@ -561,9 +558,11 @@ function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses
   if (!isRecord(value)) return fallback;
   return {
     startInf: readBoolean(value.startInf, fallback.startInf),
-    faithFloor: readBoolean(value.faithFloor, fallback.faithFloor),
     prophetThreshold: readBoolean(value.prophetThreshold, fallback.prophetThreshold),
-    resonantWord: readBoolean(value.resonantWord, fallback.resonantWord),
+    resonantWord: readBoolean(
+      value.resonantWord,
+      readBoolean(value.faithFloor, fallback.resonantWord)
+    ),
     cultCostBase: readBoolean(value.cultCostBase, fallback.cultCostBase),
     era1Gate: readBoolean(value.era1Gate, fallback.era1Gate),
     era2Gate: readBoolean(value.era2Gate, fallback.era2Gate),
@@ -657,7 +656,7 @@ function inferTreeRanksFromEchoBonuses(bonuses: EchoBonuses): {
     whispers: inferTreeRankFromBonuses(bonuses, [
       "startInf",
       "prophetThreshold",
-      "faithFloor",
+      "resonantWord",
       "era1Gate",
       "rivalWeaken"
     ]),
@@ -1013,8 +1012,6 @@ function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameState
     nowMs
   );
 
-  const faithDecayMultiplier = getFaithDecay(nextState, nowMs);
-
   return {
     state: nextState,
     offlineSummary: {
@@ -1024,7 +1021,6 @@ function simulateOfflineProgress(state: GameState, nowMs: number): LoadGameState
       veilDelta,
       followersDelta,
       influenceAfter,
-      faithDecayMultiplier,
       veilFloorHit
     },
     recoveryNotice: null,

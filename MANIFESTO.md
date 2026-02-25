@@ -43,13 +43,13 @@ Four core resources, each with a distinct role:
 4. Echoes
 - Prestige memory currency across runs.
 - Should feel high-value and strategic.
-- Upgrade costs follow Fibonacci progression.
+- Upgrade costs use stepped scaling to preserve multi-run planning.
 
 ## Core Belief Generation (Uncapped)
 
 Active formula:
 
-`B/s = [sum(prophet_output * domain_multiplier * faith_decay) + sum(cult_output * domain_synergy) + follower_trickle] * veil_bonus * ghost_bonus * pantheon_modifier * architecture_belief_modifier`
+`B/s = [sum(prophet_output * domain_multiplier) + sum(cult_output * domain_synergy) + follower_trickle] * veil_bonus * ghost_bonus * pantheon_modifier * architecture_belief_modifier`
 
 No post-formula softcap modifier is applied.
 Output growth is controlled by scaling costs and systemic pressure, not hidden multipliers.
@@ -59,9 +59,6 @@ Output growth is controlled by scaling costs and systemic pressure, not hidden m
 `prophet_output = 2 + (total_domain_level * 0.1)`
 
 `domain_multiplier = 1 + (0.15 * total_domain_level)`
-
-`faith_decay = 0.95^(minutes_since_last_event)`
-- Floor: `0.0`, or `0.80` with Echo upgrade `faith_floor`.
 
 `cult_output = prophet_count * follower_count * 0.08 * domain_synergy`
 
@@ -79,8 +76,6 @@ Passive floor term:
 `pantheon_modifier = 1.0` if no active alliance, else alliance share/bonus modifier from Pantheon state.
 
 `architecture_belief_modifier = architecture_belief_rule_modifier * final_choice_belief_modifier`
-
-Faith decay is mandatory engagement pressure, especially in Era I.
 
 ## Follower and Prophet Economy
 
@@ -135,7 +130,7 @@ Path effect layer (multipliers are stack-scaled and momentum-weighted):
 - `Fervour`: `act_return *= (1 + 0.05 * stacks) * momentum_scale`; in Era III also `miracle_gain *= (1 + 0.06 * stacks) * momentum_scale`
 - `Accord`: `cult_output *= (1 + 0.03 * stacks) * momentum_scale`; in Era III also `domain_synergy *= (1 + 0.02 * stacks + min(0.08, momentum * 0.002))`
 - `Reverence` (Era III): `veil_erosion *= max(0.58, 1 - 0.08 * stacks - min(0.1, momentum * 0.003))`
-- `Ardour` (Era III): `prophet_output *= (1 + 0.03 * stacks) * momentum_scale`; `faith_decay_minutes *= max(0.52, 1 - 0.1 * stacks - min(0.12, momentum * 0.004))`
+- `Ardour` (Era III): `prophet_output *= (1 + 0.03 * stacks) * momentum_scale`
 
 ## Influence Economy
 
@@ -232,7 +227,7 @@ Acts must reward engagement without invalidating passive systems.
 
 Passive follower arrival (Era III only):
 
-`passiveFollowerRate = (0.35*cults + 0.25*shrines + 0.05*prophets) * faithDecay * (civHealth/100) * veilZoneMult`
+`passiveFollowerRate = (0.35*cults + 0.25*shrines + 0.05*prophets) * (civHealth/100) * veilZoneMult`
 
 `veilZoneMult`:
 - Veil `>55`: `0.8`
@@ -242,7 +237,7 @@ Passive follower arrival (Era III only):
 Doctrine follower rites (Era III only):
 - Added high-cost rites for active follower bursts in Doctrine panel.
 - Costs scale per-rite by usage count and do not reset on short timers.
-- Rites consume both Belief and Influence and scale from cult/shrine/prophet/domain/faith/veil/civ state.
+- Rites consume both Belief and Influence and scale from cult/shrine/prophet/domain/veil/civ state.
 
 Rite cost formulas:
 
@@ -260,7 +255,7 @@ Constants:
 
 Rite follower gain:
 
-`rite_followers = base_followers[type] * infrastructure_mult * faithDecay * (civHealth/100) * rite_veil_mult * lineage_conversion_modifier`
+`rite_followers = base_followers[type] * infrastructure_mult * (civHealth/100) * rite_veil_mult * lineage_conversion_modifier`
 
 `base_followers[procession] = 180`
 
@@ -370,17 +365,17 @@ Civilization health:
 
 Base Echo gain on ascension:
 
-`base_echoes = floor(sqrt(totalBeliefEarned / 150000))`
+`base_echoes = floor(sqrt(totalBeliefEarned / 750000))`
 
 Revision note:
-- Divisor is `150000` (not 100000) to keep yields in target range under uncapped output.
+- Divisor is `750000` to keep first-ascension yields from trivializing full Echo tree progression.
 
 Optional multiplier:
 
 `final_echoes = floor(base_echoes * (1 + 0.08 * completed_runs))` if `echo_multiplier` is purchased.
 
-Echo costs (Fibonacci ranks):
-- `1, 2, 3, 5, 8` (current 5-rank tree implementation)
+Echo costs (5-rank tree):
+- `2, 5, 9, 14, 20`
 
 ## Era Gates
 
@@ -461,9 +456,6 @@ Followers offline:
 - Rival drain applies at 50% rate.
 - No new rivals spawn.
 
-Faith decay:
-- Applies fully while offline.
-
 Return UX:
 - Present narrative summary first, then compact numeric deltas.
 
@@ -533,7 +525,7 @@ Expanded roadmap commitments:
 - `M21` Devotion Path System expands Era I Devotion into Era II/III path differentiation with lineage memory carryover.
 
 Expanded PF commitments (additions beyond `PF-01` to `PF-07`):
-- `PF-08` through `PF-20` are adopted, including onboarding veil pacing, number legibility, faith-decay indicator, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, and remembrance condition tracking.
+- `PF-08` through `PF-20` are adopted, including onboarding veil pacing, number legibility, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, and remembrance condition tracking.
 
 Sync rule:
 - Any change to milestone or PF definitions must update both `docs/roadmap.json` and this manifesto section in the same change.

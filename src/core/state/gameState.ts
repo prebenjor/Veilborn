@@ -7,17 +7,14 @@ export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
 export const OFFLINE_INFLUENCE_RETURN_RATIO = 0.5;
 export const OFFLINE_RIVAL_DRAIN_MULTIPLIER = 0.5;
 export const OFFLINE_VEIL_FLOOR = 15;
-export const ECHO_ASCENSION_DIVISOR = 150000;
+export const ECHO_ASCENSION_DIVISOR = 750000;
 export const ECHO_TREE_MAX_RANK = 5;
-export const ECHO_TREE_RANK_COSTS = [1, 2, 3, 5, 8] as const;
+export const ECHO_TREE_RANK_COSTS = [2, 5, 9, 14, 20] as const;
 export const OMEN_LOG_MAX_ENTRIES = 6;
 
 export const PROPHET_OUTPUT_BASE = 2;
 export const PROPHET_DOMAIN_OUTPUT_SCALE = 0.1;
 export const DOMAIN_MULTIPLIER_SCALE = 0.15;
-export const FAITH_DECAY_BASE = 0.95;
-export const FAITH_DECAY_FLOOR = 0.0;
-export const FAITH_DECAY_ECHO_FLOOR = 0.8;
 export const CULT_OUTPUT_SCALE = 0.08;
 export const DOMAIN_SYNERGY_SCALE = 0.25;
 export const VEIL_BONUS_SCALE = 0.008;
@@ -319,7 +316,6 @@ export interface RunResources {
 
 export interface EchoBonuses {
   startInf: boolean;
-  faithFloor: boolean;
   prophetThreshold: boolean;
   resonantWord: boolean;
   cultCostBase: boolean;
@@ -441,7 +437,6 @@ export interface GhostInfluence {
   dominantDomain: DomainId;
   domainSynergyDelta: number;
   rivalSpawnDelta: number;
-  faithDecayDelta: number;
 }
 
 export interface GhostState {
@@ -599,7 +594,6 @@ export function createDefaultPantheonLegacyState(): PantheonLegacyState {
 export function createDefaultEchoBonuses(): EchoBonuses {
   return {
     startInf: false,
-    faithFloor: false,
     prophetThreshold: false,
     resonantWord: false,
     cultCostBase: false,

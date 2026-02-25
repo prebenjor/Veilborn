@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import {
   ECHO_TREE_MAX_RANK,
+  ECHO_ASCENSION_DIVISOR,
   DOMAIN_LABELS,
   type DomainId,
   type EchoTreeId
@@ -14,6 +15,7 @@ interface EchoTreeView {
   nextCost: number | null;
   canPurchase: boolean;
   unlockedBonuses: string[];
+  nextBonus: string | null;
 }
 
 interface AscensionPanelProps {
@@ -21,19 +23,16 @@ interface AscensionPanelProps {
   echoes: number;
   lifetimeEchoes: number;
   completedRuns: number;
+  totalBeliefEarned: number;
   ascensionEchoGain: number;
   canAscend: boolean;
   treeViews: EchoTreeView[];
   ghostLocalCount: number;
   ghostImportedCount: number;
   ghostImportStatus: string | null;
-  saveImportStatus: string | null;
-  saveImportWarnings: string[];
-  snapshotLabel: string | null;
   ghostInfluenceTotals: {
     domainSynergyDelta: number;
     rivalSpawnDelta: number;
-    faithDecayDelta: number;
   };
   ghostInfluences: Array<{
     id: string;
@@ -46,9 +45,6 @@ interface AscensionPanelProps {
   onAscend: () => void;
   onExportGhostSignatures: () => void;
   onImportGhostSignatures: (file: File) => void;
-  onExportSave: () => void;
-  onImportSave: (file: File) => void;
-  onRestoreSnapshot: () => void;
 }
 
 export function AscensionPanel({
@@ -56,31 +52,29 @@ export function AscensionPanel({
   echoes,
   lifetimeEchoes,
   completedRuns,
+  totalBeliefEarned,
   ascensionEchoGain,
   canAscend,
   treeViews,
   ghostLocalCount,
   ghostImportedCount,
   ghostImportStatus,
-  saveImportStatus,
-  saveImportWarnings,
-  snapshotLabel,
   ghostInfluenceTotals,
   ghostInfluences,
   onPurchaseTree,
   onAscend,
   onExportGhostSignatures,
-  onImportGhostSignatures,
-  onExportSave,
-  onImportSave,
-  onRestoreSnapshot
+  onImportGhostSignatures
 }: AscensionPanelProps) {
   const importInputRef = useRef<HTMLInputElement | null>(null);
-  const saveImportInputRef = useRef<HTMLInputElement | null>(null);
 
   const ghostSynergyPercent = Math.round(ghostInfluenceTotals.domainSynergyDelta * 100);
   const ghostRivalPercent = Math.round(Math.abs(ghostInfluenceTotals.rivalSpawnDelta) * 100);
-  const ghostFaithPercent = Math.round(Math.abs(ghostInfluenceTotals.faithDecayDelta) * 100);
+  const nextEchoTargetBelief = Math.max(
+    0,
+    Math.ceil(Math.pow(ascensionEchoGain + 1, 2) * ECHO_ASCENSION_DIVISOR)
+  );
+  const beliefToNextEcho = Math.max(0, nextEchoTargetBelief - totalBeliefEarned);
   const ghostInfluenceParts: string[] = [];
   if (ghostSynergyPercent !== 0) {
     ghostInfluenceParts.push(`Synergy ${ghostSynergyPercent > 0 ? "+" : ""}${ghostSynergyPercent}%`);
@@ -88,11 +82,6 @@ export function AscensionPanel({
   if (ghostInfluenceTotals.rivalSpawnDelta !== 0) {
     ghostInfluenceParts.push(
       `Rivals ${ghostInfluenceTotals.rivalSpawnDelta < 0 ? "accelerated" : "slowed"} (${ghostRivalPercent}%)`
-    );
-  }
-  if (ghostInfluenceTotals.faithDecayDelta !== 0) {
-    ghostInfluenceParts.push(
-      `Faith decay ${ghostInfluenceTotals.faithDecayDelta > 0 ? "harsher" : "gentler"} (${ghostFaithPercent}%)`
     );
   }
 
@@ -134,6 +123,9 @@ export function AscensionPanel({
                   Unlocked: {tree.unlockedBonuses.join(", ")}
                 </p>
               ) : null}
+              <p className="mt-1 text-xs text-veil/60">
+                {tree.nextBonus ? `Next unlock: ${tree.nextBonus}` : "All unlocks active."}
+              </p>
               <button
                 type="button"
                 disabled={!tree.canPurchase}
@@ -154,6 +146,11 @@ export function AscensionPanel({
       <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
         <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Ascension</p>
         <p className="mt-1 text-sm text-white">This run yields {formatResource(ascensionEchoGain)} Echoes</p>
+        <p className="mt-1 text-xs text-veil/65">
+          {beliefToNextEcho > 0
+            ? `${formatResource(beliefToNextEcho)} total Belief to next Echo`
+            : "Next Echo threshold reached"}
+        </p>
         <p className="mt-1 text-xs text-veil/65">
           {era < 3
             ? "The final fracture remains sealed for now."
@@ -227,52 +224,6 @@ export function AscensionPanel({
         )}
       </div>
 
-      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Save Archive</p>
-        {snapshotLabel ? <p className="mt-1 text-[11px] text-veil/60">Snapshot: {snapshotLabel}</p> : null}
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onExportSave}
-            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
-          >
-            Export Save
-          </button>
-          <button
-            type="button"
-            onClick={() => saveImportInputRef.current?.click()}
-            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
-          >
-            Import Save
-          </button>
-          <button
-            type="button"
-            onClick={onRestoreSnapshot}
-            className="rounded-lg border border-veil/60 px-2 py-1 text-xs text-veil transition hover:bg-veil/10"
-          >
-            Restore Snapshot
-          </button>
-          <input
-            ref={saveImportInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onImportSave(file);
-              event.currentTarget.value = "";
-            }}
-          />
-        </div>
-        {saveImportStatus ? <p className="mt-2 text-xs text-veil/75">{saveImportStatus}</p> : null}
-        {saveImportWarnings.length > 0 ? (
-          <ul className="mt-2 space-y-1 text-[11px] text-ember/80">
-            {saveImportWarnings.map((warning, index) => (
-              <li key={`save-warning-${index}`}>{warning}</li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
     </section>
   );
 }

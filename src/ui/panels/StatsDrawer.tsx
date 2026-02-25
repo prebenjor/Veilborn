@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { formatDurationCompact } from "../../core/ui/timeFormat";
 import { formatResource } from "../../core/ui/numberFormat";
 import { MIRACLE_NAMES } from "../../core/state/gameState";
@@ -59,17 +60,13 @@ interface StatsDrawerProps {
       eraThreeToAscensionSeconds: number | null;
     };
   }>;
+  snapshotLabel: string | null;
+  saveImportStatus: string | null;
+  saveImportWarnings: string[];
   telemetryStatus: string | null;
-  audioControls: {
-    supported: boolean;
-    mode: "idle" | "running" | "fallback" | "error";
-    muted: boolean;
-    message: string | null;
-  };
-  onEnableAudio: () => Promise<void>;
-  onDisableAudio: () => void;
-  onToggleAudioMute: () => void;
-  onUseAudioFallback: () => void;
+  onExportSave: () => void;
+  onImportSave: (file: File) => void;
+  onRestoreSnapshot: () => void;
   onExportTelemetry: () => void;
   onDumpTelemetryToConsole: () => void;
   devToolsEnabled: boolean;
@@ -103,12 +100,13 @@ export function StatsDrawer({
   passiveFollowerRate,
   rivalFollowerDrainPerSecond,
   runHistory,
+  snapshotLabel,
+  saveImportStatus,
+  saveImportWarnings,
   telemetryStatus,
-  audioControls,
-  onEnableAudio,
-  onDisableAudio,
-  onToggleAudioMute,
-  onUseAudioFallback,
+  onExportSave,
+  onImportSave,
+  onRestoreSnapshot,
   onExportTelemetry,
   onDumpTelemetryToConsole,
   devToolsEnabled,
@@ -120,20 +118,13 @@ export function StatsDrawer({
   onDevJumpToEraTwo,
   onDevJumpToEraThree
 }: StatsDrawerProps) {
+  const saveImportInputRef = useRef<HTMLInputElement | null>(null);
   const isEraTwoPlus = era >= 2;
   const isEraThree = era >= 3;
   const devotionStackCount = Math.max(0, Math.min(3, Math.floor(devotionStacks)));
   const devotionDots = [0, 1, 2]
     .map((index) => (index < devotionStackCount ? "●" : "○"))
     .join(" ");
-  const audioStatusLabel =
-    audioControls.mode === "running"
-      ? "Active"
-      : audioControls.mode === "fallback"
-        ? "Silent Fallback"
-        : audioControls.mode === "error"
-          ? "Error"
-          : "Idle";
   const recentRuns = [...runHistory].reverse().slice(0, 5);
   const isEmbedded = presentation === "embedded";
 
@@ -351,6 +342,53 @@ export function StatsDrawer({
       </div>
 
       <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
+        <p className="uppercase tracking-[0.16em] text-veil/80">Save Archive</p>
+        {snapshotLabel ? <p className="mt-1 text-[10px] text-veil/65">Snapshot: {snapshotLabel}</p> : null}
+        <div className="mt-2 flex flex-wrap gap-1">
+          <button
+            type="button"
+            onClick={onExportSave}
+            className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+          >
+            Export Save
+          </button>
+          <button
+            type="button"
+            onClick={() => saveImportInputRef.current?.click()}
+            className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+          >
+            Import Save
+          </button>
+          <button
+            type="button"
+            onClick={onRestoreSnapshot}
+            className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
+          >
+            Restore Snapshot
+          </button>
+          <input
+            ref={saveImportInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onImportSave(file);
+              event.currentTarget.value = "";
+            }}
+          />
+        </div>
+        {saveImportStatus ? <p className="mt-1 text-[10px] text-veil/65">{saveImportStatus}</p> : null}
+        {saveImportWarnings.length > 0 ? (
+          <ul className="mt-1 space-y-1 text-[10px] text-ember/80">
+            {saveImportWarnings.map((warning, index) => (
+              <li key={`stats-save-warning-${index}`}>{warning}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
+      <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
         <p className="uppercase tracking-[0.16em] text-veil/80">Dev Tools</p>
         <p className="mt-1 text-[10px] text-veil/65">{devToolsEnabled ? "Unlocked" : "Locked"}</p>
         <div className="mt-2 flex flex-wrap gap-1">
@@ -412,52 +450,6 @@ export function StatsDrawer({
         {devToolsStatus ? <p className="mt-1 text-[10px] text-veil/65">{devToolsStatus}</p> : null}
       </div>
 
-      <div className="mt-3 border-t border-white/10 pt-2 text-[11px] text-veil/75">
-        <p className="uppercase tracking-[0.16em] text-veil/80">Audio</p>
-        <p className="mt-1">
-          {audioStatusLabel}
-          {audioControls.mode === "running" ? (audioControls.muted ? " (Muted)" : " (Unmuted)") : null}
-        </p>
-        {audioControls.message ? <p className="mt-1 text-ember/80">{audioControls.message}</p> : null}
-        <div className="mt-2 flex flex-wrap gap-1">
-          {audioControls.supported && audioControls.mode !== "running" ? (
-            <button
-              type="button"
-              onClick={() => {
-                void onEnableAudio();
-              }}
-              className="rounded border border-white/25 px-2 py-0.5 text-[10px] text-veil/90 transition hover:border-veil/80 hover:text-white"
-            >
-              Enable
-            </button>
-          ) : null}
-          {audioControls.mode === "running" ? (
-            <>
-              <button
-                type="button"
-                onClick={onToggleAudioMute}
-                className="rounded border border-white/25 px-2 py-0.5 text-[10px] text-veil/90 transition hover:border-veil/80 hover:text-white"
-              >
-                {audioControls.muted ? "Unmute" : "Mute"}
-              </button>
-              <button
-                type="button"
-                onClick={onDisableAudio}
-                className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
-              >
-                Disable
-              </button>
-            </>
-          ) : null}
-          <button
-            type="button"
-            onClick={onUseAudioFallback}
-            className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-veil/75 transition hover:border-veil/70 hover:text-white"
-          >
-            Fallback
-          </button>
-        </div>
-      </div>
     </details>
   );
 }

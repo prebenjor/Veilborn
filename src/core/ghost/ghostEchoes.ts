@@ -100,43 +100,33 @@ function getEffectsText(influence: GhostInfluence): string {
     const direction = influence.rivalSpawnDelta < 0 ? "faster" : "slower";
     pieces.push(`rivals ${direction}`);
   }
-  if (influence.faithDecayDelta !== 0) {
-    const direction = influence.faithDecayDelta > 0 ? "harsher" : "gentler";
-    pieces.push(`faith decay ${direction}`);
-  }
   return pieces.join(", ");
 }
 
 function createInfluenceFromSignature(signature: GhostRunSignature, ordinal: number): GhostInfluence {
   let domainSynergyDelta = 0;
   let rivalSpawnDelta = 0;
-  let faithDecayDelta = 0;
   let title = `${DOMAIN_LABELS[signature.dominantDomain]} Afterimage`;
 
   switch (signature.dominantDomain) {
     case "fire":
       domainSynergyDelta += 0.03;
       rivalSpawnDelta -= 0.1;
-      faithDecayDelta += 0.03;
       title = "Scorched Scripture";
       break;
     case "death":
       domainSynergyDelta += 0.07;
-      faithDecayDelta += 0.05;
       title = "Sepulcher Cant";
       break;
     case "harvest":
       domainSynergyDelta += 0.04;
-      faithDecayDelta -= 0.08;
       title = "Granary Hymn";
       break;
     case "storm":
       rivalSpawnDelta -= 0.12;
-      faithDecayDelta += 0.02;
       title = "Thunder Litany";
       break;
     case "memory":
-      faithDecayDelta -= 0.12;
       domainSynergyDelta += 0.02;
       title = "Echo Chronicle";
       break;
@@ -149,17 +139,14 @@ function createInfluenceFromSignature(signature: GhostRunSignature, ordinal: num
 
   if (signature.miracles >= 4) {
     rivalSpawnDelta -= 0.05;
-    faithDecayDelta += 0.02;
   }
 
   if (signature.betrayals > 0) {
     rivalSpawnDelta -= 0.03;
-    faithDecayDelta += 0.06;
   }
 
   if (signature.veilCollapses >= 2) {
     domainSynergyDelta += 0.05;
-    faithDecayDelta += 0.03;
   }
 
   const influence: GhostInfluence = {
@@ -170,12 +157,14 @@ function createInfluenceFromSignature(signature: GhostRunSignature, ordinal: num
     description: "",
     dominantDomain: signature.dominantDomain,
     domainSynergyDelta: clamp(domainSynergyDelta, -0.18, 0.2),
-    rivalSpawnDelta: clamp(rivalSpawnDelta, -0.2, 0.2),
-    faithDecayDelta: clamp(faithDecayDelta, -0.2, 0.2)
+    rivalSpawnDelta: clamp(rivalSpawnDelta, -0.2, 0.2)
   };
 
   const effectsText = getEffectsText(influence);
-  influence.description = `${signature.label} leaves a ${effectsText} residue.`;
+  influence.description =
+    effectsText.length > 0
+      ? `${signature.label} leaves a ${effectsText} residue.`
+      : `${signature.label} leaves a faint residue.`;
   return influence;
 }
 
