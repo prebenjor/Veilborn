@@ -24,7 +24,9 @@ import {
   ECHO_ASCENSION_DIVISOR,
   ECHO_TREE_MAX_RANK,
   ECHO_TREE_ORDER,
-  ECHO_TREE_RANK_COSTS,
+  ECHO_TREE_COST_BASE,
+  ECHO_TREE_COST_EXPONENT,
+  ECHO_TREE_COST_LINEAR_SCALE,
   ERA_ONE_BELIEF_GATE_BASE,
   ERA_ONE_FOLLOWER_GATE,
   ERA_ONE_GATE_ECHO_MULTIPLIER,
@@ -75,6 +77,7 @@ import {
   MIRACLE_RESERVE_PER_PROPHET,
   MIRACLE_RESERVE_PER_SHRINE,
   MIRACLE_RESERVE_START_BONUS,
+  MIRACLE_RESERVE_ECHO_BONUS_PER_RANK,
   FOLLOWER_RITE_BASE_BELIEF_COST,
   FOLLOWER_RITE_BASE_FOLLOWERS,
   FOLLOWER_RITE_BASE_INFLUENCE_COST,
@@ -116,8 +119,31 @@ import {
   VEIL_REGEN_PER_SHRINE_SECONDS,
   VEIL_REGEN_SHRINE_DIMINISHING_SCALE,
   WHISPER_BASE_COST,
+  WHISPER_BASE_COST_SURCHARGE,
+  WHISPER_BASE_FAIL_CHANCE,
+  WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER,
+  WHISPER_FOLLOWER_GAIN,
+  WHISPER_BOOSTED_COST_MULTIPLIER,
+  WHISPER_BOOSTED_FAIL_CHANCE,
+  WHISPER_BOOSTED_FOLLOWER_MULTIPLIER,
+  WHISPER_CULTS_BASE_COOLDOWN_MS,
+  WHISPER_CULTS_BOOSTED_COOLDOWN_MS,
+  WHISPER_FAIL_FOLLOWER_MULTIPLIER,
+  WHISPER_ASCENSION_FAIL_MULTIPLIER,
+  WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS,
+  WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS,
+  WHISPER_ECHO_FAIL_REDUCTION_MAX,
+  WHISPER_ECHO_FAIL_REDUCTION_PER_RANK,
+  WHISPER_ECHO_YIELD_BONUS_MAX,
+  WHISPER_ECHO_YIELD_BONUS_PER_RANK,
+  WHISPER_ECHO_SURCHARGE_REDUCTION_MAX,
+  WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK,
+  WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX,
+  WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK,
   WHISPER_COST_SCALAR,
   WHISPER_WINDOW_MS,
+  WHISPER_TARGETS,
+  CADENCE_ACTION_FOLLOWER_BONUS,
   type ActType,
   type ActivityState,
   type DevotionMomentum,
@@ -126,6 +152,8 @@ import {
   type DomainId,
   type EchoBonuses,
   type EchoTreeId,
+  type WhisperMagnitude,
+  type WhisperTarget,
   type FollowerRiteType,
   type EchoTreeRanks,
   type GameState,
@@ -136,6 +164,16 @@ import {
 interface NormalizedWhisperCycle {
   whisperWindowStartedAt: number;
   whispersInWindow: number;
+}
+
+interface WhisperActionProfile {
+  target: WhisperTarget;
+  magnitude: WhisperMagnitude;
+}
+
+export interface WhisperFollowerPreview {
+  successFollowers: number;
+  strainedFollowers: number;
 }
 
 const TRAIT_ORDER: MortalTrait[] = ["skeptical", "cautious", "zealous"];
@@ -392,6 +430,7 @@ const TREE_UNLOCKS: Record<EchoTreeId, Array<keyof EchoBonuses>> = {
   doctrine: DOCTRINE_TREE_UNLOCKS,
   cataclysm: CATACLYSM_TREE_UNLOCKS
 };
+const ECHO_ROOT_UNLOCK_RANKS = 5;
 
 export function getEchoBonusesFromTreeRanks(treeRanks: EchoTreeRanks): EchoBonuses {
   const bonuses: EchoBonuses = {
@@ -427,9 +466,58 @@ export function getEchoTreeRank(state: GameState, treeId: EchoTreeId): number {
   return Math.max(0, Math.min(ECHO_TREE_MAX_RANK, state.prestige.treeRanks[treeId]));
 }
 
+function getEchoOverflowRanks(state: GameState, treeId: EchoTreeId): number {
+  return Math.max(0, getEchoTreeRank(state, treeId) - ECHO_ROOT_UNLOCK_RANKS);
+}
+
+export function getWhisperEchoYieldBonus(state: GameState): number {
+  const overflowRanks = getEchoOverflowRanks(state, "whispers");
+  return Math.min(
+    WHISPER_ECHO_YIELD_BONUS_MAX,
+    overflowRanks * WHISPER_ECHO_YIELD_BONUS_PER_RANK
+  );
+}
+
+export function getWhisperEchoFailReduction(state: GameState): number {
+  const overflowRanks = getEchoOverflowRanks(state, "whispers");
+  return Math.min(
+    WHISPER_ECHO_FAIL_REDUCTION_MAX,
+    overflowRanks * WHISPER_ECHO_FAIL_REDUCTION_PER_RANK
+  );
+}
+
+export function getWhisperEchoBoostedFailReduction(state: GameState): number {
+  const overflowRanks = getEchoOverflowRanks(state, "cataclysm");
+  return Math.min(
+    WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX,
+    overflowRanks * WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK
+  );
+}
+
+export function getWhisperEchoSurchargeReduction(state: GameState): number {
+  const overflowRanks = getEchoOverflowRanks(state, "doctrine");
+  return Math.min(
+    WHISPER_ECHO_SURCHARGE_REDUCTION_MAX,
+    overflowRanks * WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK
+  );
+}
+
+export function getWhisperEchoCooldownReductionMs(state: GameState): number {
+  const overflowRanks = getEchoOverflowRanks(state, "doctrine");
+  return Math.min(
+    WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS,
+    overflowRanks * WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS
+  );
+}
+
 export function getEchoTreeNextRankCost(rank: number): number | null {
   if (rank < 0 || rank >= ECHO_TREE_MAX_RANK) return null;
-  return ECHO_TREE_RANK_COSTS[rank];
+  const step = rank + 1;
+  return Math.ceil(
+    ECHO_TREE_COST_BASE *
+      Math.pow(ECHO_TREE_COST_EXPONENT, rank) *
+      (1 + ECHO_TREE_COST_LINEAR_SCALE * (step - 1))
+  );
 }
 
 export function getEchoTreeNextCost(state: GameState, treeId: EchoTreeId): number | null {
@@ -720,6 +808,8 @@ export function getMiracleReserveCap(state: GameState): number {
 
   const averageDomainLevel = getAverageDomainLevel(state);
   const startBonus = state.echoBonuses.startInf ? MIRACLE_RESERVE_START_BONUS : 0;
+  const echoOverflowRanks = getEchoOverflowRanks(state, "cataclysm");
+  const echoReserveBonus = echoOverflowRanks * MIRACLE_RESERVE_ECHO_BONUS_PER_RANK;
   const total =
     MIRACLE_RESERVE_BASE_CAP +
     state.prophets * MIRACLE_RESERVE_PER_PROPHET +
@@ -727,7 +817,8 @@ export function getMiracleReserveCap(state: GameState): number {
     state.doctrine.shrinesBuilt * MIRACLE_RESERVE_PER_SHRINE +
     Math.max(0, averageDomainLevel - MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE) *
       MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE +
-    startBonus;
+    startBonus +
+    echoReserveBonus;
 
   return Math.max(0, Math.min(MIRACLE_RESERVE_MAX_CAP, Math.floor(total)));
 }
@@ -811,6 +902,154 @@ function getWhisperCostFromCount(whispersInWindow: number): number {
 export function getWhisperCost(state: GameState, nowMs: number): number {
   const normalized = normalizeWhisperCycle(state.activity, nowMs);
   return getWhisperCostFromCount(normalized.whispersInWindow);
+}
+
+function normalizeWhisperProfile(
+  state: GameState,
+  profile?: Partial<WhisperActionProfile>
+): WhisperActionProfile {
+  if (state.era <= 1) {
+    return {
+      target: "crowd",
+      magnitude: "base"
+    };
+  }
+
+  const target =
+    profile?.target && WHISPER_TARGETS.includes(profile.target) ? profile.target : "crowd";
+  const magnitude = state.era >= 3 && profile?.magnitude === "boosted" ? "boosted" : "base";
+  return {
+    target,
+    magnitude
+  };
+}
+
+export function getWhisperTargetCooldownEndsAt(state: GameState, target: WhisperTarget): number {
+  return Math.max(0, Math.floor(state.activity.whisperTargetCooldowns[target] ?? 0));
+}
+
+export function getWhisperTargetCooldownMs(
+  state: GameState,
+  target: WhisperTarget,
+  magnitude: WhisperMagnitude
+): number {
+  if (state.era < 2 || target !== "cults") return 0;
+  const baseCooldownMs =
+    magnitude === "boosted" && state.era >= 3
+      ? WHISPER_CULTS_BOOSTED_COOLDOWN_MS
+      : WHISPER_CULTS_BASE_COOLDOWN_MS;
+  return Math.max(0, baseCooldownMs - getWhisperEchoCooldownReductionMs(state));
+}
+
+export function isWhisperTargetOnCooldown(
+  state: GameState,
+  nowMs: number,
+  target: WhisperTarget
+): boolean {
+  return nowMs < getWhisperTargetCooldownEndsAt(state, target);
+}
+
+function getWhisperTargetCostSurcharge(state: GameState, target: WhisperTarget): number {
+  if (state.era < 2) return 0;
+  const baseSurcharge = WHISPER_BASE_COST_SURCHARGE[target];
+  const surchargeMultiplier = 1 - getWhisperEchoSurchargeReduction(state);
+  return Math.max(0, Math.ceil(baseSurcharge * surchargeMultiplier));
+}
+
+function getWhisperTargetFollowerMultiplier(
+  state: GameState,
+  target: WhisperTarget,
+  magnitude: WhisperMagnitude
+): number {
+  const baseTargetMultiplier = state.era >= 2 ? WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER[target] : 1;
+  const magnitudeMultiplier =
+    magnitude === "boosted" && state.era >= 3 ? WHISPER_BOOSTED_FOLLOWER_MULTIPLIER[target] : 1;
+  const echoYieldMultiplier = 1 + getWhisperEchoYieldBonus(state);
+  return baseTargetMultiplier * magnitudeMultiplier * echoYieldMultiplier;
+}
+
+function getWhisperFollowerGainRaw(
+  state: GameState,
+  profile: WhisperActionProfile,
+  cadenceFollowerBonus: number,
+  strainedOutcome: boolean
+): number {
+  const baseFollowers = WHISPER_FOLLOWER_GAIN + cadenceFollowerBonus;
+  const targetMultiplier = getWhisperTargetFollowerMultiplier(
+    state,
+    profile.target,
+    profile.magnitude
+  );
+  const strainMultiplier = strainedOutcome ? WHISPER_FAIL_FOLLOWER_MULTIPLIER : 1;
+  return Math.max(1, baseFollowers * targetMultiplier * strainMultiplier);
+}
+
+export function getWhisperFailChance(
+  state: GameState,
+  profile?: Partial<WhisperActionProfile>
+): number {
+  const normalized = normalizeWhisperProfile(state, profile);
+  if (state.era < 2) return 0;
+
+  const baseChance =
+    normalized.magnitude === "boosted" && state.era >= 3
+      ? WHISPER_BOOSTED_FAIL_CHANCE[normalized.target]
+      : WHISPER_BASE_FAIL_CHANCE[normalized.target];
+  const ascensionMultiplier = Math.pow(
+    WHISPER_ASCENSION_FAIL_MULTIPLIER,
+    Math.max(0, state.prestige.completedRuns)
+  );
+  const baseReduction = getWhisperEchoFailReduction(state);
+  const boostedReduction =
+    normalized.magnitude === "boosted" && state.era >= 3
+      ? getWhisperEchoBoostedFailReduction(state)
+      : 0;
+  return Math.max(0, Math.min(0.95, baseChance * ascensionMultiplier - baseReduction - boostedReduction));
+}
+
+export function getWhisperCostForProfile(
+  state: GameState,
+  nowMs: number,
+  profile?: Partial<WhisperActionProfile>,
+  oneTimeCostDelta = 0
+): number {
+  const normalized = normalizeWhisperProfile(state, profile);
+  const normalizedCycle = normalizeWhisperCycle(state.activity, nowMs);
+  const baseCycleCost = getWhisperCostFromCount(normalizedCycle.whispersInWindow);
+  const targetSurcharge = getWhisperTargetCostSurcharge(state, normalized.target);
+  const magnitudeMultiplier =
+    normalized.magnitude === "boosted" && state.era >= 3
+      ? WHISPER_BOOSTED_COST_MULTIPLIER[normalized.target]
+      : 1;
+  return Math.max(
+    1,
+    Math.ceil((baseCycleCost + targetSurcharge + oneTimeCostDelta) * magnitudeMultiplier)
+  );
+}
+
+export function getWhisperFollowerPreview(
+  state: GameState,
+  profile?: Partial<WhisperActionProfile>
+): WhisperFollowerPreview {
+  const normalized = normalizeWhisperProfile(state, profile);
+  const cadenceFollowerBonus = state.activity.cadencePromptActive ? CADENCE_ACTION_FOLLOWER_BONUS : 0;
+  const lineageModifier = getLineageConversionModifier(state);
+
+  const successFollowers = Math.max(
+    1,
+    Math.floor(
+      getWhisperFollowerGainRaw(state, normalized, cadenceFollowerBonus, false) * lineageModifier
+    )
+  );
+  const strainedFollowers = Math.max(
+    1,
+    Math.floor(getWhisperFollowerGainRaw(state, normalized, cadenceFollowerBonus, true) * lineageModifier)
+  );
+
+  return {
+    successFollowers,
+    strainedFollowers
+  };
 }
 
 export function getFollowersForNextProphet(state: GameState): number {

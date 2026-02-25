@@ -881,6 +881,33 @@
         "Whisper of Providence retune reduces early-miracle dominance without changing tier ordering",
         "Echo spending is reachable in Era I after at least one completed run"
       ]
+    },
+    {
+      "id": "PF-28",
+      "title": "Whisper Evolution and Echo Sink Expansion",
+      "status": "completed",
+      "execute_after": "M14",
+      "notes": "Implemented. Whisper now evolves by era with target/magnitude profiles, cooldown/failure pressure, and ascension-linked reliability scaling. Echo trees now support deeper progression and higher-rank sinks so post-ascension Echo spend cannot be exhausted immediately.",
+      "scope": [
+        "Era II whisper targeting: Crowd (base), Prophets (+8 Influence, +40% follower yield), Cults (+12 Influence, +60% follower yield, cooldown)",
+        "Era III whisper magnitudes: retain base options and add boosted variants (Open Proclamation, Sacred Charge, Doctrine Wave) with higher cost, higher yield, higher risk",
+        "Whisper strain/failure model: per-target failure chance with reduced follower gain on strained outcomes",
+        "Ascension synergy: completed runs reduce whisper failure pressure via multiplicative reliability factor",
+        "Doctrine-target cooldown system: cult-target whispers enforce recovery windows with era/magnitude-aware cooldown values",
+        "Echo trees expanded from 5 to 12 ranks with formula-based cost scaling for steeper late-rank costs",
+        "High-rank echo overflow bonuses: whisper yield bonus, fail-chance reduction, surcharge reduction, cult-target cooldown reduction, boosted-fail mitigation, and miracle reserve cap growth",
+        "Update runtime previews/tooltips to show per-option cost, follower outcomes, cooldown, and strain chance",
+        "Update MANIFESTO.md and docs/GAME_REFERENCE.md with whisper evolution and echo scaling formulas in the same change"
+      ],
+      "validation": [
+        "Era I keeps single whisper action behavior with no target split",
+        "Era II exposes three whisper targets and enforces cult-target cooldown behavior",
+        "Era III exposes both base and boosted whisper variants with distinct cost/yield/risk profiles",
+        "Whisper affordability and action gating correctly respect target profile, cooldown, and influence availability",
+        "Echo tree purchases continue beyond rank 5 and cannot be trivially maxed in one ascension",
+        "High-rank echo investment produces measurable whisper reliability/yield improvements",
+        "Documentation formulas match runtime behavior for whisper profiles and echo progression"
+      ]
     }
   ]
 }

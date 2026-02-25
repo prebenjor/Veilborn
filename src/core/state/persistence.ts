@@ -753,6 +753,24 @@ function sanitizeDevotionMomentum(value: unknown, fallback: DevotionMomentum): D
   };
 }
 
+function sanitizeWhisperTargetCooldowns(
+  value: unknown,
+  fallback: GameState["activity"]["whisperTargetCooldowns"]
+): GameState["activity"]["whisperTargetCooldowns"] {
+  const normalized = {
+    crowd: Math.max(0, Math.floor(fallback.crowd)),
+    prophets: Math.max(0, Math.floor(fallback.prophets)),
+    cults: Math.max(0, Math.floor(fallback.cults))
+  };
+  if (!isRecord(value)) return normalized;
+
+  return {
+    crowd: Math.max(0, Math.floor(readNumber(value.crowd, normalized.crowd))),
+    prophets: Math.max(0, Math.floor(readNumber(value.prophets, normalized.prophets))),
+    cults: Math.max(0, Math.floor(readNumber(value.cults, normalized.cults)))
+  };
+}
+
 function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const fallback = createInitialGameState(nowMs);
   if (!isRecord(rawState)) return fallback;
@@ -807,6 +825,10 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
       lastEventAt: Math.max(0, readNumber(rawActivity.lastEventAt, nowMs)),
       whisperWindowStartedAt: Math.max(0, readNumber(rawActivity.whisperWindowStartedAt, nowMs)),
       whispersInWindow: Math.max(0, Math.floor(readNumber(rawActivity.whispersInWindow, 0))),
+      whisperTargetCooldowns: sanitizeWhisperTargetCooldowns(
+        rawActivity.whisperTargetCooldowns,
+        fallback.activity.whisperTargetCooldowns
+      ),
       lastCadencePromptAt: Math.max(0, readNumber(rawActivity.lastCadencePromptAt, nowMs)),
       cadencePromptActive: readBoolean(rawActivity.cadencePromptActive, false)
     },
@@ -873,7 +895,8 @@ const MIGRATORS: Record<number, Migrator> = {
   13: sanitizeState,
   14: sanitizeState,
   15: sanitizeState,
-  16: sanitizeState
+  16: sanitizeState,
+  17: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

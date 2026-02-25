@@ -43,7 +43,7 @@ Four core resources, each with a distinct role:
 4. Echoes
 - Prestige memory currency across runs.
 - Should feel high-value and strategic.
-- Upgrade costs use stepped scaling to preserve multi-run planning.
+- Upgrade costs use steep formula scaling with overflow-rank sinks to preserve multi-run planning.
 
 ## Core Belief Generation (Uncapped)
 
@@ -156,7 +156,25 @@ Implementation-expanded regen stack:
 - `resonant_word = +2.0` flat if Echo upgrade is owned
 
 Costs:
-- Whisper: `10 * 1.4^(whispers_today)` (resets every 4 real minutes).
+- Whisper base cycle: `baseCycleCost = ceil(10 * 1.4^whispersInWindow)` (4-minute reset window).
+- Era II whisper targets:
+  - Crowd: surcharge `+0`, follower multiplier `1.0`, fail chance `0.00`
+  - Prophets: surcharge `+8`, follower multiplier `1.4`, fail chance `0.08`
+  - Cults: surcharge `+12`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`
+- Era III boosted whisper variants:
+  - Open Proclamation (Crowd): cost `x2.5`, follower multiplier `x2.0`, fail chance `0.06`
+  - Sacred Charge (Prophets): cost `x2.5`, follower multiplier `x2.5`, fail chance `0.14`
+  - Doctrine Wave (Cults): cost `x3.0`, follower multiplier `x3.0`, fail chance `0.20`, cooldown `90s`
+- Whisper profile cost:
+
+`whisper_cost = ceil((baseCycleCost + target_surcharge + one_time_delta) * magnitude_multiplier)`
+
+- Whisper strain model:
+
+`fail_chance = clamp(base_fail * 0.96^completed_runs - whisper_echo_fail_reduction - boosted_fail_reduction, 0, 0.95)`
+
+`strained_followers = floor(base_followers_raw * 0.6 * lineage_modifier)`
+
 - Recruit: `25` flat.
 - Act: `20-150` by tier, with Echo discount factor `0.85`.
 - Miracle costs (Influence):
@@ -170,7 +188,7 @@ Miracle Reserve (Era III):
 - Miracles consume total power: `influence + reserve`.
 - Reserve does not gain offline and does not decay.
 
-`miracle_reserve_cap = 600 + 20*prophets + 30*cults + 4*shrines + 25*max(0,avg_domain_level-4) + 150 if start_inf`
+`miracle_reserve_cap = 600 + 20*prophets + 30*cults + 4*shrines + 25*max(0,avg_domain_level-4) + 150 if start_inf + 60*max(0,cataclysm_tree_rank-5)`
 
 `miracle_reserve_cap` is clamped to `5000`.
 
@@ -370,12 +388,22 @@ Base Echo gain on ascension:
 Revision note:
 - Divisor is `750000` to keep first-ascension yields from trivializing full Echo tree progression.
 
-Optional multiplier:
+Echo tree progression:
+- Trees: `whispers`, `doctrine`, `cataclysm`
+- Max rank per tree: `12`
+- Next-rank cost formula:
 
-`final_echoes = floor(base_echoes * (1 + 0.08 * completed_runs))` if `echo_multiplier` is purchased.
+`next_rank_cost(rank) = ceil(2 * 2^rank * (1 + 0.25 * rank))` where `rank` is current rank (`0`-indexed)
 
-Echo costs (5-rank tree):
-- `2, 5, 9, 14, 20`
+Reference next-rank costs:
+- `2, 5, 12, 28, 64, 144, 320, 704, 1536, 3328, 7168, 15360`
+
+Overflow sink model:
+- Core branch unlocks remain concentrated in the first 5 ranks.
+- Overflow rank is `max(0, rank - 5)` and drives late-game sinks:
+  - Whispers tree overflow: follower-yield bonus and fail-chance reduction
+  - Doctrine tree overflow: whisper surcharge reduction and cult-target cooldown reduction
+  - Cataclysm tree overflow: boosted-whisper fail reduction and miracle reserve cap growth
 
 ## Era Gates
 
@@ -513,7 +541,7 @@ Implementation governance is now formally bound to `docs/roadmap.json`.
 That file is the machine-readable execution ledger and includes:
 
 - Milestones `M0` through `M21`.
-- Post-final improvements `PF-01` through `PF-20`.
+- Post-final improvements `PF-01` through `PF-28`.
 
 Expanded roadmap commitments:
 - `M15` Save Integrity and Recovery must be completed before `M14` balance stress tuning.
@@ -525,7 +553,8 @@ Expanded roadmap commitments:
 - `M21` Devotion Path System expands Era I Devotion into Era II/III path differentiation with lineage memory carryover.
 
 Expanded PF commitments (additions beyond `PF-01` to `PF-07`):
-- `PF-08` through `PF-20` are adopted, including onboarding veil pacing, number legibility, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, and remembrance condition tracking.
+- `PF-08` through `PF-28` are adopted, including onboarding veil pacing, number legibility, influence nudges, rival readability, collapse recovery UX, echo tree clarity, act result clarity, offline narrative polish, domain synergy feedback, veil mastery zones, pantheon legibility, remembrance condition tracking, miracle reserve flow, desktop shell refinements, and whisper-evolution/echo-sink expansion.
+- `PF-21` is superseded by `PF-25` and is not executed independently.
 
 Sync rule:
 - Any change to milestone or PF definitions must update both `docs/roadmap.json` and this manifesto section in the same change.

@@ -19,7 +19,7 @@ When runtime and manifesto diverge, either:
 
 ## Current Build Snapshot
 
-- Save schema: `16`
+- Save schema: `17`
 - Core loop: deterministic tick (`250ms`)
 - Persistence: localStorage save + migration + recovery snapshot
 - Offline sim: enabled (`8h cap`, `85% belief efficiency`)
@@ -55,6 +55,7 @@ Completed PFs currently reflected in runtime:
 - `PF-25` veil pressure rebalance and miracle naming baseline
 - `PF-26` desktop omens sidebar + fixed stats dock (run-scoped/capped omen feed)
 - `PF-27` miracle reserve + legacy echo access
+- `PF-28` whisper evolution + expanded echo sink scaling
 
 ## Core Systems and Formulas
 
@@ -112,13 +113,57 @@ Notes:
 
 Miracle reserve cap (Era III):
 
-`miracleReserveCap = min(5000, floor(600 + 20*prophets + 30*cults + 4*shrines + 25*max(0, avgDomainLevel-4) + 150 if startInf))`
+`miracleReserveCap = min(5000, floor(600 + 20*prophets + 30*cults + 4*shrines + 25*max(0, avgDomainLevel-4) + 150 if startInf + 60*max(0, cataclysmTreeRank-5)))`
 
 ### Whisper and Recruit
 
-Whisper:
-- Cost: `ceil(10 * 1.4^whispersInWindow)`, 4-minute reset window
-- Gain: `belief +2`, `followers +1` before modifiers
+Whisper base cycle:
+- Window reset: `4 minutes`
+- Base cycle cost: `baseCycleCost = ceil(10 * 1.4^whispersInWindow)`
+- Base belief gain on use: `+2` (plus cadence bonus when active)
+
+Era I whisper profile:
+- Single action only (`Crowd`, `base`)
+- No fail chance, no target cooldown
+
+Era II whisper targets:
+- `Crowd`: surcharge `+0`, follower multiplier `1.0`, fail chance `0.00`
+- `Prophets`: surcharge `+8`, follower multiplier `1.4`, fail chance `0.08`
+- `Cults`: surcharge `+12`, follower multiplier `1.6`, fail chance `0.12`, cooldown `45s`
+
+Era III magnitude layer:
+- Base variants remain available.
+- Boosted variants unlock:
+  - `Open Proclamation` (`Crowd boosted`): cost multiplier `2.5`, follower multiplier `2.0`, fail chance `0.06`
+  - `Sacred Charge` (`Prophets boosted`): cost multiplier `2.5`, follower multiplier `2.5`, fail chance `0.14`
+  - `Doctrine Wave` (`Cults boosted`): cost multiplier `3.0`, follower multiplier `3.0`, fail chance `0.20`, cooldown `90s`
+
+Whisper cost by profile:
+
+`whisperCost = ceil((baseCycleCost + targetSurcharge + oneTimeDelta) * magnitudeMultiplier)`
+
+Notes:
+- `oneTimeDelta` is used by temporary event effects (for example, next-whisper modifiers).
+- Doctrine echo overflow can reduce target surcharge (up to 20%).
+
+Whisper follower outcomes:
+
+`baseFollowersRaw = (1 + cadenceFollowerBonus) * targetMultiplier * magnitudeMultiplier * (1 + whisperEchoYieldBonus)`
+
+`successFollowers = floor(baseFollowersRaw * lineageModifier)`
+
+`strainedFollowers = floor(baseFollowersRaw * 0.6 * lineageModifier)` (runtime uses strain multiplier before lineage rounding)
+
+Whisper strain/fail chance:
+
+`failChance = clamp(baseFail * 0.96^completedRuns - whisperEchoFailReduction - boostedFailReduction, 0, 0.95)`
+
+If strained, whisper still resolves but uses `strainedFollowers` instead of `successFollowers`.
+
+Whisper cooldowns:
+- Only `Cults` target has cooldown.
+- Cooldown ends are stored per target in session state.
+- Doctrine echo overflow reduces cult-target cooldown by `4s` per overflow rank (max `32s`).
 
 Recruit:
 - Cost: `25 Influence` (flat)
@@ -392,9 +437,32 @@ Ascension echo gain:
 
 Echo trees:
 - `whispers`, `doctrine`, `cataclysm`
-- max rank `5`
-- rank costs: `2, 5, 9, 14, 20`
+- max rank `12`
+- rank cost formula:
+
+`nextRankCost(rank) = ceil(2 * 2^rank * (1 + 0.25 * rank))` where `rank` is current rank (`0`-indexed)
+
+Reference next-rank costs:
+- Rank 1: `2`
+- Rank 2: `5`
+- Rank 3: `12`
+- Rank 4: `28`
+- Rank 5: `64`
+- Rank 6: `144`
+- Rank 7: `320`
+- Rank 8: `704`
+- Rank 9: `1536`
+- Rank 10: `3328`
+- Rank 11: `7168`
+- Rank 12: `15360`
 - post-ascension Era I includes a `Legacy Echoes` quick-spend panel so Echoes can be invested before returning to Era III
+
+Overflow rank model:
+- Core branch unlocks remain concentrated in the first 5 ranks.
+- Overflow rank is `max(0, rank - 5)` and drives late-game sink bonuses:
+  - `whispers` overflow: whisper follower yield bonus (`+2%` per rank, max `+24%`) and fail chance reduction (`-1.5%` per rank, max `-24%`)
+  - `doctrine` overflow: whisper target surcharge reduction (`-2%` per rank, max `-20%`) and cult-target cooldown reduction (`-4s` per rank, max `-32s`)
+  - `cataclysm` overflow: boosted-whisper fail reduction (`-1%` per rank, max `-10%`) and miracle reserve cap increase (`+60` per overflow rank)
 
 Domain carry:
 - `domain_carry` is currently a planned upgrade path and not active in runtime.

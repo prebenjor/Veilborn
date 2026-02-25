@@ -253,6 +253,7 @@ Notes:
 - `PF-22` completed Era III Influence cap scaling (cult/domain/shrine terms).
 - `PF-26` completed desktop shell split: persistent OMENS sidebar (`>=800px`) + fixed top-right STATS dock (collapsed by default); mobile behavior unchanged.
 - `PF-27` completed miracle power reserve + post-ascension Era I legacy echo quick-spend access.
+- `PF-28` completed whisper evolution (targeting + boosted variants + strain/cooldowns) and expanded echo sink scaling (12 ranks + overflow bonuses).
 - PF-26 follow-up behavior is live: active omen surface is run-scoped and capped to 6 entries to prevent prior-run bleed and long-scroll clutter.
 - Remaining M14 scope is economy constant calibration against target run durations.
 

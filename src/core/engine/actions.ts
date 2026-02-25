@@ -51,7 +51,9 @@ import {
   type FinalChoice,
   type FollowerRiteType,
   type GameState,
-  type MiracleTier
+  type MiracleTier,
+  type WhisperMagnitude,
+  type WhisperTarget
 } from "../state/gameState";
 import {
   appendLocalGhostSignature,
@@ -103,7 +105,11 @@ import {
   getTotalDomainLevel,
   getInfluenceCap,
   getUnravelingGateStatus,
-  getWhisperCost,
+  getWhisperCostForProfile,
+  getWhisperFailChance,
+  getWhisperFollowerPreview,
+  getWhisperTargetCooldownMs,
+  isWhisperTargetOnCooldown,
   normalizeWhisperCycle
 } from "./formulas";
 
@@ -144,6 +150,12 @@ interface LineageDelta {
   trustDebt: number;
   skepticism: number;
   betrayalScars: number;
+}
+
+export interface WhisperActionOptions {
+  target?: WhisperTarget;
+  magnitude?: WhisperMagnitude;
+  costOverride?: number;
 }
 
 export interface ImportGhostSignaturesResult {
@@ -1326,23 +1338,98 @@ function appendOmen(state: GameState, nowMs: number, kind: OmenKind, detail?: st
   };
 }
 
-export function canWhisper(state: GameState, nowMs: number, costOverride?: number): boolean {
-  const targetCost = costOverride ?? getWhisperCost(state, nowMs);
+function normalizeWhisperActionOptions(
+  state: GameState,
+  options?: WhisperActionOptions
+): Required<Pick<WhisperActionOptions, "target" | "magnitude">> & {
+  costOverride?: number;
+} {
+  if (state.era <= 1) {
+    return {
+      target: "crowd",
+      magnitude: "base",
+      costOverride: options?.costOverride
+    };
+  }
+
+  return {
+    target: options?.target ?? "crowd",
+    magnitude: state.era >= 3 && options?.magnitude === "boosted" ? "boosted" : "base",
+    costOverride: options?.costOverride
+  };
+}
+
+function getWhisperActionLabel(target: WhisperTarget, magnitude: WhisperMagnitude): string {
+  if (magnitude === "boosted") {
+    if (target === "crowd") return "Open Proclamation";
+    if (target === "prophets") return "Sacred Charge";
+    return "Doctrine Wave";
+  }
+  if (target === "crowd") return "Crowd";
+  if (target === "prophets") return "Prophets";
+  return "Cults";
+}
+
+export function canWhisper(state: GameState, nowMs: number, options?: WhisperActionOptions): boolean {
+  const normalized = normalizeWhisperActionOptions(state, options);
+  if (isWhisperTargetOnCooldown(state, nowMs, normalized.target)) return false;
+  const targetCost =
+    normalized.costOverride ??
+    getWhisperCostForProfile(state, nowMs, {
+      target: normalized.target,
+      magnitude: normalized.magnitude
+    });
   return state.resources.influence >= targetCost;
 }
 
-export function performWhisper(state: GameState, nowMs: number, costOverride?: number): GameState {
+export function performWhisper(state: GameState, nowMs: number, options?: WhisperActionOptions): GameState {
+  const normalizedOptions = normalizeWhisperActionOptions(state, options);
+  if (isWhisperTargetOnCooldown(state, nowMs, normalizedOptions.target)) return state;
   const normalizedCycle = normalizeWhisperCycle(state.activity, nowMs);
-  const cost = costOverride ?? getWhisperCost(state, nowMs);
+  const cost =
+    normalizedOptions.costOverride ??
+    getWhisperCostForProfile(
+      state,
+      nowMs,
+      {
+        target: normalizedOptions.target,
+        magnitude: normalizedOptions.magnitude
+      },
+      0
+    );
   if (state.resources.influence < cost) return state;
 
+  const whisperFailChance = getWhisperFailChance(state, {
+    target: normalizedOptions.target,
+    magnitude: normalizedOptions.magnitude
+  });
+  const failRoll = rollChance(state.rngState, whisperFailChance);
+  const strainedOutcome = failRoll.value;
   const cadence = getCadenceBonus(state);
   const lineageFactors = getLineageConversionFactors(state);
-  const baseFollowerGain = WHISPER_FOLLOWER_GAIN + cadence.followerBonus;
-  const followerGain = Math.max(1, Math.floor(baseFollowerGain * lineageFactors.totalModifier));
+  const followerPreview = getWhisperFollowerPreview(state, {
+    target: normalizedOptions.target,
+    magnitude: normalizedOptions.magnitude
+  });
+  const followerGain = strainedOutcome
+    ? followerPreview.strainedFollowers
+    : followerPreview.successFollowers;
   const beliefGain = WHISPER_BELIEF_GAIN + cadence.beliefBonus;
+  const whisperCooldownMs = getWhisperTargetCooldownMs(
+    state,
+    normalizedOptions.target,
+    normalizedOptions.magnitude
+  );
+  const whisperCooldowns = {
+    ...state.activity.whisperTargetCooldowns,
+    [normalizedOptions.target]:
+      whisperCooldownMs > 0 ? nowMs + whisperCooldownMs : state.activity.whisperTargetCooldowns[normalizedOptions.target]
+  };
+  const whisperLabel = getWhisperActionLabel(normalizedOptions.target, normalizedOptions.magnitude);
+  const outcomeText = strainedOutcome ? "strained and splintered" : "held and spread";
   const withWhisper = {
     ...state,
+    rngState: failRoll.rngState,
     resources: {
       ...state.resources,
       influence: state.resources.influence - cost,
@@ -1353,7 +1440,8 @@ export function performWhisper(state: GameState, nowMs: number, costOverride?: n
       {
         ...state.activity,
         whisperWindowStartedAt: normalizedCycle.whisperWindowStartedAt,
-        whispersInWindow: normalizedCycle.whispersInWindow + 1
+        whispersInWindow: normalizedCycle.whispersInWindow + 1,
+        whisperTargetCooldowns: whisperCooldowns
       },
       nowMs
     ),
@@ -1385,7 +1473,7 @@ export function performWhisper(state: GameState, nowMs: number, costOverride?: n
   );
   const flavor = getConversionFlavorText(state, lineageFactors.totalModifier);
   const detail = [
-    `${followerGain} new listeners held the whisper through the next bell.`,
+    `${whisperLabel} ${outcomeText}; ${followerGain} followers answered before the next bell.`,
     flavor
   ]
     .filter((entry): entry is string => Boolean(entry))

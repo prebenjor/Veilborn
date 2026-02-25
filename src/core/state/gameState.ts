@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 16;
+export const GAME_STATE_SCHEMA_VERSION = 17;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -8,8 +8,10 @@ export const OFFLINE_INFLUENCE_RETURN_RATIO = 0.5;
 export const OFFLINE_RIVAL_DRAIN_MULTIPLIER = 0.5;
 export const OFFLINE_VEIL_FLOOR = 15;
 export const ECHO_ASCENSION_DIVISOR = 750000;
-export const ECHO_TREE_MAX_RANK = 5;
-export const ECHO_TREE_RANK_COSTS = [2, 5, 9, 14, 20] as const;
+export const ECHO_TREE_MAX_RANK = 12;
+export const ECHO_TREE_COST_BASE = 2;
+export const ECHO_TREE_COST_EXPONENT = 2;
+export const ECHO_TREE_COST_LINEAR_SCALE = 0.25;
 export const OMEN_LOG_MAX_ENTRIES = 6;
 
 export const PROPHET_OUTPUT_BASE = 2;
@@ -44,12 +46,60 @@ export const MIRACLE_RESERVE_PER_SHRINE = 4;
 export const MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE = 4;
 export const MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE = 25;
 export const MIRACLE_RESERVE_START_BONUS = 150;
+export const MIRACLE_RESERVE_ECHO_BONUS_PER_RANK = 60;
 
 export const WHISPER_BASE_COST = 10;
 export const WHISPER_COST_SCALAR = 1.4;
 export const WHISPER_WINDOW_MS = 4 * 60 * 1000;
 export const WHISPER_BELIEF_GAIN = 2;
 export const WHISPER_FOLLOWER_GAIN = 1;
+export type WhisperTarget = "crowd" | "prophets" | "cults";
+export type WhisperMagnitude = "base" | "boosted";
+export const WHISPER_TARGETS: WhisperTarget[] = ["crowd", "prophets", "cults"];
+export const WHISPER_BASE_COST_SURCHARGE: Record<WhisperTarget, number> = {
+  crowd: 0,
+  prophets: 8,
+  cults: 12
+};
+export const WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER: Record<WhisperTarget, number> = {
+  crowd: 1,
+  prophets: 1.4,
+  cults: 1.6
+};
+export const WHISPER_BOOSTED_COST_MULTIPLIER: Record<WhisperTarget, number> = {
+  crowd: 2.5,
+  prophets: 2.5,
+  cults: 3
+};
+export const WHISPER_BOOSTED_FOLLOWER_MULTIPLIER: Record<WhisperTarget, number> = {
+  crowd: 2,
+  prophets: 2.5,
+  cults: 3
+};
+export const WHISPER_BASE_FAIL_CHANCE: Record<WhisperTarget, number> = {
+  crowd: 0,
+  prophets: 0.08,
+  cults: 0.12
+};
+export const WHISPER_BOOSTED_FAIL_CHANCE: Record<WhisperTarget, number> = {
+  crowd: 0.06,
+  prophets: 0.14,
+  cults: 0.2
+};
+export const WHISPER_FAIL_FOLLOWER_MULTIPLIER = 0.6;
+export const WHISPER_ASCENSION_FAIL_MULTIPLIER = 0.96;
+export const WHISPER_CULTS_BASE_COOLDOWN_MS = 45 * 1000;
+export const WHISPER_CULTS_BOOSTED_COOLDOWN_MS = 90 * 1000;
+export const WHISPER_ECHO_FAIL_REDUCTION_PER_RANK = 0.015;
+export const WHISPER_ECHO_FAIL_REDUCTION_MAX = 0.24;
+export const WHISPER_ECHO_YIELD_BONUS_PER_RANK = 0.02;
+export const WHISPER_ECHO_YIELD_BONUS_MAX = 0.24;
+export const WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK = 0.02;
+export const WHISPER_ECHO_SURCHARGE_REDUCTION_MAX = 0.2;
+export const WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS = 4000;
+export const WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS = 32000;
+export const WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK = 0.01;
+export const WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX = 0.1;
 export const RECRUIT_INFLUENCE_COST = 25;
 export const RECRUIT_BASE_FOLLOWERS = 4;
 export const RECRUIT_PROPHET_FOLLOWER_BONUS = 2;
@@ -451,6 +501,7 @@ export interface ActivityState {
   lastEventAt: number;
   whisperWindowStartedAt: number;
   whispersInWindow: number;
+  whisperTargetCooldowns: Record<WhisperTarget, number>;
   lastCadencePromptAt: number;
   cadencePromptActive: boolean;
 }
@@ -735,6 +786,11 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       lastEventAt: nowMs,
       whisperWindowStartedAt: nowMs,
       whispersInWindow: 0,
+      whisperTargetCooldowns: {
+        crowd: 0,
+        prophets: 0,
+        cults: 0
+      },
       lastCadencePromptAt: nowMs,
       cadencePromptActive: false
     },
