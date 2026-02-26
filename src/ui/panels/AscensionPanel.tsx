@@ -7,8 +7,9 @@ interface EchoTreeView {
   rank: number;
   nextCost: number | null;
   canPurchase: boolean;
-  unlockedBonuses: string[];
-  nextBonus: string | null;
+  effectLabel: string;
+  currentEffect: string;
+  nextEffect: string | null;
 }
 
 interface AscensionPanelProps {
@@ -75,11 +76,11 @@ export function AscensionPanel({
                       tree.nextCost === 1 ? "Echo" : "Echoes"
                     }`}
               </p>
-              {tree.unlockedBonuses.length > 0 ? (
-                <p className="mt-1 text-xs text-veil/60">Unlocked: {tree.unlockedBonuses.join(", ")}</p>
-              ) : null}
               <p className="mt-1 text-xs text-veil/60">
-                {tree.nextBonus ? `Next unlock: ${tree.nextBonus}` : "All unlocks active."}
+                {tree.effectLabel}: {tree.currentEffect}
+              </p>
+              <p className="mt-1 text-xs text-veil/60">
+                {tree.nextEffect ? `Next rank: ${tree.nextEffect}` : "Maximum rank reached."}
               </p>
               <button
                 type="button"

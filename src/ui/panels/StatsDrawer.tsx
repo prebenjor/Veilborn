@@ -45,7 +45,7 @@ interface StatsDrawerProps {
     peakBeliefPerSecond: number;
     veilCollapseCount: number;
     civilizationCollapseCount: number;
-    miracleCountByTier: Record<1 | 2 | 3 | 4, number>;
+    miracleCountByTier: Record<1 | 2 | 3, number>;
     actionCadence: {
       totalActions: number;
       averageIntervalSeconds: number | null;
@@ -245,7 +245,7 @@ export function StatsDrawer({
               <dd>
                 {formatResource(miracleReserve)} / {formatResource(miracleReserveCap)}
               </dd>
-              <dt>Miracle power</dt>
+              <dt>Rite budget</dt>
               <dd>{formatResource(currentInfluence + miracleReserve)}</dd>
             </>
           ) : null}
@@ -266,9 +266,8 @@ export function StatsDrawer({
               const miracleTotal =
                 run.miracleCountByTier[1] +
                 run.miracleCountByTier[2] +
-                run.miracleCountByTier[3] +
-                run.miracleCountByTier[4];
-              const namedMiracleCounts = ([1, 2, 3, 4] as const)
+                run.miracleCountByTier[3];
+              const namedMiracleCounts = ([1, 2, 3] as const)
                 .filter((tier) => run.miracleCountByTier[tier] > 0)
                 .map(
                   (tier) =>

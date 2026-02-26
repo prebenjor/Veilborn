@@ -60,7 +60,6 @@ import {
   getActCost,
   getActDurationSeconds,
   getCivilizationRebuildSeconds,
-  getEchoBonusesFromTreeRanks,
   getEchoTreeNextCost,
   getCultFormationCost,
   getDomainInvestCost,
@@ -77,6 +76,7 @@ import {
   isPantheonUnlocked,
   getMiracleBeliefGain,
   getMiracleCivDamage,
+  getFractureEchoRiteVeilStrainMultiplier,
   getMiracleInfluenceCost,
   getMiracleReserveCap,
   getMiracleVeilCost,
@@ -1684,8 +1684,8 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
   if (!canCastMiracle(state, tier)) return state;
 
   const influenceCost = getMiracleInfluenceCost(tier);
-  const availablePower = state.resources.influence + state.cataclysm.miracleReserve;
-  if (availablePower < influenceCost) return state;
+  const availableRiteBudget = state.resources.influence + state.cataclysm.miracleReserve;
+  if (availableRiteBudget < influenceCost) return state;
 
   let remainingCost = influenceCost;
   const influenceSpent = Math.min(state.resources.influence, remainingCost);
@@ -1707,6 +1707,7 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     : state.resources.followers;
   const nextVeil = Math.max(VEIL_MIN, state.resources.veil - veilCost);
   const veilSpentByRite = Math.max(0, state.resources.veil - nextVeil);
+  const riteVeilStrain = veilSpentByRite * getFractureEchoRiteVeilStrainMultiplier(state);
 
   const withMiracle = {
     ...state,
@@ -1725,7 +1726,7 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
     cataclysm: {
       ...state.cataclysm,
       miraclesThisRun: state.cataclysm.miraclesThisRun + 1,
-      gateRiteVeilSpent: state.cataclysm.gateRiteVeilSpent + veilSpentByRite,
+      gateRiteVeilSpent: state.cataclysm.gateRiteVeilSpent + riteVeilStrain,
       miracleReserve: Math.max(
         0,
         Math.min(miracleReserveCap, state.cataclysm.miracleReserve - reserveSpent)
@@ -1749,8 +1750,7 @@ export function performCastMiracle(state: GameState, tier: MiracleTier, nowMs: n
   const miracleDetailByTier: Record<MiracleTier, string> = {
     1: `${MIRACLE_NAMES[1]} touched a small district before dawn.`,
     2: `${MIRACLE_NAMES[2]} reordered merchants and magistrates alike.`,
-    3: `${MIRACLE_NAMES[3]} forced whole provinces to rewrite their calendars.`,
-    4: `${MIRACLE_NAMES[4]} opened an age-defining wound in history.`
+    3: `${MIRACLE_NAMES[3]} forced whole provinces to rewrite their calendars.`
   };
   const miracleDetail = miracleDetailByTier[tier];
   const withDevotionPath = withDevotionMomentumDelta(withMiracle, nowMs, { fervour: 2 });
@@ -2006,7 +2006,6 @@ export function performPurchaseEchoTreeRank(
     ...state.prestige.treeRanks,
     [treeId]: nextRank
   };
-  const nextEchoBonuses = getEchoBonusesFromTreeRanks(nextTreeRanks);
 
   const withUpgrade = {
     ...state,
@@ -2015,7 +2014,6 @@ export function performPurchaseEchoTreeRank(
       echoes: state.prestige.echoes - nextCost,
       treeRanks: nextTreeRanks
     },
-    echoBonuses: nextEchoBonuses,
     activity: resolveActivityAfterAction(state.activity, nowMs),
     meta: {
       ...state.meta,
@@ -2023,11 +2021,19 @@ export function performPurchaseEchoTreeRank(
     }
   };
 
+  const treeName: Record<EchoTreeId, string> = {
+    whispers: "whisper",
+    conversion: "conversion",
+    doctrine: "doctrine",
+    stability: "fracture",
+    cataclysm: "reservoir"
+  };
+
   return appendOmen(
     withUpgrade,
     nowMs,
     "echoTree",
-    `The ${treeId} branch rooted deeper into this cycle.`
+    `The ${treeName[treeId]} branch rooted deeper into this cycle.`
   );
 }
 
@@ -2146,7 +2152,6 @@ export function performAscension(state: GameState, nowMs: number): GameState {
       bestVeilZeroStreakMs: nextBestVeilZeroStreakMs
     }
   };
-  const nextEchoBonuses = getEchoBonusesFromTreeRanks(nextPrestige.treeRanks);
 
   const resetState = createInitialGameState(nowMs);
   const inheritedDevotionMomentum = createDefaultDevotionMomentum();
@@ -2166,7 +2171,6 @@ export function performAscension(state: GameState, nowMs: number): GameState {
       unlocked: pantheonUnlocksOnNextRun
     },
     ghost: initializedGhost,
-    echoBonuses: nextEchoBonuses,
     devotionPath: "none",
     devotionMomentum: inheritedDevotionMomentum
   };

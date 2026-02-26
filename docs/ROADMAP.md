@@ -252,7 +252,7 @@ Notes:
 - `PF-25` completed Veil pressure rebalance + miracle naming and superseded `PF-21`.
 - `PF-22` completed Era III Influence cap scaling (cult/domain/shrine terms).
 - `PF-26` completed desktop shell split: persistent OMENS sidebar (`>=800px`) + fixed top-right STATS dock (collapsed by default); mobile behavior unchanged.
-- `PF-27` completed miracle power reserve + post-ascension Era I legacy echo quick-spend access.
+- `PF-27` completed rite reserve + post-ascension Era I legacy echo quick-spend access.
 - `PF-28` completed whisper evolution (targeting + boosted variants + strain/cooldowns) and expanded echo sink scaling (12 ranks + overflow bonuses).
 - PF-26 follow-up behavior is live: active omen surface is run-scoped and capped to 6 entries to prevent prior-run bleed and long-scroll clutter.
 - Remaining M14 scope is economy constant calibration against target run durations.
@@ -299,7 +299,7 @@ Deliverables:
   - Threshold sits at bottom of GROWTH (not ACTIVE) and defaults to collapsed
 - Era III GROWTH order: Doctrine (merged), Domains, Rivals (Threshold remains in persistent Unraveling strip)
 - Era II+ META containers are collapsible with persisted state
-- ACTIVE tab prioritizes time-sensitive systems (Cataclysm, rivals, whispers, Influence pressure).
+- ACTIVE tab prioritizes time-sensitive systems (Gate Rites, rivals, whispers, Influence pressure).
 - Unraveling gate as persistent strip in Era III.
 - Echo trees and other between-run systems constrained to META view.
 - Omen surface persistent across tabs (drawer/strip), not competing as a main panel.

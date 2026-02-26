@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 20;
+export const GAME_STATE_SCHEMA_VERSION = 22;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -8,11 +8,21 @@ export const OFFLINE_INFLUENCE_RETURN_RATIO = 0.5;
 export const OFFLINE_RIVAL_DRAIN_MULTIPLIER = 0.5;
 export const OFFLINE_VEIL_FLOOR = 15;
 export const ECHO_ASCENSION_DIVISOR = 750000;
-export const ECHO_TREE_MAX_RANK = 12;
+export const ECHO_TREE_MAX_RANK = 20;
 export const ECHO_TREE_COST_BASE = 2;
 export const ECHO_TREE_COST_EXPONENT = 2;
 export const ECHO_TREE_COST_LINEAR_SCALE = 0.25;
 export const OMEN_LOG_MAX_ENTRIES = 6;
+
+export const ECHO_WHISPER_FAIL_REDUCTION_PER_RANK = 0.004;
+export const ECHO_WHISPER_FAIL_REDUCTION_MAX = 0.08;
+export const ECHO_CONVERSION_THRESHOLD_REDUCTION_PER_RANK = 0.01;
+export const ECHO_CONVERSION_THRESHOLD_REDUCTION_MAX = 0.2;
+export const ECHO_DOCTRINE_ACT_COST_REDUCTION_PER_RANK = 0.0075;
+export const ECHO_DOCTRINE_ACT_COST_REDUCTION_MAX = 0.15;
+export const ECHO_FRACTURE_RITE_STRAIN_BONUS_PER_RANK = 0.015;
+export const ECHO_FRACTURE_RITE_STRAIN_BONUS_MAX = 0.3;
+export const ECHO_RESERVOIR_CAP_PER_RANK = 20;
 
 export const PROPHET_OUTPUT_BASE = 2;
 export const PROPHET_DOMAIN_OUTPUT_SCALE = 0.1;
@@ -46,7 +56,7 @@ export const MIRACLE_RESERVE_PER_SHRINE = 4;
 export const MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE = 4;
 export const MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE = 25;
 export const MIRACLE_RESERVE_START_BONUS = 150;
-export const MIRACLE_RESERVE_ECHO_BONUS_PER_RANK = 60;
+export const MIRACLE_RESERVE_ECHO_BONUS_PER_RANK = ECHO_RESERVOIR_CAP_PER_RANK;
 
 export const WHISPER_BASE_COST = 10;
 export const WHISPER_COST_SCALAR = 1.4;
@@ -91,16 +101,16 @@ export const WHISPER_ASCENSION_FAIL_MULTIPLIER = 0.96;
 export const WHISPER_PROPHETS_BASE_COOLDOWN_MS = 60 * 1000;
 export const WHISPER_CULTS_BASE_COOLDOWN_MS = 90 * 1000;
 export const WHISPER_CULTS_BOOSTED_COOLDOWN_MS = 90 * 1000;
-export const WHISPER_ECHO_FAIL_REDUCTION_PER_RANK = 0.015;
-export const WHISPER_ECHO_FAIL_REDUCTION_MAX = 0.24;
-export const WHISPER_ECHO_YIELD_BONUS_PER_RANK = 0.02;
-export const WHISPER_ECHO_YIELD_BONUS_MAX = 0.24;
-export const WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK = 0.01;
-export const WHISPER_ECHO_SURCHARGE_REDUCTION_MAX = 0.1;
-export const WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS = 2000;
-export const WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS = 16000;
-export const WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK = 0.01;
-export const WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX = 0.1;
+export const WHISPER_ECHO_FAIL_REDUCTION_PER_RANK = ECHO_WHISPER_FAIL_REDUCTION_PER_RANK;
+export const WHISPER_ECHO_FAIL_REDUCTION_MAX = ECHO_WHISPER_FAIL_REDUCTION_MAX;
+export const WHISPER_ECHO_YIELD_BONUS_PER_RANK = 0;
+export const WHISPER_ECHO_YIELD_BONUS_MAX = 0;
+export const WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK = 0;
+export const WHISPER_ECHO_SURCHARGE_REDUCTION_MAX = 0;
+export const WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS = 0;
+export const WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS = 0;
+export const WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK = 0;
+export const WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX = 0;
 export const RECRUIT_INFLUENCE_COST = 25;
 export const RECRUIT_BASE_FOLLOWERS = 4;
 export const RECRUIT_PROPHET_FOLLOWER_BONUS = 2;
@@ -223,38 +233,33 @@ export const VEIL_COLLAPSE_FOLLOWER_RETENTION = 0.4;
 export const VEIL_COLLAPSE_PROPHET_LOSS = 2;
 export const VEIL_COLLAPSE_IMMUNITY_SECONDS = 30;
 
-export type MiracleTier = 1 | 2 | 3 | 4;
-export const MIRACLE_TIERS: MiracleTier[] = [1, 2, 3, 4];
+export type MiracleTier = 1 | 2 | 3;
+export const MIRACLE_TIERS: MiracleTier[] = [1, 2, 3];
 export const MIRACLE_NAMES: Record<MiracleTier, string> = {
   1: "Whisper of Providence",
   2: "The Anointing",
-  3: "The Rending",
-  4: "Unraveling"
+  3: "The Rending"
 };
 export const MIRACLE_INFLUENCE_COST: Record<MiracleTier, number> = {
-  1: 500,
-  2: 1600,
-  3: 4100,
-  4: 10000
+  1: 300,
+  2: 650,
+  3: 1000
 };
 export const MIRACLE_BASE_GAIN: Record<MiracleTier, number> = {
-  1: 5500,
-  2: 30000,
-  3: 90000,
-  4: 300000
+  1: 7000,
+  2: 24000,
+  3: 70000
 };
 export const MIRACLE_VEIL_COST: Record<MiracleTier, number> = {
   1: 10,
-  2: 15,
-  3: 25,
-  4: 40
+  2: 18,
+  3: 28
 };
 export const MIRACLE_VEIL_COST_TIER_ONE_ECHO = 5;
 export const MIRACLE_CIV_DAMAGE: Record<MiracleTier, number> = {
-  1: 5,
-  2: 8,
-  3: 14,
-  4: 24
+  1: 4,
+  2: 7,
+  3: 11
 };
 export const MIRACLE_DOMAIN_BONUS_SCALE = 0.1;
 
@@ -310,24 +315,6 @@ export interface RunResources {
   influence: number;
   veil: number;
   followers: number;
-}
-
-export interface EchoBonuses {
-  startInf: boolean;
-  prophetThreshold: boolean;
-  resonantWord: boolean;
-  cultCostBase: boolean;
-  era1Gate: boolean;
-  era2Gate: boolean;
-  actFloor: boolean;
-  actDiscount: boolean;
-  rivalDelay: boolean;
-  rivalWeaken: boolean;
-  veilRegen: boolean;
-  miracleVeilDiscount: boolean;
-  collapseThreshold: boolean;
-  collapseImmunity: boolean;
-  civRebuild: boolean;
 }
 
 export type DomainPoisonRuns = Record<DomainId, number>;
@@ -542,7 +529,6 @@ export interface GameState {
   prestige: PrestigeState;
   pantheon: PantheonState;
   ghost: GhostState;
-  echoBonuses: EchoBonuses;
   era: 1 | 2 | 3;
   mortals: Mortal[];
   domains: DomainProgress[];
@@ -604,26 +590,6 @@ export function createDefaultPantheonLegacyState(): PantheonLegacyState {
     domainPoisonRuns: createDefaultDomainPoisonRuns(),
     betrayalsLifetime: 0,
     betrayedAllyEver: false
-  };
-}
-
-export function createDefaultEchoBonuses(): EchoBonuses {
-  return {
-    startInf: false,
-    prophetThreshold: false,
-    resonantWord: false,
-    cultCostBase: false,
-    era1Gate: false,
-    era2Gate: false,
-    actFloor: false,
-    actDiscount: false,
-    rivalDelay: false,
-    rivalWeaken: false,
-    veilRegen: false,
-    miracleVeilDiscount: false,
-    collapseThreshold: false,
-    collapseImmunity: false,
-    civRebuild: false
   };
 }
 
@@ -770,7 +736,6 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
     prestige: createDefaultPrestigeState(),
     pantheon: createDefaultPantheonState(),
     ghost: createDefaultGhostState(),
-    echoBonuses: createDefaultEchoBonuses(),
     era: 1,
     mortals: [
       {

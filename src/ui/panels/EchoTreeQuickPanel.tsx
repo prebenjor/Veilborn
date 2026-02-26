@@ -10,7 +10,9 @@ interface EchoTreeView {
   rank: number;
   nextCost: number | null;
   canPurchase: boolean;
-  nextBonus: string | null;
+  effectLabel: string;
+  currentEffect: string;
+  nextEffect: string | null;
 }
 
 interface EchoTreeQuickPanelProps {
@@ -39,7 +41,10 @@ export function EchoTreeQuickPanel({ echoes, treeViews, onPurchaseTree }: EchoTr
                 : `Next: ${formatResource(tree.nextCost)} ${tree.nextCost === 1 ? "Echo" : "Echoes"}`}
             </p>
             <p className="mt-1 text-xs text-veil/60">
-              {tree.nextBonus ? `Unlocks: ${tree.nextBonus}` : "All unlocks active."}
+              {tree.effectLabel}: {tree.currentEffect}
+            </p>
+            <p className="mt-1 text-xs text-veil/60">
+              {tree.nextEffect ? `Next: ${tree.nextEffect}` : "Maximum rank reached."}
             </p>
             <button
               type="button"

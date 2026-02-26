@@ -10,7 +10,7 @@ interface MiracleOption {
   canCast: boolean;
 }
 
-interface CataclysmPanelProps {
+interface GateRitesPanelProps {
   era: number;
   influence: number;
   influenceCap: number;
@@ -28,7 +28,7 @@ interface CataclysmPanelProps {
   onCastMiracle: (tier: MiracleTier) => void;
 }
 
-export function CataclysmPanel({
+export function GateRitesPanel({
   era,
   influence,
   influenceCap,
@@ -44,10 +44,10 @@ export function CataclysmPanel({
   riteVeilStrainTarget,
   miracleOptions,
   onCastMiracle
-}: CataclysmPanelProps) {
+}: GateRitesPanelProps) {
   if (era < 3) return null;
   const stability = getVeilStabilityView(veil, veilCollapseThreshold);
-  const miraclePower = influence + miracleReserve;
+  const riteBudget = influence + miracleReserve;
 
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
@@ -73,18 +73,18 @@ export function CataclysmPanel({
             Veil strain from rites: {formatResource(riteVeilStrain)} / {formatResource(riteVeilStrainTarget)}
           </p>
           <p className="mt-1 text-xs text-veil/65">
-            Rite power {formatResource(miraclePower)} (Influence {formatResource(influence)} /{" "}
+            Rite budget {formatResource(riteBudget)} (Influence {formatResource(influence)} /{" "}
             {formatResource(influenceCap)} + Reserve {formatResource(miracleReserve)} /{" "}
             {formatResource(miracleReserveCap)})
           </p>
         </article>
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {miracleOptions.map((miracle) => (
           <article key={miracle.tier} className="rounded-xl border border-white/10 bg-black/20 p-3">
             <p className="text-xs tracking-[0.08em] text-veil/70">{MIRACLE_NAMES[miracle.tier]}</p>
-            <p className="mt-1 text-xs text-veil/65">Cost {formatResource(miracle.influenceCost)} Power</p>
+            <p className="mt-1 text-xs text-veil/65">Cost {formatResource(miracle.influenceCost)} Influence</p>
             <p className="mt-1 text-xs text-veil/65">
               Veil strain +{formatResource(miracle.veilCost)} &middot; Return {formatResource(miracle.beliefGain)} Belief
             </p>

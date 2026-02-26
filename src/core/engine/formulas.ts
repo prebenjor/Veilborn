@@ -1,18 +1,14 @@
 import {
   ACT_BASE_COST,
   ACT_BASE_MULTIPLIER,
-  ACT_COST_DISCOUNT,
   ACT_DURATION_SECONDS,
   ACT_FLOOR_BASE,
-  ACT_FLOOR_ECHO,
   ACT_RETURN_FACTOR,
   CIV_HEALTH_MAX,
   CIV_REBUILD_BASE_SECONDS,
-  CIV_REBUILD_ECHO_MULTIPLIER,
   CIV_REGEN_PER_MINUTE,
   CIV_REGEN_PER_SHRINE_PER_MINUTE,
   CULT_COST_BASE,
-  CULT_COST_ECHO_BASE,
   CULT_COST_SCALAR,
   CULT_OUTPUT_SCALE,
   DOMAIN_INVEST_BASE_COST,
@@ -34,25 +30,27 @@ import {
   DOMAIN_SYNERGY_SCALE,
   DOMAIN_XP_BASE,
   DOMAIN_XP_SCALAR,
+  ECHO_CONVERSION_THRESHOLD_REDUCTION_MAX,
+  ECHO_CONVERSION_THRESHOLD_REDUCTION_PER_RANK,
+  ECHO_DOCTRINE_ACT_COST_REDUCTION_MAX,
+  ECHO_DOCTRINE_ACT_COST_REDUCTION_PER_RANK,
+  ECHO_FRACTURE_RITE_STRAIN_BONUS_MAX,
+  ECHO_FRACTURE_RITE_STRAIN_BONUS_PER_RANK,
   ECHO_ASCENSION_DIVISOR,
   ECHO_TREE_MAX_RANK,
-  ECHO_TREE_ORDER,
   ECHO_TREE_COST_BASE,
   ECHO_TREE_COST_EXPONENT,
   ECHO_TREE_COST_LINEAR_SCALE,
   ERA_ONE_BELIEF_GATE_BASE,
   ERA_ONE_FOLLOWER_GATE,
-  ERA_ONE_GATE_ECHO_MULTIPLIER,
   ERA_ONE_PROPHET_GATE,
   ERA_TWO_BELIEF_GATE_BASE,
   ERA_TWO_CULT_GATE,
-  ERA_TWO_GATE_ECHO_MULTIPLIER,
   MIRACLE_BASE_GAIN,
   MIRACLE_CIV_DAMAGE,
   MIRACLE_DOMAIN_BONUS_SCALE,
   MIRACLE_INFLUENCE_COST,
   MIRACLE_VEIL_COST,
-  MIRACLE_VEIL_COST_TIER_ONE_ECHO,
   PANTHEON_ALLIANCE_DOMAIN_BONUS_BASE,
   PANTHEON_ALLIANCE_DOMAIN_BONUS_SCALE,
   PANTHEON_ALLIANCE_SHARE_MULTIPLIER,
@@ -82,8 +80,6 @@ import {
   INFLUENCE_REGEN_PER_CULT_FOLLOWER,
   INFLUENCE_REGEN_PER_PROPHET_PER_SECOND,
   INFLUENCE_REGEN_PER_SHRINE_PER_SECOND,
-  INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND,
-  INFLUENCE_START_BONUS,
   MIRACLE_RESERVE_BASE_CAP,
   MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE,
   MIRACLE_RESERVE_MAX_CAP,
@@ -91,13 +87,11 @@ import {
   MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE,
   MIRACLE_RESERVE_PER_PROPHET,
   MIRACLE_RESERVE_PER_SHRINE,
-  MIRACLE_RESERVE_START_BONUS,
   MIRACLE_RESERVE_ECHO_BONUS_PER_RANK,
   FOLLOWER_BELIEF_TRICKLE_PER_FOLLOWER,
   PROPHET_DOMAIN_OUTPUT_SCALE,
   PROPHET_OUTPUT_BASE,
   PROPHET_THRESHOLD_BASE,
-  PROPHET_THRESHOLD_ECHO_BASE,
   PROPHET_THRESHOLD_SCALAR,
   ACOLYTE_THRESHOLD_BASE,
   ACOLYTE_THRESHOLD_SCALAR,
@@ -111,21 +105,17 @@ import {
   DEVOTION_STACK_MAX,
   DEVOTION_RECRUIT_BONUS_PER_STACK,
   RIVAL_SPAWN_BASE_MS,
-  RIVAL_SPAWN_ECHO_DELAY_MS,
   RIVAL_STRENGTH_SCALE,
-  RIVAL_WEAKENED_MULTIPLIER,
   UNRAVELING_BELIEF_GATE,
   UNRAVELING_RITE_VEIL_STRAIN_GATE,
   UNRAVELING_MIRACLES_GATE,
   UNRAVELING_RUNTIME_GATE_SECONDS,
   UNRAVELING_VEIL_GATE,
   VEIL_COLLAPSE_THRESHOLD_BASE,
-  VEIL_COLLAPSE_THRESHOLD_ECHO,
   VEIL_BONUS_SCALE,
   VEIL_EROSION_LOG_SCALE,
   VEIL_EROSION_PER_SHRINE_SCALE,
   VEIL_REGEN_BASE_SECONDS,
-  VEIL_REGEN_ECHO_SECONDS,
   VEIL_REGEN_PER_SHRINE_SECONDS,
   VEIL_REGEN_SHRINE_DIMINISHING_SCALE,
   WHISPER_BASE_COST,
@@ -137,16 +127,8 @@ import {
   WHISPER_CULTS_BASE_COOLDOWN_MS,
   WHISPER_FAIL_FOLLOWER_MULTIPLIER,
   WHISPER_ASCENSION_FAIL_MULTIPLIER,
-  WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS,
-  WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS,
   WHISPER_ECHO_FAIL_REDUCTION_MAX,
   WHISPER_ECHO_FAIL_REDUCTION_PER_RANK,
-  WHISPER_ECHO_YIELD_BONUS_MAX,
-  WHISPER_ECHO_YIELD_BONUS_PER_RANK,
-  WHISPER_ECHO_SURCHARGE_REDUCTION_MAX,
-  WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK,
-  WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX,
-  WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK,
   WHISPER_WINDOW_MS,
   CADENCE_ACTION_FOLLOWER_BONUS,
   type ActType,
@@ -155,11 +137,9 @@ import {
   type DevotionPath,
   type DomainProgress,
   type DomainId,
-  type EchoBonuses,
   type EchoTreeId,
   type WhisperMagnitude,
   type WhisperTarget,
-  type EchoTreeRanks,
   type GameState,
   type MiracleTier
 } from "../state/gameState";
@@ -422,108 +402,46 @@ export function getArchitectureCivilizationModifier(state: GameState): number {
   return 1;
 }
 
-const WHISPERS_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
-  "startInf",
-  "resonantWord"
-];
-
-const CONVERSION_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
-  "prophetThreshold",
-  "cultCostBase",
-  "era1Gate",
-  "era2Gate"
-];
-
-const DOCTRINE_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
-  "actFloor",
-  "actDiscount",
-  "rivalDelay",
-  "rivalWeaken"
-];
-
-const STABILITY_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
-  "veilRegen",
-  "collapseThreshold",
-  "collapseImmunity",
-  "civRebuild"
-];
-
-const CATACLYSM_TREE_UNLOCKS: Array<keyof EchoBonuses> = [
-  "miracleVeilDiscount"
-];
-
-const TREE_UNLOCKS: Record<EchoTreeId, Array<keyof EchoBonuses>> = {
-  whispers: WHISPERS_TREE_UNLOCKS,
-  conversion: CONVERSION_TREE_UNLOCKS,
-  doctrine: DOCTRINE_TREE_UNLOCKS,
-  stability: STABILITY_TREE_UNLOCKS,
-  cataclysm: CATACLYSM_TREE_UNLOCKS
-};
-const ECHO_ROOT_UNLOCK_RANKS = 5;
-
-export function getEchoBonusesFromTreeRanks(treeRanks: EchoTreeRanks): EchoBonuses {
-  const bonuses: EchoBonuses = {
-    startInf: false,
-    prophetThreshold: false,
-    resonantWord: false,
-    cultCostBase: false,
-    era1Gate: false,
-    era2Gate: false,
-    actFloor: false,
-    actDiscount: false,
-    rivalDelay: false,
-    rivalWeaken: false,
-    veilRegen: false,
-    miracleVeilDiscount: false,
-    collapseThreshold: false,
-    collapseImmunity: false,
-    civRebuild: false
-  };
-
-  for (const treeId of ECHO_TREE_ORDER) {
-    const rank = Math.max(0, Math.min(ECHO_TREE_MAX_RANK, treeRanks[treeId]));
-    const unlocks = TREE_UNLOCKS[treeId];
-    for (let i = 0; i < rank && i < unlocks.length; i += 1) {
-      bonuses[unlocks[i]] = true;
-    }
-  }
-
-  return bonuses;
-}
-
 export function getEchoTreeRank(state: GameState, treeId: EchoTreeId): number {
   return Math.max(0, Math.min(ECHO_TREE_MAX_RANK, state.prestige.treeRanks[treeId]));
 }
 
 function getEchoOverflowRanks(state: GameState, treeId: EchoTreeId): number {
-  return Math.max(0, getEchoTreeRank(state, treeId) - ECHO_ROOT_UNLOCK_RANKS);
+  return Math.max(0, getEchoTreeRank(state, treeId));
 }
 
 function getConversionEchoThresholdMultiplier(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "conversion");
-  return Math.max(0.7, 1 - overflowRanks * 0.02);
-}
-
-function getDoctrineEchoActCostMultiplier(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "doctrine");
-  return Math.max(0.78, 1 - overflowRanks * 0.015);
-}
-
-function getStabilityEchoVeilRegenMultiplier(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "stability");
-  return 1 + Math.min(0.2, overflowRanks * 0.02);
-}
-
-export function getWhisperEchoYieldBonus(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "whispers");
-  return Math.min(
-    WHISPER_ECHO_YIELD_BONUS_MAX,
-    overflowRanks * WHISPER_ECHO_YIELD_BONUS_PER_RANK
+  const ranks = getEchoOverflowRanks(state, "conversion");
+  return Math.max(
+    1 - ECHO_CONVERSION_THRESHOLD_REDUCTION_MAX,
+    1 - ranks * ECHO_CONVERSION_THRESHOLD_REDUCTION_PER_RANK
   );
 }
 
+function getDoctrineEchoActCostMultiplier(state: GameState): number {
+  const ranks = getEchoOverflowRanks(state, "doctrine");
+  return Math.max(
+    1 - ECHO_DOCTRINE_ACT_COST_REDUCTION_MAX,
+    1 - ranks * ECHO_DOCTRINE_ACT_COST_REDUCTION_PER_RANK
+  );
+}
+
+export function getFractureEchoRiteVeilStrainMultiplier(state: GameState): number {
+  const ranks = getEchoOverflowRanks(state, "stability");
+  const bonus = Math.min(
+    ECHO_FRACTURE_RITE_STRAIN_BONUS_MAX,
+    ranks * ECHO_FRACTURE_RITE_STRAIN_BONUS_PER_RANK
+  );
+  return 1 + bonus;
+}
+
+export function getWhisperEchoYieldBonus(state: GameState): number {
+  void state;
+  return 0;
+}
+
 export function getWhisperEchoFailReduction(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "whispers");
+  const overflowRanks = getEchoTreeRank(state, "whispers");
   return Math.min(
     WHISPER_ECHO_FAIL_REDUCTION_MAX,
     overflowRanks * WHISPER_ECHO_FAIL_REDUCTION_PER_RANK
@@ -531,27 +449,17 @@ export function getWhisperEchoFailReduction(state: GameState): number {
 }
 
 export function getWhisperEchoBoostedFailReduction(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "whispers");
-  return Math.min(
-    WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_MAX,
-    overflowRanks * WHISPER_ECHO_BOOSTED_FAIL_REDUCTION_PER_RANK
-  );
+  return getWhisperEchoFailReduction(state);
 }
 
 export function getWhisperEchoSurchargeReduction(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "whispers");
-  return Math.min(
-    WHISPER_ECHO_SURCHARGE_REDUCTION_MAX,
-    overflowRanks * WHISPER_ECHO_SURCHARGE_REDUCTION_PER_RANK
-  );
+  void state;
+  return 0;
 }
 
 export function getWhisperEchoCooldownReductionMs(state: GameState): number {
-  const overflowRanks = getEchoOverflowRanks(state, "whispers");
-  return Math.min(
-    WHISPER_ECHO_COOLDOWN_REDUCTION_MAX_MS,
-    overflowRanks * WHISPER_ECHO_COOLDOWN_REDUCTION_PER_RANK_MS
-  );
+  void state;
+  return 0;
 }
 
 export function getEchoTreeNextRankCost(rank: number): number | null {
@@ -837,18 +745,16 @@ export function getPassiveFollowerRate(state: GameState, nowMs: number): number 
 }
 
 export function getVeilRegenPerSecond(state: GameState): number {
-  const baseSeconds = state.echoBonuses.veilRegen ? VEIL_REGEN_ECHO_SECONDS : VEIL_REGEN_BASE_SECONDS;
+  const baseSeconds = VEIL_REGEN_BASE_SECONDS;
   const baseRegen = 1 / baseSeconds;
   const shrineCount = state.doctrine.shrinesBuilt;
-  const shrineBaseSeconds = state.echoBonuses.veilRegen
-    ? VEIL_REGEN_ECHO_SECONDS
-    : VEIL_REGEN_PER_SHRINE_SECONDS;
+  const shrineBaseSeconds = VEIL_REGEN_PER_SHRINE_SECONDS;
   const shrineBaseRate = 1 / shrineBaseSeconds;
   const shrineRegen =
     shrineCount > 0
       ? (shrineCount * shrineBaseRate) / (1 + shrineCount * VEIL_REGEN_SHRINE_DIMINISHING_SCALE)
       : 0;
-  return (baseRegen + shrineRegen) * getStabilityEchoVeilRegenMultiplier(state);
+  return baseRegen + shrineRegen;
 }
 
 export function getVeilErosionPerSecond(state: GameState): number {
@@ -862,7 +768,8 @@ export function getVeilErosionPerSecond(state: GameState): number {
 }
 
 export function getVeilCollapseThreshold(state: GameState): number {
-  return state.echoBonuses.collapseThreshold ? VEIL_COLLAPSE_THRESHOLD_ECHO : VEIL_COLLAPSE_THRESHOLD_BASE;
+  void state;
+  return VEIL_COLLAPSE_THRESHOLD_BASE;
 }
 
 export function getCultOutput(state: GameState): number {
@@ -921,8 +828,7 @@ function getAverageDomainLevel(state: GameState): number {
 }
 
 export function getInfluenceCap(state: GameState): number {
-  const startBonus = state.echoBonuses.startInf ? INFLUENCE_START_BONUS : 0;
-  const baseCap = INFLUENCE_BASE_CAP + state.prophets * INFLUENCE_CAP_PER_PROPHET + startBonus;
+  const baseCap = INFLUENCE_BASE_CAP + state.prophets * INFLUENCE_CAP_PER_PROPHET;
   if (state.era < 3) return baseCap;
 
   const cultBonus =
@@ -942,8 +848,7 @@ export function getMiracleReserveCap(state: GameState): number {
   if (state.era < 3) return 0;
 
   const averageDomainLevel = getAverageDomainLevel(state);
-  const startBonus = state.echoBonuses.startInf ? MIRACLE_RESERVE_START_BONUS : 0;
-  const echoOverflowRanks = getEchoOverflowRanks(state, "cataclysm");
+  const echoOverflowRanks = getEchoTreeRank(state, "cataclysm");
   const echoReserveBonus = echoOverflowRanks * MIRACLE_RESERVE_ECHO_BONUS_PER_RANK;
   const total =
     MIRACLE_RESERVE_BASE_CAP +
@@ -952,7 +857,6 @@ export function getMiracleReserveCap(state: GameState): number {
     state.doctrine.shrinesBuilt * MIRACLE_RESERVE_PER_SHRINE +
     Math.max(0, averageDomainLevel - MIRACLE_RESERVE_DOMAIN_LEVEL_BASELINE) *
       MIRACLE_RESERVE_PER_DOMAIN_LEVEL_OVER_BASE +
-    startBonus +
     echoReserveBonus;
 
   return Math.max(0, Math.min(MIRACLE_RESERVE_MAX_CAP, Math.floor(total)));
@@ -985,7 +889,8 @@ function getInfluenceCultRegenPerSecond(state: GameState): { totalPerSecond: num
 }
 
 function getInfluenceEchoRegenPerSecond(state: GameState): number {
-  return state.echoBonuses.resonantWord ? INFLUENCE_RESONANT_WORD_BONUS_PER_SECOND : 0;
+  void state;
+  return 0;
 }
 
 export function getInfluenceRegenBreakdown(state: GameState): InfluenceRegenBreakdown {
@@ -1174,8 +1079,11 @@ export function getWhisperFollowerPreview(
 }
 
 export function getFollowersForNextProphet(state: GameState): number {
-  const base = state.echoBonuses.prophetThreshold ? PROPHET_THRESHOLD_ECHO_BASE : PROPHET_THRESHOLD_BASE;
-  return Math.ceil(base * Math.pow(PROPHET_THRESHOLD_SCALAR, state.prophets) * getConversionEchoThresholdMultiplier(state));
+  return Math.ceil(
+    PROPHET_THRESHOLD_BASE *
+      Math.pow(PROPHET_THRESHOLD_SCALAR, state.prophets) *
+      getConversionEchoThresholdMultiplier(state)
+  );
 }
 
 export function getFollowersForNextAcolyte(state: GameState): number {
@@ -1207,8 +1115,9 @@ export function getProphetsForNextCult(state: GameState): number {
 }
 
 export function getCultFormationCost(state: GameState): number {
-  const base = state.echoBonuses.cultCostBase ? CULT_COST_ECHO_BASE : CULT_COST_BASE;
-  return Math.ceil(base * Math.pow(CULT_COST_SCALAR, state.cults) * getConversionEchoThresholdMultiplier(state));
+  return Math.ceil(
+    CULT_COST_BASE * Math.pow(CULT_COST_SCALAR, state.cults) * getConversionEchoThresholdMultiplier(state)
+  );
 }
 
 export function getRecruitFollowerGainBase(state: GameState): number {
@@ -1308,8 +1217,7 @@ export function simulateDomainInvestments(
 }
 
 export function getActCost(state: GameState, type: ActType): number {
-  const discount = state.echoBonuses.actDiscount ? ACT_COST_DISCOUNT : 1;
-  return Math.ceil(ACT_BASE_COST[type] * discount * getDoctrineEchoActCostMultiplier(state));
+  return Math.ceil(ACT_BASE_COST[type] * getDoctrineEchoActCostMultiplier(state));
 }
 
 export function getActDurationSeconds(type: ActType): number {
@@ -1326,8 +1234,7 @@ export function getActResonantBonus(state: GameState): number {
 }
 
 export function getActBeliefMultiplier(state: GameState, baseMultiplier: number): number {
-  const floor = state.echoBonuses.actFloor ? ACT_FLOOR_ECHO : ACT_FLOOR_BASE;
-  return Math.max(floor, baseMultiplier + getActResonantBonus(state));
+  return Math.max(ACT_FLOOR_BASE, baseMultiplier + getActResonantBonus(state));
 }
 
 export function getActRewardBelief(
@@ -1361,8 +1268,8 @@ export function getCivilizationRegenPerSecond(state: GameState): number {
 }
 
 export function getCivilizationRebuildSeconds(state: GameState): number {
-  const multiplier = state.echoBonuses.civRebuild ? CIV_REBUILD_ECHO_MULTIPLIER : 1;
-  return Math.ceil(CIV_REBUILD_BASE_SECONDS * multiplier);
+  void state;
+  return Math.ceil(CIV_REBUILD_BASE_SECONDS);
 }
 
 export function getMiracleInfluenceCost(tier: MiracleTier): number {
@@ -1374,9 +1281,7 @@ export function getMiracleBaseGain(tier: MiracleTier): number {
 }
 
 export function getMiracleVeilCost(state: GameState, tier: MiracleTier): number {
-  if (tier === 1 && state.echoBonuses.miracleVeilDiscount) {
-    return MIRACLE_VEIL_COST_TIER_ONE_ECHO;
-  }
+  void state;
   return MIRACLE_VEIL_COST[tier];
 }
 
@@ -1396,14 +1301,14 @@ export function getMiracleBeliefGain(state: GameState, tier: MiracleTier): numbe
 }
 
 export function getRivalSpawnIntervalMs(state: GameState): number {
-  const baseInterval = RIVAL_SPAWN_BASE_MS + (state.echoBonuses.rivalDelay ? RIVAL_SPAWN_ECHO_DELAY_MS : 0);
+  const baseInterval = RIVAL_SPAWN_BASE_MS;
   const ghostInfluence = getGhostInfluenceTotals(state);
   return Math.ceil(Math.max(45 * 1000, baseInterval * (1 + ghostInfluence.rivalSpawnDelta)));
 }
 
 export function getRivalStrength(state: GameState, beliefPerSecond: number): number {
-  const weakened = state.echoBonuses.rivalWeaken ? RIVAL_WEAKENED_MULTIPLIER : 1;
-  return Math.max(1, beliefPerSecond * RIVAL_STRENGTH_SCALE) * weakened;
+  void state;
+  return Math.max(1, beliefPerSecond * RIVAL_STRENGTH_SCALE);
 }
 
 export function getTotalRivalStrength(state: GameState): number {
@@ -1437,8 +1342,8 @@ export function getGhostInfluenceTotals(state: GameState): GhostInfluenceTotals 
 }
 
 export function getEraOneBeliefGateTarget(state: GameState): number {
-  const multiplier = state.echoBonuses.era1Gate ? ERA_ONE_GATE_ECHO_MULTIPLIER : 1;
-  return Math.ceil(ERA_ONE_BELIEF_GATE_BASE * multiplier);
+  void state;
+  return Math.ceil(ERA_ONE_BELIEF_GATE_BASE);
 }
 
 export function getEraOneGateStatus(state: GameState): EraOneGateStatus {
@@ -1461,8 +1366,8 @@ export function getEraOneGateStatus(state: GameState): EraOneGateStatus {
 }
 
 export function getEraTwoBeliefGateTarget(state: GameState): number {
-  const multiplier = state.echoBonuses.era2Gate ? ERA_TWO_GATE_ECHO_MULTIPLIER : 1;
-  return Math.ceil(ERA_TWO_BELIEF_GATE_BASE * multiplier);
+  void state;
+  return Math.ceil(ERA_TWO_BELIEF_GATE_BASE);
 }
 
 export function getEraTwoGateStatus(state: GameState): EraTwoGateStatus {

@@ -514,7 +514,7 @@
       "notes": "This scope is formalized structurally under M20 for milestone-level validation.",
       "scope": [
         "Hide all future-era systems until era unlock",
-        "Fix current leak: Cataclysm content must not appear in Era II",
+        "Fix current leak: Gate Rites content must not appear in Era II",
         "Add a shared reveal policy helper used by all panels"
       ]
     },
@@ -753,7 +753,7 @@
         "Replace Miracle T2 with an in-world name reflecting ritualistic, meaningful intervention (e.g. The Anointing)",
         "Replace Miracle T3 with an in-world name reflecting violent, costly world-shaping (e.g. The Rending)",
         "Replace Miracle T4 with an in-world name reflecting catastrophic, near-unraveling force (e.g. Unraveling - echoes the gate name intentionally)",
-        "Names applied everywhere tier is referenced: Cataclysm panel buttons, omen log entries, stats page miracle count line",
+        "Names applied everywhere tier is referenced: Gate Rites panel buttons, omen log entries, stats page miracle count line",
         "Cost, return, Veil cost, and Civ damage values unchanged"
       ]
     },
@@ -793,7 +793,7 @@
       "title": "Era III UI Consistency Pass",
       "status": "queued",
       "execute_after": "M14",
-      "notes": "Trimmed to unresolved items after PF-26 and UI consolidation follow-ups. Completed checks (Meta label, Cataclysm top ordering, Veil Stability descriptor in stat bar) were removed from scope.",
+      "notes": "Trimmed to unresolved items after PF-26 and UI consolidation follow-ups. Completed checks (Meta label, Gate Rites top ordering, Veil Stability descriptor in stat bar) were removed from scope.",
       "scope": [
         "Gate label appears twice (section header and inner bar header) - inner bar label should read 'Ready to Unravel' when conditions unmet, 'Cross the Threshold' when all met",
         "Suppress Rival button when no rivals are present should be hidden entirely, not greyed or visible",
@@ -808,12 +808,11 @@
       "notes": "Completed baseline pass. Shrine regen now uses diminishing returns, erosion includes shrine pressure, and miracle labels are in-world names. Follow-up numeric miracle retunes are tracked separately under PF-27.",
       "scope": [
         "Apply diminishing returns to shrine Veil regen: shrine_regen_per_second = (shrine_count * base_shrine_rate) / (1 + shrine_count * 0.015)",
-        "Set base_shrine_rate to 1/90, or 1/80 with veilRegen echo bonus",
+        "Set base_shrine_rate to 1/90",
         "Add shrine-count erosion term: erosion = 0.001 * log10(totalBeliefEarned) + 0.0002 * shrine_count",
         "Replace Miracle T1 with Whisper of Providence",
         "Replace Miracle T2 with The Anointing",
         "Replace Miracle T3 with The Rending",
-        "Replace Miracle T4 with Unraveling",
         "Apply miracle names everywhere tier labels appear: Gate Rites panel, omen log, stats surfaces, and any tier-referenced tooltip/projection text",
         "Update MANIFESTO.md and docs/GAME_REFERENCE.md in the same change with revised Veil formulas and miracle names",
         "Keep non-PF25 miracle numeric retunes tracked in dedicated follow-up items"
@@ -821,7 +820,7 @@
       "validation": [
         "At high shrine counts, Veil pressure requires active management and does not trivially stay in safe zone",
         "At low shrine counts, early Era III remains meaningfully recoverable between miracles",
-        "All four miracle tiers display in-world names everywhere tier labels were shown",
+        "All active gate-rite tiers display in-world names everywhere tier labels were shown",
         "Any subsequent miracle numeric retune is documented in a dedicated follow-up item",
         "MANIFESTO.md and docs/GAME_REFERENCE.md match runtime formulas"
       ]
@@ -862,14 +861,14 @@
     },
     {
       "id": "PF-27",
-      "title": "Miracle Power Reserve and Legacy Echo Access",
+      "title": "Rite Reserve and Legacy Echo Access",
       "status": "completed",
       "execute_after": "M14",
       "notes": "Implemented as a follow-up balance/access pass after PF-22 and PF-25. Addresses late-era miracle access friction and post-ascension echo investment dead-time.",
       "scope": [
         "Introduce Era III miracle reserve pool fed by Influence overflow at cap",
-        "Miracle cast affordability checks and costs use total miracle power (Influence + reserve), spending Influence first then reserve",
-        "Expose miracle reserve and total miracle power in Gate Rites and Stats surfaces",
+        "Gate-rite affordability checks and costs use total rite budget (Influence + reserve), spending Influence first then reserve",
+        "Expose miracle reserve and total rite budget in Gate Rites and Stats surfaces",
         "Retune Whisper of Providence output profile (base gain, Veil cost, civ damage) to reduce overperformance",
         "Add post-ascension Era I Legacy Echoes quick-spend panel so Echo points are investable before returning to Era III",
         "Update MANIFESTO.md, docs/GAME_REFERENCE.md, and regression coverage for the new formulas/behavior"
@@ -877,7 +876,7 @@
       "validation": [
         "Miracles remain castable through reserve when Influence alone is below cost",
         "Influence overflow at cap accumulates reserve up to reserve cap; reserve does not grow offline",
-        "Gate Rites and Stats surfaces show reserve and total miracle power accurately",
+        "Gate Rites and Stats surfaces show reserve and total rite budget accurately",
         "Whisper of Providence retune reduces early-miracle dominance without changing tier ordering",
         "Echo spending is reachable in Era I after at least one completed run"
       ]
@@ -887,25 +886,25 @@
       "title": "Whisper Evolution and Echo Sink Expansion",
       "status": "completed",
       "execute_after": "M14",
-      "notes": "Implemented. Whisper now evolves by era with target/magnitude profiles, cooldown/failure pressure, and ascension-linked reliability scaling. Echo trees now support deeper progression and higher-rank sinks so post-ascension Echo spend cannot be exhausted immediately.",
+      "notes": "Implemented and later simplified. Whisper now uses focused Prophet/Cult targeting with cooldown/failure pressure. Echo trees were refocused into single-axis roots and expanded to 20 ranks for long-run sink depth.",
       "scope": [
         "Era II whisper targeting: Crowd (base), Prophets (+8 Influence, +40% follower yield), Cults (+12 Influence, +60% follower yield, cooldown)",
-        "Era III whisper magnitudes: retain base options and add boosted variants (Open Proclamation, Sacred Charge, Doctrine Wave) with higher cost, higher yield, higher risk",
+        "Era III whisper pressure remains target-driven (Prophets/Cults) with cooldown and strain outcomes; boosted variants were intentionally removed",
         "Whisper strain/failure model: per-target failure chance with reduced follower gain on strained outcomes",
         "Ascension synergy: completed runs reduce whisper failure pressure via multiplicative reliability factor",
         "Doctrine-target cooldown system: cult-target whispers enforce recovery windows with era/magnitude-aware cooldown values",
-        "Echo trees expanded from 5 to 12 ranks with formula-based cost scaling for steeper late-rank costs",
-        "High-rank echo overflow bonuses: whisper yield bonus, fail-chance reduction, surcharge reduction, cult-target cooldown reduction, boosted-fail mitigation, and miracle reserve cap growth",
+        "Echo trees expanded from 5 to 20 ranks with formula-based cost scaling for steeper late-rank costs",
+        "Echo roots refocused to one mechanic each: whisper strain reduction, conversion threshold reduction, doctrine act-cost reduction, fracture rite-strain amplification, and reserve-cap growth",
         "Update runtime previews/tooltips to show per-option cost, follower outcomes, cooldown, and strain chance",
         "Update MANIFESTO.md and docs/GAME_REFERENCE.md with whisper evolution and echo scaling formulas in the same change"
       ],
       "validation": [
         "Era I keeps single whisper action behavior with no target split",
         "Era II exposes three whisper targets and enforces cult-target cooldown behavior",
-        "Era III exposes both base and boosted whisper variants with distinct cost/yield/risk profiles",
+        "Era III keeps focused Prophet/Cult whisper routing without boosted variant clutter",
         "Whisper affordability and action gating correctly respect target profile, cooldown, and influence availability",
-        "Echo tree purchases continue beyond rank 5 and cannot be trivially maxed in one ascension",
-        "High-rank echo investment produces measurable whisper reliability/yield improvements",
+        "Echo tree purchases continue to rank 20 and cannot be trivially maxed in one ascension",
+        "High-rank echo investment produces measurable improvements in each root's single target axis",
         "Documentation formulas match runtime behavior for whisper profiles and echo progression"
       ]
     }

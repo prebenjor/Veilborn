@@ -29,7 +29,6 @@ import {
   type DevotionMomentum,
   type DevotionPath,
   type EchoTreeId,
-  type EchoBonuses,
   type GameState,
   type Mortal,
   type OmenEntry,
@@ -51,7 +50,6 @@ import {
   getBeliefPerSecond,
   getCivilizationRegenPerSecond,
   getCultOutput,
-  getEchoBonusesFromTreeRanks,
   getInfluenceCap,
   getMiracleReserveCap,
   getPassiveFollowerRate,
@@ -98,6 +96,44 @@ export interface SaveImportResult {
 export interface SnapshotMeta {
   savedAt: number;
   reason: "ascension" | "era_transition";
+}
+
+interface LegacyEchoBonuses {
+  startInf: boolean;
+  prophetThreshold: boolean;
+  resonantWord: boolean;
+  cultCostBase: boolean;
+  era1Gate: boolean;
+  era2Gate: boolean;
+  actFloor: boolean;
+  actDiscount: boolean;
+  rivalDelay: boolean;
+  rivalWeaken: boolean;
+  veilRegen: boolean;
+  miracleVeilDiscount: boolean;
+  collapseThreshold: boolean;
+  collapseImmunity: boolean;
+  civRebuild: boolean;
+}
+
+function createDefaultLegacyEchoBonuses(): LegacyEchoBonuses {
+  return {
+    startInf: false,
+    prophetThreshold: false,
+    resonantWord: false,
+    cultCostBase: false,
+    era1Gate: false,
+    era2Gate: false,
+    actFloor: false,
+    actDiscount: false,
+    rivalDelay: false,
+    rivalWeaken: false,
+    veilRegen: false,
+    miracleVeilDiscount: false,
+    collapseThreshold: false,
+    collapseImmunity: false,
+    civRebuild: false
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -487,7 +523,8 @@ function sanitizeCataclysm(value: unknown, fallback: CataclysmState): CataclysmS
   };
 }
 
-function sanitizeEchoBonuses(value: unknown, fallback: EchoBonuses): EchoBonuses {
+function sanitizeLegacyEchoBonuses(value: unknown): LegacyEchoBonuses {
+  const fallback = createDefaultLegacyEchoBonuses();
   if (!isRecord(value)) return fallback;
   return {
     startInf: readBoolean(value.startInf, fallback.startInf),
@@ -571,7 +608,10 @@ function sanitizeRemembrance(value: unknown, fallback: RemembranceState): Rememb
   };
 }
 
-function inferTreeRankFromBonuses(bonuses: EchoBonuses, keys: Array<keyof EchoBonuses>): number {
+function inferTreeRankFromBonuses(
+  bonuses: LegacyEchoBonuses,
+  keys: Array<keyof LegacyEchoBonuses>
+): number {
   let rank = 0;
   for (const key of keys) {
     if (!bonuses[key]) break;
@@ -580,7 +620,7 @@ function inferTreeRankFromBonuses(bonuses: EchoBonuses, keys: Array<keyof EchoBo
   return rank;
 }
 
-function inferTreeRanksFromEchoBonuses(bonuses: EchoBonuses): {
+function inferTreeRanksFromEchoBonuses(bonuses: LegacyEchoBonuses): {
   whispers: number;
   conversion: number;
   doctrine: number;
@@ -619,10 +659,10 @@ function inferTreeRanksFromEchoBonuses(bonuses: EchoBonuses): {
 function sanitizePrestige(
   value: unknown,
   fallback: PrestigeState,
-  normalizedBonuses: EchoBonuses
+  legacyBonuses: LegacyEchoBonuses
 ): PrestigeState {
   if (!isRecord(value)) {
-    const inferredTreeRanks = inferTreeRanksFromEchoBonuses(normalizedBonuses);
+    const inferredTreeRanks = inferTreeRanksFromEchoBonuses(legacyBonuses);
     return {
       ...fallback,
       treeRanks: inferredTreeRanks,
@@ -650,7 +690,7 @@ function sanitizePrestige(
     );
   }
 
-  const inferredTreeRanks = inferTreeRanksFromEchoBonuses(normalizedBonuses);
+  const inferredTreeRanks = inferTreeRanksFromEchoBonuses(legacyBonuses);
   const treeRanks = {
     whispers: Object.prototype.hasOwnProperty.call(rawTreeRanks, "whispers")
       ? normalizedTreeRanks.whispers
@@ -752,9 +792,8 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const rawCataclysm = isRecord(rawState.cataclysm) ? rawState.cataclysm : {};
   const rawPantheon = isRecord(rawState.pantheon) ? rawState.pantheon : {};
   const rawGhost = isRecord(rawState.ghost) ? rawState.ghost : {};
-  const normalizedEchoBonuses = sanitizeEchoBonuses(rawState.echoBonuses, fallback.echoBonuses);
-  const normalizedPrestige = sanitizePrestige(rawState.prestige, fallback.prestige, normalizedEchoBonuses);
-  const syncedEchoBonuses = getEchoBonusesFromTreeRanks(normalizedPrestige.treeRanks);
+  const legacyEchoBonuses = sanitizeLegacyEchoBonuses(rawState.echoBonuses);
+  const normalizedPrestige = sanitizePrestige(rawState.prestige, fallback.prestige, legacyEchoBonuses);
   const normalizedPantheon = sanitizePantheon(rawPantheon, fallback.pantheon);
   const normalizedGhost = sanitizeGhostState(rawGhost, fallback.ghost);
   const pantheonUnlocked =
@@ -817,7 +856,6 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
       unlocked: pantheonUnlocked
     },
     ghost: normalizedGhost,
-    echoBonuses: syncedEchoBonuses,
     era: readNumber(rawState.era, fallback.era) >= 3 ? 3 : readNumber(rawState.era, fallback.era) >= 2 ? 2 : 1,
     mortals: sanitizeMortals(rawState.mortals, fallback.mortals),
     domains: sanitizeDomains(rawState.domains, fallback.domains),
@@ -873,7 +911,9 @@ const MIGRATORS: Record<number, Migrator> = {
   17: sanitizeState,
   18: sanitizeState,
   19: sanitizeState,
-  20: sanitizeState
+  20: sanitizeState,
+  21: sanitizeState,
+  22: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

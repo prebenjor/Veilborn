@@ -134,7 +134,7 @@ Path effect layer (multipliers are stack-scaled and momentum-weighted):
 
 ## Influence Economy
 
-`influence_max = 100 + (20 * prophet_count) + 50 if start_inf upgrade is owned`
+`influence_max = 100 + (20 * prophet_count)`
 
 Era III cap scaling (runtime):
 
@@ -175,20 +175,19 @@ Costs:
 
 - Recruit: `25` flat.
 - Act: `20-150` by tier, with Echo discount factor `0.85`.
-- Miracle costs (Influence):
-  - Whisper of Providence: `500`
-  - The Anointing: `1600`
-  - The Rending: `4100`
-  - Unraveling: `10000`
+- Gate Rite costs (Influence):
+  - Whisper of Providence: `300`
+  - The Anointing: `650`
+  - The Rending: `1000`
 
-Miracle Reserve (Era III):
+Rite Reserve (Era III):
 - Overflow Influence at cap is redirected into a reserve pool instead of being lost.
-- Miracles consume total power: `influence + reserve`.
+- Gate rites consume total rite budget: `influence + reserve`.
 - Reserve does not gain offline and does not decay.
 
-`miracle_reserve_cap = 600 + 20*prophets + 30*cults + 4*shrines + 25*max(0,avg_domain_level-4) + 150 if start_inf + 60*max(0,cataclysm_tree_rank-5)`
+`rite_reserve_cap = 600 + 20*prophets + 30*cults + 4*shrines + 25*max(0,avg_domain_level-4) + 20*reservoir_root_rank`
 
-`miracle_reserve_cap` is clamped to `5000`.
+`rite_reserve_cap` is clamped to `5000`.
 
 ## Domain System
 
@@ -279,9 +278,7 @@ Act return:
 
 `belief_gained = current_B/s * act_duration * belief_mult * 0.3`
 
-`belief_mult = max(act_floor, base_mult + (0.12 * active_resonance_pairs) + (0.05 * tempest_memory_resonance_tier))`
-
-`act_floor = 1.0`, or `1.5` with Echo `act_floor`.
+`belief_mult = max(1.0, base_mult + (0.12 * active_resonance_pairs) + (0.05 * tempest_memory_resonance_tier))`
 
 Base multipliers by act type:
 - `2.5 / 4.0 / 7.0`
@@ -290,13 +287,9 @@ Acts must reward engagement without invalidating passive systems.
 
 Doctrine overflow scaling:
 
-`act_cost = base_act_cost * act_discount_mult * doctrine_overflow_mult`
-
-`act_discount_mult = 0.85 if act_discount Echo is owned, else 1.0`
-
-`doctrine_overflow_mult = max(0.78, 1 - 0.015 * doctrine_overflow_rank)`
-
-`doctrine_overflow_rank = max(0, doctrine_tree_rank - 5)`
+`act_cost = base_act_cost * doctrine_rank_mult`
+`doctrine_rank_mult = max(0.85, 1 - 0.0075 * doctrine_root_rank)`
+`doctrine_root_rank = doctrine_tree_rank`
 
 ## Era III Follower Flow Additions (Implemented)
 
@@ -345,7 +338,7 @@ Base regen:
 - `+1 Veil / 120s`
 - Shrine Veil regen (diminishing returns):
   - `shrine_regen_per_second = (shrine_count * base_shrine_rate) / (1 + shrine_count * 0.015)`
-  - `base_shrine_rate = 1/90s` (or `1/80s` with Echo `veilRegen`)
+- `base_shrine_rate = 1/90s`
 - Echo regen upgrade: base improves to `+1 / 80s`
 
 Natural erosion (Era III):
@@ -377,7 +370,6 @@ Target mastery zone:
 Collapse penalty:
 - Followers reduced to 40%.
 - Lose last 2 gained prophets.
-- 30s immunity with Echo `collapse_immunity`.
 
 ## Miracle and Civilization Health
 
@@ -389,15 +381,14 @@ Miracle return:
 
 `domain_bonus = domain_level * 0.1`
 
-Tier constants:
-- Whisper of Providence: cost 500, base gain 5500, Veil cost 10, civ damage 5
-- The Anointing: cost 1600, base gain 30000, Veil cost 15, civ damage 8
-- The Rending: cost 4100, base gain 90000, Veil cost 25, civ damage 14
-- Unraveling: cost 10000, base gain 300000, Veil cost 40, civ damage 24
+Rite constants:
+- Whisper of Providence: cost 300, base gain 7000, Veil cost 10, civ damage 4
+- The Anointing: cost 650, base gain 24000, Veil cost 18, civ damage 7
+- The Rending: cost 1000, base gain 70000, Veil cost 28, civ damage 11
 
 Civilization health:
 - Starts at 100 each run.
-- Damage per miracle uses tier weights `1, 2, 3.5, 6` multiplied by 4.
+- Damage scales by rite tier constants above.
 - Natural regen: `+0.5 / 60s`.
 - Shrine bonus: `+0.2 per shrine / 60s`.
 - Collapse when `civHealth <= 0`.
@@ -415,41 +406,39 @@ Revision note:
 - Divisor is `750000` to keep first-ascension yields from trivializing full Echo tree progression.
 
 Echo tree progression:
-- Trees: `whispers`, `conversion`, `doctrine`, `stability`, `cataclysm`
-- Max rank per tree: `12`
+- Trees (runtime ids): `whispers`, `conversion`, `doctrine`, `stability`, `cataclysm`
+- Player-facing root names: `Whisper`, `Conversion`, `Doctrine`, `Fracture`, `Reservoir`
+- Compatibility note: runtime id `cataclysm` is retained for save migration and maps to `Reservoir`.
+- Max rank per tree: `20`
 - Next-rank cost formula:
 
 `next_rank_cost(rank) = ceil(2 * 2^rank * (1 + 0.25 * rank))` where `rank` is current rank (`0`-indexed)
 
-Reference next-rank costs:
-- `2, 5, 12, 28, 64, 144, 320, 704, 1536, 3328, 7168, 15360`
-
-Overflow sink model:
-- Core branch unlocks remain concentrated in the first 5 ranks.
-- Each root is focused to a single system family (targeted whispers, conversion thresholds, doctrine acts, veil stability, cataclysm pressure).
-- Overflow rank is `max(0, rank - 5)` and drives late-game sinks:
-  - Whispers overflow: targeted whisper fail-chance reduction, follower-yield bonus, surcharge reduction, and cooldown reduction
-  - Conversion overflow: threshold/requirement/cost reductions for acolyte -> prophet -> cult progression
-  - Doctrine overflow: additional act-cost reduction
-  - Stability overflow: additive veil-regen multiplier (`+2%` per overflow rank, capped at `+20%`)
-  - Cataclysm overflow: miracle reserve cap growth (`+60` per overflow rank)
+Focused root model:
+- Each root modifies exactly one system axis.
+- `Whisper`: whisper strain chance reduction (`-0.4%` per rank, cap `-8%`)
+- `Conversion`: conversion thresholds/requirements reduction (`-1.0%` per rank, cap `-20%`)
+- `Doctrine`: doctrine act-cost reduction (`-0.75%` per rank, cap `-15%`)
+- `Fracture`: gate-rite Veil strain bonus (`+1.5%` per rank, cap `+30%`)
+- `Reservoir`: rite reserve cap bonus (`+20` per rank)
 
 ## Era Gates
 
 Era I -> Era II:
-- `totalBeliefEarned >= 10000 * (0.70 with era1_gate Echo else 1.0)`
+- `totalBeliefEarned >= 10000`
 - `prophets >= 3`
 - `followers >= 500`
 
 Era II -> Era III:
-- `totalBeliefEarned >= 275000 * (0.75 with era2_gate Echo else 1.0)`
+- `totalBeliefEarned >= 275000`
 - `cults >= 3`
 - Survived at least one rival event
 
-Era III -> Unraveling:
+Era III -> Gate:
 - `totalBeliefEarned >= 5000000`
 - `veil <= 20`
-- `miraclesThisRun >= 2`
+- `gateRitesThisRun >= 2`
+- `gateRiteVeilStrain >= 50`
 - `runTime >= 240 minutes` soft gate
 - Soft gate may be bypassed on run 3+ with full Echo progression
 
@@ -462,9 +451,9 @@ Revision note (Veil regen, PF-25):
 - Shrine-count erosion term added: more infrastructure now pushes harder against the Veil.
 - Early Era III (around 10 shrines) remains broadly stable between miracles.
 
-Revision note (Miracle access and pacing, PF-27):
+Revision note (Gate-rite access and pacing, PF-27):
 - Era III Influence cap now scales with cult count, average domain level, and shrine count.
-- Overflow Influence at cap is redirected into Miracle Reserve and consumed by miracles as total power (`influence + reserve`).
+- Overflow Influence at cap is redirected into Rite Reserve and consumed by gate rites as total budget (`influence + reserve`).
 - Whisper of Providence was retuned to reduce early-miracle overperformance while preserving the same cost tier.
 - Echo spending remains reachable immediately after ascension via an Era I legacy quick-spend surface.
 

@@ -19,7 +19,7 @@ When runtime and manifesto diverge, either:
 
 ## Current Build Snapshot
 
-- Save schema: `20`
+- Save schema: `22`
 - Core loop: deterministic tick (`250ms`)
 - Persistence: localStorage save + migration + recovery snapshot
 - Offline sim: enabled (`8h cap`, `85% belief efficiency`)
@@ -86,7 +86,7 @@ Components:
 
 Cap:
 
-`influenceCap = 100 + (20 * prophets) + 50 if startInf`
+`influenceCap = 100 + (20 * prophets)`
 
 Era III bonus terms:
 
@@ -98,22 +98,21 @@ Era III bonus terms:
 
 Total regen per second:
 
-`total = base + shrine + cult + echo`
+`total = base + shrine + cult`
 
 - `base = 1 + (0.5 * prophets)`
 - `shrine = shrinesBuilt * 0.2`
 - `cult = min(avgFollowersPerCult * 0.001, 2.0) * cultCount`
-- `echo = 2.0 if resonantWord`
 
 Notes:
 - Cult regen uses average followers per cult and applies a per-cult cap before multiplying.
 - Stats page exposes full influence regen breakdown.
 - Overflow Influence at cap is redirected into Era III `miracleReserve` (no offline gain, no decay).
-- Miracles spend total power: `influence + miracleReserve` (Influence spent first).
+- Gate rites spend total rite budget: `influence + miracleReserve` (Influence spent first).
 
 Miracle reserve cap (Era III):
 
-`miracleReserveCap = min(5000, floor(600 + 20*prophets + 30*cults + 4*shrines + 25*max(0, avgDomainLevel-4) + 150 if startInf + 60*max(0, cataclysmTreeRank-5)))`
+`miracleReserveCap = min(5000, floor(600 + 20*prophets + 30*cults + 4*shrines + 25*max(0, avgDomainLevel-4) + 20*reservoirTreeRank))`
 
 ### Whisper and Recruit
 
@@ -141,7 +140,7 @@ Whisper cost by profile:
 
 Notes:
 - `oneTimeDelta` is used by temporary event effects (for example, next-whisper modifiers).
-- Whisper echo overflow can reduce target surcharge (up to 10%).
+- Whisper root affects reliability only (strain chance reduction); it does not modify surcharge, cooldown, or follower yield.
 
 Whisper follower outcomes:
 
@@ -160,7 +159,6 @@ If strained, whisper still resolves but uses `strainedFollowers` instead of `suc
 Whisper cooldowns:
 - `Prophets` and `Cults` targets both have cooldowns.
 - Cooldown ends are stored per target in session state.
-- Whisper echo overflow reduces target cooldown by `2s` per overflow rank (max `16s`).
 
 Recruit:
 - Cost: `25 Influence` (flat)
@@ -238,7 +236,7 @@ Prophet threshold:
 `followersNeeded = base * 1.6^prophets * conversionThresholdMult`
 
 - base `50`
-- base `20` with `prophetThreshold` echo bonus
+- base `50` (no prophet-threshold echo override in focused-root model)
 
 Prophet acolyte requirement:
 
@@ -250,8 +248,7 @@ Cult formation cost:
 
 `cost = base * 2^cults * conversionThresholdMult`
 
-- base `500`
-- base `350` with `cultCostBase` echo bonus
+- base `500` (no cult-base echo override in focused-root model)
 
 Cult prophet requirement:
 
@@ -261,7 +258,7 @@ Founding a cult consumes the required prophets.
 
 Conversion threshold multiplier:
 
-`conversionThresholdMult = max(0.7, 1 - (0.02 * conversionOverflowRank))`
+`conversionThresholdMult = max(0.8, 1 - (0.01 * conversionRootRank))`
 
 ### Domain Investment
 
@@ -303,7 +300,7 @@ Act types:
 - `proclaim`: cost `150`, duration `60s`, base mult `7.0`
 
 Cost discount:
-- x`0.85` if `actDiscount` echo bonus
+- no act-discount echo override in focused-root model
 
 Belief return:
 
@@ -312,8 +309,7 @@ Belief return:
 `beliefMult = max(actFloor, baseMult + activeResonancePairs * 0.12 + tempestMemoryTier * 0.05)`
 
 Act floor:
-- base `1.0`
-- `1.5` with `actFloor` echo bonus
+- `1.0` (no act-floor echo override in focused-root model)
 
 Act slot cap:
 - `max(1, cults)`
@@ -327,14 +323,12 @@ Availability:
 Spawn:
 - Available in era `>=2`, requires cults
 - Base interval `300s`
-- +`60s` with `rivalDelay`
+- no echo-delay override in focused-root model
 - Max active: `2`
 
 Strength:
 
-`strength = max(1, beliefPerSecond * 0.08) * weakenedModifier`
-
-- weakened modifier `0.8` with `rivalWeaken`, else `1.0`
+`strength = max(1, beliefPerSecond * 0.08)` (no echo-weaken override in focused-root model)
 
 Drain:
 
@@ -367,10 +361,8 @@ Integrated in online and offline simulation.
 
 Regen:
 - base `1 / 120s`
-- base `1 / 80s` with `veilRegen`
 - shrine regen: `(shrines * baseShrineRate) / (1 + shrines * 0.015)`
   - baseShrineRate: `1/90`
-  - with `veilRegen` echo: baseShrineRate `1/80`
 
 Erosion in era III:
 
@@ -378,38 +370,33 @@ Erosion in era III:
 
 Collapse threshold:
 - base `15`
-- `8` with `collapseThreshold`
 
 On veil collapse:
 - followers x`0.4`
 - lose `2` prophets
-- optional immunity `30s` with `collapseImmunity`
+- no echo-immunity override in focused-root model
 
 ### Miracles and Civilization
 
 Miracle influence costs:
-- Whisper of Providence: `500`
-- The Anointing: `1600`
-- The Rending: `4100`
-- Unraveling: `10000`
+- Whisper of Providence: `300`
+- The Anointing: `650`
+- The Rending: `1000`
 
 Miracle base gains:
-- Whisper of Providence: `5500`
-- The Anointing: `30000`
-- The Rending: `90000`
-- Unraveling: `300000`
+- Whisper of Providence: `7000`
+- The Anointing: `24000`
+- The Rending: `70000`
 
 Miracle veil costs:
-- Whisper of Providence: `10` (`5` with `miracleVeilDiscount`)
-- The Anointing: `15`
-- The Rending: `25`
-- Unraveling: `40`
+- Whisper of Providence: `10`
+- The Anointing: `18`
+- The Rending: `28`
 
 Civilization damage:
-- Whisper of Providence: `5`
-- The Anointing: `8`
-- The Rending: `14`
-- Unraveling: `24`
+- Whisper of Providence: `4`
+- The Anointing: `7`
+- The Rending: `11`
 
 Miracle belief gain:
 
@@ -420,17 +407,17 @@ Civilization:
 - shrine bonus `0.2 / shrine / min`
 - collapse at `<= 0`
 - collapse followers to `15%` of peak
-- rebuild base `180s`, x`0.6` with `civRebuild`
+- rebuild base `180s` (no echo-rebuild override in focused-root model)
 
 ### Era Gates
 
 Era I -> II:
-- belief earned target (`10000`, or x`0.7` with `era1Gate`)
+- belief earned target (`10000`)
 - `3` prophets
 - `500` followers
 
 Era II -> III:
-- belief earned target (`275000`, or x`0.75` with `era2Gate`)
+- belief earned target (`275000`)
 - `3` cults
 - survived rival event
 
@@ -448,8 +435,11 @@ Ascension echo gain:
 `floor(sqrt(totalBeliefEarned / 750000))`
 
 Echo trees:
-- `whispers`, `conversion`, `doctrine`, `stability`, `cataclysm`
-- max rank `12`
+- Runtime ids: `whispers`, `conversion`, `doctrine`, `stability`, `cataclysm`
+- Player-facing root names: `Whisper`, `Conversion`, `Doctrine`, `Fracture`, `Reservoir`
+- Compatibility note: runtime id `cataclysm` is a legacy save key that maps to the `Reservoir` root.
+- Legacy `echoBonuses` flags were removed from runtime state; older saves are migrated by inferring tree ranks.
+- max rank `20`
 - rank cost formula:
 
 `nextRankCost(rank) = ceil(2 * 2^rank * (1 + 0.25 * rank))` where `rank` is current rank (`0`-indexed)
@@ -467,16 +457,22 @@ Reference next-rank costs:
 - Rank 10: `3328`
 - Rank 11: `7168`
 - Rank 12: `15360`
+- Rank 13: `32768`
+- Rank 14: `69632`
+- Rank 15: `147456`
+- Rank 16: `311296`
+- Rank 17: `655360`
+- Rank 18: `1376256`
+- Rank 19: `2883584`
+- Rank 20: `6029312`
 - post-ascension Era I includes a `Legacy Echoes` quick-spend panel so Echoes can be invested before returning to Era III
 
-Overflow rank model:
-- Core branch unlocks remain concentrated in the first 5 ranks.
-- Overflow rank is `max(0, rank - 5)` and drives late-game sink bonuses:
-  - `whispers` overflow: targeted whisper fail reduction, follower-yield bonus, target surcharge reduction, and cooldown reduction
-  - `conversion` overflow: conversion threshold multiplier (`-2%` per rank, floor `0.70`) for acolyte/prophet/cult conversion thresholds and requirements
-  - `doctrine` overflow: additional act-cost reduction (`-1.5%` per rank, floor `x0.78`)
-  - `stability` overflow: veil-regen multiplier bonus (`+2%` per rank, cap `+20%`)
-  - `cataclysm` overflow: miracle reserve cap increase (`+60` per overflow rank)
+Focused rank model:
+- `whispers`: whisper strain reduction (`-0.4%` per rank, cap `-8%`)
+- `conversion`: conversion thresholds reduction (`-1.0%` per rank, cap `-20%`)
+- `doctrine`: act-cost reduction (`-0.75%` per rank, cap `-15%`)
+- `stability` (Fracture root): gate-rite Veil strain bonus (`+1.5%` per rank, cap `+30%`)
+- `cataclysm` (Reservoir root): rite reserve cap increase (`+20` per rank)
 
 Domain carry:
 - `domain_carry` is currently a planned upgrade path and not active in runtime.
@@ -588,9 +584,9 @@ Stats surface:
 - content scales by era without spoiling future systems
 
 Stats content by era:
-- Era I: no doctrine or cataclysm metrics (no cult output line, no shrine/cult influence lines, no rival or passive follower lines); Devotion stack line visible.
+- Era I: no doctrine or gate-rite metrics (no cult output line, no shrine/cult influence lines, no rival or passive follower lines); Devotion stack line visible.
 - Era II: doctrine metrics appear (cults, shrines, rival-related flow where active) and Devotion path label appears.
-- Era III: cataclysm-era metrics appear (passive follower arrival and other era-III-only lines).
+- Era III: gate-rite metrics appear (reserve, rite budget, passive follower arrival and other era-III-only lines).
 
 Telemetry:
 - local structured events:

@@ -158,13 +158,13 @@ function isTelemetryScalar(value: unknown): value is TelemetryScalar {
 }
 
 function sanitizeMiracleCountByTier(value: unknown): Record<MiracleTier, number> {
-  const fallback: Record<MiracleTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  const fallback: Record<MiracleTier, number> = { 1: 0, 2: 0, 3: 0 };
   if (!isRecord(value)) return fallback;
+  const legacyTierFour = Math.max(0, Math.floor(readNumber(value[4], readNumber(value["4"], 0))));
   return {
     1: Math.max(0, Math.floor(readNumber(value[1], readNumber(value["1"], 0)))),
     2: Math.max(0, Math.floor(readNumber(value[2], readNumber(value["2"], 0)))),
-    3: Math.max(0, Math.floor(readNumber(value[3], readNumber(value["3"], 0)))),
-    4: Math.max(0, Math.floor(readNumber(value[4], readNumber(value["4"], 0))))
+    3: Math.max(0, Math.floor(readNumber(value[3], readNumber(value["3"], 0)))) + legacyTierFour
   };
 }
 
@@ -595,14 +595,16 @@ function countMiraclesByTier(
   events: TelemetryEvent[],
   runId: string
 ): Record<MiracleTier, number> {
-  const counts: Record<MiracleTier, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  const counts: Record<MiracleTier, number> = { 1: 0, 2: 0, 3: 0 };
   for (const event of events) {
     if (event.runId !== runId) continue;
     if (event.type !== "miracle_use") continue;
     const tierRaw = event.details.tier;
     const tier = Math.floor(typeof tierRaw === "number" ? tierRaw : Number.NaN);
-    if (tier === 1 || tier === 2 || tier === 3 || tier === 4) {
+    if (tier === 1 || tier === 2 || tier === 3) {
       counts[tier] += 1;
+    } else if (tier === 4) {
+      counts[3] += 1;
     }
   }
   return counts;

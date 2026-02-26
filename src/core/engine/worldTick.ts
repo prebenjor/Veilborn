@@ -2,7 +2,6 @@ import {
   CADENCE_PROMPT_INTERVAL_MS,
   CIV_HEALTH_MAX,
   VEIL_COLLAPSE_FOLLOWER_RETENTION,
-  VEIL_COLLAPSE_IMMUNITY_SECONDS,
   VEIL_COLLAPSE_PROPHET_LOSS,
   VEIL_MAX,
   VEIL_MIN,
@@ -343,9 +342,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     ? Math.max(0, preTickState.prophets - VEIL_COLLAPSE_PROPHET_LOSS)
     : preTickState.prophets;
   const veilZeroStreakMs = veilAfterTick <= VEIL_MIN ? preTickState.cataclysm.veilZeroStreakMs + simulatedMs : 0;
-  const veilCollapseImmunityUntil = shouldVeilCollapse && preTickState.echoBonuses.collapseImmunity
-    ? nowMs + VEIL_COLLAPSE_IMMUNITY_SECONDS * 1000
-    : preTickState.cataclysm.veilCollapseImmunityUntil;
+  const veilCollapseImmunityUntil = preTickState.cataclysm.veilCollapseImmunityUntil;
 
   let civilizationHealth = preTickState.cataclysm.civilizationHealth;
   let civilizationCollapsed = preTickState.cataclysm.civilizationCollapsed;

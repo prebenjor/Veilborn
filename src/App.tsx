@@ -118,6 +118,15 @@ import {
 } from "./core/engine/doubtEvents";
 import {
   DOMAIN_LABELS,
+  ECHO_CONVERSION_THRESHOLD_REDUCTION_MAX,
+  ECHO_CONVERSION_THRESHOLD_REDUCTION_PER_RANK,
+  ECHO_DOCTRINE_ACT_COST_REDUCTION_MAX,
+  ECHO_DOCTRINE_ACT_COST_REDUCTION_PER_RANK,
+  ECHO_FRACTURE_RITE_STRAIN_BONUS_MAX,
+  ECHO_FRACTURE_RITE_STRAIN_BONUS_PER_RANK,
+  ECHO_RESERVOIR_CAP_PER_RANK,
+  ECHO_WHISPER_FAIL_REDUCTION_MAX,
+  ECHO_WHISPER_FAIL_REDUCTION_PER_RANK,
   MIRACLE_TIERS,
   OMEN_LOG_MAX_ENTRIES,
   RIVAL_DRAIN_RATE,
@@ -158,7 +167,7 @@ import {
   updateTelemetryPeakBeliefPerSecond,
   type TelemetryRunSummary
 } from "./core/state/telemetry";
-import { CataclysmPanel } from "./ui/panels/CataclysmPanel";
+import { GateRitesPanel } from "./ui/panels/GateRitesPanel";
 import { AscensionPanel } from "./ui/panels/AscensionPanel";
 import { DoctrinePanel } from "./ui/panels/DoctrinePanel";
 import { DomainPanel } from "./ui/panels/DomainPanel";
@@ -225,99 +234,70 @@ interface NavigatorWithPowerHints extends Navigator {
 const ECHO_TREE_META: Array<{
   id: EchoTreeId;
   label: string;
-  unlocks: string[];
+  effectLabel: string;
 }> = [
   {
     id: "whispers",
     label: "Whisper Roots",
-    unlocks: [
-      "Start each run with +50 Influence",
-      "Resonant Word: +2.0 Influence/s",
-      "Steady Voice I: targeted whisper fail chance -1.5%",
-      "Steady Voice II: targeted whisper fail chance -1.5%",
-      "Steady Voice III: targeted whisper fail chance -1.5%",
-      "Resonant Delivery I: targeted whisper yield +2%",
-      "Resonant Delivery II: targeted whisper yield +2%",
-      "Resonant Delivery III: targeted whisper yield +2%",
-      "Narrow Channel I: target surcharges -1%",
-      "Narrow Channel II: target surcharges -1%",
-      "Doctrine Relay I: target cooldown -2s",
-      "Doctrine Relay II: target cooldown -2s"
-    ]
+    effectLabel: "Whisper strain reduction"
   },
   {
     id: "conversion",
     label: "Conversion Roots",
-    unlocks: [
-      "Lower Prophet threshold: 50 -> 20 followers",
-      "Lower Cult base cost: 500 -> 350",
-      "Era I Belief gate multiplier: x0.70",
-      "Era II Belief gate multiplier: x0.75",
-      "Ordination Weave I: conversion thresholds -2%",
-      "Ordination Weave II: conversion thresholds -2%",
-      "Ordination Weave III: conversion thresholds -2%",
-      "Ordination Weave IV: conversion thresholds -2%",
-      "Ordination Weave V: conversion thresholds -2%",
-      "Ordination Weave VI: conversion thresholds -2%",
-      "Ordination Weave VII: conversion thresholds -2%",
-      "Ordination Weave VIII: conversion thresholds -2%"
-    ]
+    effectLabel: "Conversion threshold reduction"
   },
   {
     id: "doctrine",
     label: "Doctrine Roots",
-    unlocks: [
-      "Act return floor: 1.0x -> 1.5x",
-      "Act costs: x0.85",
-      "Rival spawn interval: +60s",
-      "Rivals weakened by 20%",
-      "War Drums I: additional act-cost reduction -1.5%",
-      "War Drums II: additional act-cost reduction -1.5%",
-      "War Drums III: additional act-cost reduction -1.5%",
-      "War Drums IV: additional act-cost reduction -1.5%",
-      "War Drums V: additional act-cost reduction -1.5%",
-      "War Drums VI: additional act-cost reduction -1.5%",
-      "War Drums VII: additional act-cost reduction -1.5%",
-      "War Drums VIII: additional act-cost reduction -1.5%"
-    ]
+    effectLabel: "Doctrine act-cost reduction"
   },
   {
     id: "stability",
-    label: "Stability Roots",
-    unlocks: [
-      "Veil base regen: 1/120s -> 1/80s",
-      "Veil collapse threshold: 15 -> 8",
-      "Veil collapse immunity: 30s",
-      "Civilization rebuild timer: x0.60",
-      "Anchor Lattice I: veil regen +2%",
-      "Anchor Lattice II: veil regen +2%",
-      "Anchor Lattice III: veil regen +2%",
-      "Anchor Lattice IV: veil regen +2%",
-      "Anchor Lattice V: veil regen +2%",
-      "Anchor Lattice VI: veil regen +2%",
-      "Anchor Lattice VII: veil regen +2%",
-      "Anchor Lattice VIII: veil regen +2%"
-    ]
+    label: "Fracture Roots",
+    effectLabel: "Rite veil-strain bonus"
   },
   {
     id: "cataclysm",
-    label: "Cataclysm Roots",
-    unlocks: [
-      "Whisper of Providence Veil cost: 10 -> 5",
-      "Reserve Lattice I: +60 miracle reserve cap",
-      "Reserve Lattice II: +60 miracle reserve cap",
-      "Reserve Lattice III: +60 miracle reserve cap",
-      "Reserve Lattice IV: +60 miracle reserve cap",
-      "Reserve Lattice V: +60 miracle reserve cap",
-      "Reserve Lattice VI: +60 miracle reserve cap",
-      "Reserve Lattice VII: +60 miracle reserve cap",
-      "Reserve Lattice VIII: +60 miracle reserve cap",
-      "Reserve Lattice IX: +60 miracle reserve cap",
-      "Reserve Lattice X: +60 miracle reserve cap",
-      "Reserve Lattice XI: +60 miracle reserve cap"
-    ]
+    label: "Reservoir Roots",
+    effectLabel: "Rite reserve cap bonus"
   }
 ];
+
+function getEchoTreeEffectValue(treeId: EchoTreeId, rank: number): number {
+  const clampedRank = Math.max(0, rank);
+  switch (treeId) {
+    case "whispers":
+      return Math.min(ECHO_WHISPER_FAIL_REDUCTION_MAX, clampedRank * ECHO_WHISPER_FAIL_REDUCTION_PER_RANK);
+    case "conversion":
+      return Math.min(
+        ECHO_CONVERSION_THRESHOLD_REDUCTION_MAX,
+        clampedRank * ECHO_CONVERSION_THRESHOLD_REDUCTION_PER_RANK
+      );
+    case "doctrine":
+      return Math.min(
+        ECHO_DOCTRINE_ACT_COST_REDUCTION_MAX,
+        clampedRank * ECHO_DOCTRINE_ACT_COST_REDUCTION_PER_RANK
+      );
+    case "stability":
+      return Math.min(
+        ECHO_FRACTURE_RITE_STRAIN_BONUS_MAX,
+        clampedRank * ECHO_FRACTURE_RITE_STRAIN_BONUS_PER_RANK
+      );
+    case "cataclysm":
+      return clampedRank * ECHO_RESERVOIR_CAP_PER_RANK;
+    default:
+      return 0;
+  }
+}
+
+function formatEchoTreeEffect(treeId: EchoTreeId, rank: number): string {
+  const value = getEchoTreeEffectValue(treeId, rank);
+  if (treeId === "cataclysm") return `+${formatResource(value)} reserve cap`;
+  if (treeId === "stability") return `+${formatResource(value * 100, 1)}% rite veil strain`;
+  if (treeId === "whispers") return `-${formatResource(value * 100, 1)}% whisper strain chance`;
+  if (treeId === "conversion") return `-${formatResource(value * 100, 1)}% conversion thresholds`;
+  return `-${formatResource(value * 100, 2)}% act costs`;
+}
 
 const ERA_TWO_PLUS_WHISPER_PROFILES: Array<{
   target: WhisperTarget;
@@ -982,8 +962,9 @@ export default function App() {
         rank,
         nextCost,
         canPurchase: canPurchaseEchoTreeRank(gameState, tree.id),
-        unlockedBonuses: tree.unlocks.slice(0, rank),
-        nextBonus: rank < tree.unlocks.length ? tree.unlocks[rank] : null
+        effectLabel: tree.effectLabel,
+        currentEffect: formatEchoTreeEffect(tree.id, rank),
+        nextEffect: nextCost === null ? null : formatEchoTreeEffect(tree.id, rank + 1)
       };
     });
 
@@ -1868,9 +1849,9 @@ export default function App() {
     />
   );
 
-  const eraThreeCataclysmPanel =
+  const eraThreeGateRitesPanel =
     era >= 3 ? (
-      <CataclysmPanel
+      <GateRitesPanel
         era={gameState.era}
         influence={gameState.resources.influence}
         influenceCap={influenceCap}
@@ -1973,7 +1954,7 @@ export default function App() {
   const gateTabContent =
     era >= 3 ? (
       <div className="space-y-2">
-        {eraThreeCataclysmPanel}
+        {eraThreeGateRitesPanel}
         {eraThreeGatePanel}
       </div>
     ) : null;
