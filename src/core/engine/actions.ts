@@ -94,6 +94,7 @@ import {
   getInfluenceCap,
   getUnravelingGateStatus,
   getAcolyteListenRecruitMultiplier,
+  getAcolyteListenWhisperBeliefMultiplier,
   getWhisperCostForProfile,
   getWhisperFailChance,
   getWhisperFollowerPreview,
@@ -1221,7 +1222,8 @@ export function performWhisper(state: GameState, nowMs: number, options?: Whispe
   const followerGain = strainedOutcome
     ? followerPreview.strainedFollowers
     : followerPreview.successFollowers;
-  const beliefGain = WHISPER_BELIEF_GAIN + cadence.beliefBonus;
+  const listenBeliefMultiplier = getAcolyteListenWhisperBeliefMultiplier(baseState);
+  const beliefGain = (WHISPER_BELIEF_GAIN + cadence.beliefBonus) * listenBeliefMultiplier;
   const whisperCooldownMs = getWhisperTargetCooldownMs(
     baseState,
     normalizedOptions.target,

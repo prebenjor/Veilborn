@@ -1,6 +1,7 @@
 import {
   ACOLYTE_ORDER_GATHER_PASSIVE_PER_ACOLYTE,
   ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER,
+  ACOLYTE_ORDER_LISTEN_WHISPER_BELIEF_MULTIPLIER,
   ACOLYTE_ORDER_STEADY_INFLUENCE_CAP,
   ACOLYTE_ORDER_STEADY_INFLUENCE_PER_ACOLYTE,
   ACT_BASE_COST,
@@ -63,6 +64,7 @@ import {
   PASSIVE_FOLLOWER_RATE_PER_CULT,
   PASSIVE_FOLLOWER_RATE_PER_PROPHET_ERA_TWO,
   PASSIVE_FOLLOWER_RATE_PER_PROPHET,
+  PASSIVE_FOLLOWER_RATE_PER_ACOLYTE_ERA_ONE_BASE,
   PASSIVE_FOLLOWER_RATE_PER_ACOLYTE_ERA_TWO,
   PASSIVE_FOLLOWER_RATE_PER_ACOLYTE,
   PASSIVE_FOLLOWER_RATE_PER_SHRINE,
@@ -123,6 +125,7 @@ import {
   VEIL_REGEN_PER_SHRINE_SECONDS,
   VEIL_REGEN_SHRINE_DIMINISHING_SCALE,
   WHISPER_BASE_COST,
+  WHISPER_COST_SCALAR,
   WHISPER_BASE_COST_SURCHARGE,
   WHISPER_BASE_FAIL_CHANCE,
   WHISPER_BASE_TARGET_FOLLOWER_MULTIPLIER,
@@ -679,10 +682,12 @@ export function getPassiveFollowerRateBreakdown(
 ): PassiveFollowerRateBreakdown {
   void nowMs;
   if (state.era < 2) {
+    const acolyteBaselineRate = PASSIVE_FOLLOWER_RATE_PER_ACOLYTE_ERA_ONE_BASE * state.acolytes;
     const acolyteOrderRate = getAcolyteGatherPassiveFollowersPerSecond(state);
+    const acolytePerSecond = Math.max(0, acolyteBaselineRate + acolyteOrderRate);
     return {
-      totalPerSecond: acolyteOrderRate,
-      acolytePerSecond: acolyteOrderRate,
+      totalPerSecond: acolytePerSecond,
+      acolytePerSecond,
       prophetPerSecond: 0,
       cultPerSecond: 0,
       shrinePerSecond: 0
@@ -882,6 +887,11 @@ export function getAcolyteListenRecruitMultiplier(state: GameState): number {
   return 1 + ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER * getActiveAcolyteOrderPotency(state);
 }
 
+export function getAcolyteListenWhisperBeliefMultiplier(state: GameState): number {
+  if (getActiveAcolyteOrder(state) !== "listen") return 1;
+  return 1 + ACOLYTE_ORDER_LISTEN_WHISPER_BELIEF_MULTIPLIER * getActiveAcolyteOrderPotency(state);
+}
+
 export function getAcolyteSteadyInfluenceBonusPerSecond(state: GameState): number {
   if (getActiveAcolyteOrder(state) !== "steady") return 0;
   const raw = Math.max(0, state.acolytes) * ACOLYTE_ORDER_STEADY_INFLUENCE_PER_ACOLYTE;
@@ -1047,9 +1057,14 @@ export function isWhisperTargetOnCooldown(
 function getWhisperTargetCostSurcharge(state: GameState, target: WhisperTarget): number {
   if (state.era < 2) return 0;
   const baseSurcharge = WHISPER_BASE_COST_SURCHARGE[target];
+  const scalarBaseline = 1.4;
+  const scalarAdjustedSurcharge = baseSurcharge * (WHISPER_COST_SCALAR / scalarBaseline);
   const surchargeMultiplier = 1 - getWhisperEchoSurchargeReduction(state);
   const resonanceReduction = getDoctrineResonanceState(state).whisperSurchargeReduction;
-  return Math.max(0, Math.ceil(baseSurcharge * surchargeMultiplier * (1 - resonanceReduction)));
+  return Math.max(
+    0,
+    Math.ceil(scalarAdjustedSurcharge * surchargeMultiplier * (1 - resonanceReduction))
+  );
 }
 
 function getWhisperTargetFollowerMultiplier(

@@ -43,9 +43,7 @@ export function StatBar({
       <article className="veil-stat-card rounded-xl border border-white/10 bg-black/25 p-3">
         <p className="text-xs uppercase tracking-[0.2em] text-veil/70">Followers</p>
         <p className="mt-2 text-xl text-white">{formatResource(followers)}</p>
-        {era >= 2 ? (
-          <p className="mt-1 text-xs text-veil/65">{formatRate(followerPerSecond)} / sec</p>
-        ) : null}
+        <p className="mt-1 text-xs text-veil/65">{formatRate(followerPerSecond)} / sec</p>
         {era >= 3 ? (
           <p className="mt-1 text-xs text-veil/65">
             Veil {formatResource(veil)} <span className="text-veil/55">&middot;</span>{" "}

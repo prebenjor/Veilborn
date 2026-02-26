@@ -102,7 +102,7 @@ Total regen per second:
 `total = base + shrine + cult + acolyteOrder`
 
 - `base = 1 + (0.5 * prophets)`
-- `shrine = shrinesBuilt * 0.2`
+- `shrine = shrinesBuilt * 0.16`
 - `cult = min(avgFollowersPerCult * 0.001, 2.0) * cultCount`
 - `acolyteOrder` (Era I only): active `Steady` order bonus, capped by order rules
 
@@ -130,8 +130,8 @@ Era II+ whisper targets:
 - `Prophets`: surcharge `+50`, follower multiplier `1.25`, fail chance `0.08`, cooldown `60s`
 - `Cults`: surcharge `+80`, follower multiplier `1.4`, fail chance `0.12`, cooldown `90s`
 - Passive follower-rate impact from last whisper target:
-  - `Prophets`: `+3%`
-  - `Cults`: `+5%`
+  - `Prophets`: `+2%`
+  - `Cults`: `+3%`
 - Light-Void resonance additionally modifies both targets:
   - `-8%` surcharge per resonance tier
   - `-4s` cooldown per resonance tier
@@ -139,6 +139,10 @@ Era II+ whisper targets:
 Whisper cost by profile:
 
 `whisperCost = ceil(baseWhisperCost + targetSurcharge + oneTimeDelta)`
+
+`targetSurcharge = ceil(baseTargetSurcharge * (whisperCostScalar / 1.4) * (1 - whisperSurchargeReduction) * (1 - resonanceReduction))`
+
+`whisperCostScalar = 1.48`
 
 Notes:
 - `oneTimeDelta` is used by temporary event effects (for example, next-whisper modifiers).
@@ -174,17 +178,19 @@ Cadence prompt:
 
 Era I acolyte orders:
 - Available when Era I has at least one acolyte.
-- One active order at a time; order duration: `45s`.
+- One active order at a time; order duration: `40s`.
 - Repeat penalty on reissuing the same order:
-  - `penalty = min(0.45, repeatCount * 0.15)`
+  - `penalty = min(0.6, repeatCount * 0.18)`
   - `potency = max(0.1, 1 - penalty)`
 - `Gather`:
-  - immediate followers: `floor((4 + 2*acolytes) * potency)`, minimum `1`
-  - passive followers per second while active: `acolytes * 0.08 * potency`
+  - immediate followers: `floor((3 + 1.5*acolytes) * potency)`, minimum `1`
+  - baseline passive followers per second in Era I (always on): `acolytes * 0.01`
+  - passive followers per second while active: `acolytes * 0.035 * potency`
 - `Listen`:
-  - next recruit and recruit preview multiplier while active: `1 + 0.35 * potency`
+  - next recruit and recruit preview multiplier while active: `1 + 0.2 * potency`
+  - whisper belief gain multiplier while active: `1 + 0.25 * potency`
 - `Steady`:
-  - influence regen bonus while active: `min(1.5, acolytes * 0.12) * potency`
+  - influence regen bonus while active: `min(1.0, acolytes * 0.08) * potency`
 - Orders auto-expire by timestamp and clear to `none` on expiry.
 
 ### Devotion (Path System Active)
@@ -250,7 +256,7 @@ Era unlock:
 
 Acolyte threshold:
 
-`followersNeededForNextAcolyte = 18 * 1.45^acolytes * conversionThresholdMult`
+`followersNeededForNextAcolyte = 18 * 1.4^acolytes * conversionThresholdMult`
 
 Prophet threshold:
 
@@ -537,6 +543,7 @@ Era I:
 - `legacy` tab uses a collapsible `Legacy Echoes` container (`era1_legacy_collapsed`)
 - Whisper/Recruit follower yield hints are shown on action hover/focus (not as static text)
 - Devotion indicator appears in the Whispers card after first qualifying action (max 3)
+- top stat bar shows follower rate (`/sec`) in Era I, Era II, and Era III
 - event log header: `Murmurs`
 - bottom status: one quiet atmospheric line
 
@@ -550,6 +557,10 @@ Era II+:
 - right omens sidebar width is `240px` (`300px` on large screens); left column enforces a `500px` minimum
 - desktop stats uses a separate fixed top-right dock (collapsed by default, trigger label `STATS`)
 - the right omens sidebar has no expand control and shows a short rolling feed (max 6 entries)
+- run-core anchor remains in the top stat bar (Belief, Influence, Followers) with rate-first sublines (`/sec`)
+- progression cards should include one muted `next unlock` line (threshold/cost only, no additional CTA)
+- batch spend controls (`x1`, `x10`, `MAX`) are reserved for batch surfaces (domains/echoes), not core active actions
+- ascension panel shows deterministic preview lines (`This run yields ...`, `Next Echo at ...`) immediately above Ascend CTA
 
 Era II:
 - tabs: `active`, `growth`, `legacy`, `meta`
@@ -599,6 +610,9 @@ Stats surface:
 - always accessible in every era and tab
 - desktop (`>=800px`): fixed top-right dock with collapsed-by-default trigger (`STATS`)
 - mobile (`<800px`): floating button opens drawer
+- internal sub-tabs: `STATS`, `LORE`, `TOOLS`
+- `LORE` includes era play guidance and milestone progress (`current/target` + next requirement)
+- `TOOLS` includes telemetry export, save archive controls, dev tools, and command hints
 - run timers and cadence info
 - follower flow lines
 - devotion path + stack line (path appears in Era II+)
@@ -611,6 +625,10 @@ Stats surface:
   - temporary resource boost
   - unlock state persists via localStorage key `veilborn.ui.dev_tools.enabled.v1`
 - content scales by era without spoiling future systems
+
+Major event toast:
+- compact top-left banner for era transitions and ascension completion
+- no toasts for routine actions
 
 Stats content by era:
 - Era I: no doctrine or gate-rite metrics (no cult output line, no shrine/cult influence lines, no rival lines); Devotion stack line visible, and active `Steady` acolyte-order influence bonus appears in influence breakdown.

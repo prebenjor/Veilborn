@@ -42,6 +42,10 @@ Stats visibility rule:
 - Stats content should grow by era and only include active or already encountered systems.
 - Desktop (`>=800px`): Stats is a fixed top-right dock with a collapsed-by-default `STATS` trigger.
 - Mobile (`<800px`): Stats remains a floating button that opens the drawer.
+- Top stat bar rates (`/sec`) for Belief, Influence, and Followers are visible in all eras.
+- Stats surface uses internal sub-tabs: `STATS`, `LORE`, `TOOLS`.
+- `LORE` shows era-context guidance and milestone tracking.
+- `TOOLS` hosts save archive, telemetry exports, and optional dev controls.
 
 ## Layout Rules
 
@@ -92,3 +96,54 @@ Stats visibility rule:
 - Keep shared shell surfaces in `src/ui/layout/*` (stat bar, tab dock, omen surface).
 - Keep `App.tsx` focused on state/selector/action orchestration.
 - When changing any rule in this document, update `MANIFESTO.md` and `docs/GAME_REFERENCE.md` in the same change.
+
+## Interaction Patterns (Concrete Spec)
+
+These are implementation-ready UI patterns to keep run readability high without adding new mechanics.
+
+Run Core Anchor:
+- Keep one always-visible run core in the top stat bar.
+- Required cards and order: `Belief`, `Influence`, `Followers`.
+- Required subline under each card: rate-first (`/sec`) where applicable.
+- Era III only: Veil stability descriptor remains attached to the Followers card.
+
+Next Unlock Ghost Row:
+- Each progression surface should expose one muted "next unlock" line at the bottom.
+- Examples:
+  - `Acolytes`: `Next ordination at <followers>`
+  - `Prophets`: `Next anointing at <followers> + <acolytes>`
+  - `Cults` (Era III): `Next cult at <belief> + <prophets>`
+  - `Gate`: `Next rite milestone at <veil strain target>`
+- Style: low-emphasis text, no border, no CTA, always one line.
+
+Bulk Spend Controls:
+- Bulk controls are allowed only where action batching already exists (for example domain investing and echo rank purchase).
+- Canonical labels: `x1`, `x10`, `MAX`.
+- Placement: top-right of the owning container header.
+- Never add bulk controls to core active actions (`Whisper`, `Recruit`, `Ordain`, `Anoint`, `Found Cult`).
+
+Ascension Preview Contract:
+- Ascension container must show a deterministic preview before the CTA.
+- Required lines:
+  - `This run yields <echoes> Echoes`
+  - `Next Echo at <belief target>`
+- Keep copy mechanical and short; no flavor prose in the preview lines.
+
+Rate-First Surface Rule:
+- Generator/progression cards lead with per-second impact before costs.
+- Required order inside cards:
+  - primary state (count/level)
+  - rate line (`x/s` or `% passive gain`)
+  - next cost/threshold
+  - CTA
+- If space is constrained, hide explanatory prose first; never hide the rate line.
+
+Event Feed Compression:
+- Primary omen feed remains short and recent.
+- Keep capped rolling history behavior (`OMEN_LOG_MAX_ENTRIES`).
+- Do not introduce expandable long-history controls in the primary gameplay shell.
+
+Major Event Toast:
+- Use a compact top-left toast for major events only.
+- Allowed toast events: era transition and ascension completion.
+- Do not emit toasts for routine actions (Whisper, Recruit, Invest, Act start).

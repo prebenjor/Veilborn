@@ -122,6 +122,7 @@ import {
 import {
   ACOLYTE_ORDER_GATHER_PASSIVE_PER_ACOLYTE,
   ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER,
+  ACOLYTE_ORDER_LISTEN_WHISPER_BELIEF_MULTIPLIER,
   ACOLYTE_ORDER_REPEAT_MAX_PENALTY,
   ACOLYTE_ORDER_REPEAT_STEP,
   ACOLYTE_ORDER_STEADY_INFLUENCE_CAP,
@@ -214,6 +215,10 @@ const LOW_BATTERY_LEVEL = 0.2;
 type UiTab = "active" | "growth" | "threshold" | "gate" | "legacy" | "meta";
 type EraValue = 1 | 2 | 3;
 type TransitionKind = "fade" | "vignette";
+type UiToast = {
+  id: number;
+  message: string;
+};
 
 interface WhisperOptionView {
   target: WhisperTarget;
@@ -595,6 +600,7 @@ export default function App() {
   const [transitionKind, setTransitionKind] = useState<TransitionKind | null>(null);
   const [transitionHint, setTransitionHint] = useState<string | null>(null);
   const [finalChoiceMaskVisible, setFinalChoiceMaskVisible] = useState(false);
+  const [uiToast, setUiToast] = useState<UiToast | null>(null);
   const eraHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const gameStateRef = useRef(gameState);
   const previousEraRef = useRef<EraValue>(gameState.era);
@@ -604,7 +610,22 @@ export default function App() {
   });
   const transitionTimerRef = useRef<number | null>(null);
   const finalChoiceMaskTimerRef = useRef<number | null>(null);
+  const uiToastTimerRef = useRef<number | null>(null);
   const nowMs = gameState.meta.updatedAt;
+
+  const showUiToast = (message: string) => {
+    setUiToast({
+      id: Date.now(),
+      message
+    });
+    if (uiToastTimerRef.current !== null) {
+      window.clearTimeout(uiToastTimerRef.current);
+    }
+    uiToastTimerRef.current = window.setTimeout(() => {
+      setUiToast((current) => (current?.message === message ? null : current));
+      uiToastTimerRef.current = null;
+    }, 3600);
+  };
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -850,6 +871,9 @@ export default function App() {
       if (finalChoiceMaskTimerRef.current !== null) {
         window.clearTimeout(finalChoiceMaskTimerRef.current);
       }
+      if (uiToastTimerRef.current !== null) {
+        window.clearTimeout(uiToastTimerRef.current);
+      }
     };
   }, []);
 
@@ -1048,6 +1072,9 @@ export default function App() {
       : nextRivalInSeconds <= 0
         ? "No rivals present \u00b7 next spawn imminent"
         : `No rivals present \u00b7 next in ~${formatDurationCompact(nextRivalInSeconds)}`;
+  const elapsedSeconds = Math.floor(gameState.simulation.totalElapsedMs / 1000);
+  const secondsSinceLastEvent = Math.max(0, (nowMs - gameState.activity.lastEventAt) / 1000);
+  const era = gameState.era;
   const eraTwoThresholdMetCount =
     (gameState.stats.totalBeliefEarned >= eraTwoGate.beliefTarget ? 1 : 0) +
     (gameState.cults >= eraTwoGate.cultsTarget ? 1 : 0) +
@@ -1064,6 +1091,45 @@ export default function App() {
   const eraOneThresholdSummary = `${formatResource(eraOneThresholdMetCount)} / ${formatResource(eraOneThresholdTotalCount)} conditions met`;
   const eraOneThresholdRatio =
     eraOneThresholdTotalCount <= 0 ? 0 : eraOneThresholdMetCount / eraOneThresholdTotalCount;
+  const eraThreeGateMetCount =
+    (unravelingGate.beliefReady ? 1 : 0) +
+    (unravelingGate.veilReady ? 1 : 0) +
+    (unravelingGate.miraclesReady ? 1 : 0) +
+    (unravelingGate.riteVeilStrainReady ? 1 : 0) +
+    (unravelingGate.runTimeReady ? 1 : 0);
+  const eraThreeGateTotalCount = 5;
+  const statsMilestoneCount =
+    era === 1 ? eraOneThresholdMetCount : era === 2 ? eraTwoThresholdMetCount : eraThreeGateMetCount;
+  const statsMilestoneTarget =
+    era === 1 ? eraOneThresholdTotalCount : era === 2 ? eraTwoThresholdTotalCount : eraThreeGateTotalCount;
+  const statsNextMilestoneLabel =
+    era === 1
+      ? !eraOneGate.beliefReady
+        ? `Belief ${formatResource(gameState.stats.totalBeliefEarned)} / ${formatResource(eraOneGate.beliefTarget)}`
+        : !eraOneGate.acolytesReady
+          ? `Acolytes ${formatResource(gameState.acolytes)} / ${formatResource(eraOneGate.acolytesTarget)}`
+          : !eraOneGate.followersReady
+            ? `Followers ${formatResource(gameState.resources.followers)} / ${formatResource(eraOneGate.followersTarget)}`
+            : "Ready to advance to Era II"
+      : era === 2
+        ? !eraTwoGate.beliefReady
+          ? `Belief ${formatResource(gameState.stats.totalBeliefEarned)} / ${formatResource(eraTwoGate.beliefTarget)}`
+          : !eraTwoGate.cultsReady
+            ? `Cults ${formatResource(gameState.cults)} / ${formatResource(eraTwoGate.cultsTarget)}`
+            : !eraTwoGate.rivalEventReady
+              ? "Trigger one rival event"
+              : "Ready to advance to Era III"
+        : !unravelingGate.beliefReady
+          ? `Belief ${formatResource(gameState.stats.totalBeliefEarned)} / ${formatResource(unravelingGate.beliefTarget)}`
+          : !unravelingGate.veilReady
+            ? `Veil ${formatResource(gameState.resources.veil)} / ${formatResource(unravelingGate.veilTarget)}`
+            : !unravelingGate.miraclesReady
+              ? `Rites ${formatResource(gameState.cataclysm.miraclesThisRun)} / ${formatResource(unravelingGate.miraclesTarget)}`
+              : !unravelingGate.riteVeilStrainReady
+                ? `Rite strain ${formatResource(gameState.cataclysm.gateRiteVeilSpent)} / ${formatResource(unravelingGate.riteVeilStrainTarget)}`
+                : !unravelingGate.runTimeReady
+                  ? `Runtime ${formatDurationCompact(elapsedSeconds)} / ${formatDurationCompact(unravelingGate.runTimeTargetSeconds)}`
+                  : "Ready to cross the Gate";
 
   const veilBonus = getVeilBonus(gameState.resources.veil);
   const veilRegenPerSecond = getVeilRegenPerSecond(gameState);
@@ -1079,9 +1145,6 @@ export default function App() {
     canCast: canCastMiracle(gameState, tier)
   }));
 
-  const elapsedSeconds = Math.floor(gameState.simulation.totalElapsedMs / 1000);
-  const secondsSinceLastEvent = Math.max(0, (nowMs - gameState.activity.lastEventAt) / 1000);
-  const era = gameState.era;
   const availableTabs = getAvailableTabs(era);
   const safeActiveTab = getSafeTab(activeTab, availableTabs);
   const runStartTimestamp = gameState.meta.runStartTimestamp;
@@ -1164,6 +1227,8 @@ export default function App() {
     getNextAcolyteOrderPotency("steady");
   const acolyteListenRecruitMultiplier =
     1 + ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER * getNextAcolyteOrderPotency("listen");
+  const acolyteListenWhisperBeliefMultiplier =
+    1 + ACOLYTE_ORDER_LISTEN_WHISPER_BELIEF_MULTIPLIER * getNextAcolyteOrderPotency("listen");
   const metaOverviewSummary = `Era ${formatResource(era)} \u00b7 ${formatResource(gameState.prestige.completedRuns)} completed runs`;
   const metaAscensionSummary = uiReveal.showAscensionPanel
     ? `${formatResource(gameState.prestige.echoes)} Echoes \u00b7 +${formatResource(ascensionEchoGain)} this run`
@@ -1654,9 +1719,11 @@ export default function App() {
 
   const onAscend = () => {
     const actionAt = Date.now();
+    let ascensionEchoesGained: number | null = null;
     setGameState((prev) => {
       if (!canAscend(prev)) return prev;
       const echoesGained = getAscensionEchoGain(prev.stats.totalBeliefEarned);
+      ascensionEchoesGained = echoesGained;
       recordTelemetryAction(prev, "ascend", actionAt);
       appendTelemetryEvent(prev, "ascension", actionAt, {
         echoesGained,
@@ -1668,6 +1735,9 @@ export default function App() {
     });
     setSnapshotMeta(getRecoverySnapshotMeta());
     setTelemetryRunSummaries(loadTelemetryRunSummaries());
+    if (ascensionEchoesGained !== null) {
+      showUiToast(`Ascension complete · +${formatResource(ascensionEchoesGained)} Echoes`);
+    }
   };
 
   const onFormPantheonAlliance = (allyId: string) => {
@@ -1692,11 +1762,13 @@ export default function App() {
 
   const onAdvanceEraOne = () => {
     const actionAt = Date.now();
+    let didAdvance = false;
     setGameState((prev) => {
       if (!canAdvanceEraOneToTwo(prev)) return prev;
       saveRecoverySnapshot(prev, "era_transition");
       const next = performAdvanceEraOneToTwo(prev, actionAt);
       if (next !== prev && next.era !== prev.era) {
+        didAdvance = true;
         recordTelemetryAction(next, "advance_era", actionAt);
         appendTelemetryEvent(next, "era_transition", actionAt, {
           fromEra: prev.era,
@@ -1706,15 +1778,20 @@ export default function App() {
       return next;
     });
     setSnapshotMeta(getRecoverySnapshotMeta());
+    if (didAdvance) {
+      showUiToast("Era II reached · Doctrine takes root.");
+    }
   };
 
   const onAdvanceEraTwo = () => {
     const actionAt = Date.now();
+    let didAdvance = false;
     setGameState((prev) => {
       if (!canAdvanceEraTwoToThree(prev)) return prev;
       saveRecoverySnapshot(prev, "era_transition");
       const next = performAdvanceEraTwoToThree(prev, actionAt);
       if (next !== prev && next.era !== prev.era) {
+        didAdvance = true;
         recordTelemetryAction(next, "advance_era", actionAt);
         appendTelemetryEvent(next, "era_transition", actionAt, {
           fromEra: prev.era,
@@ -1724,6 +1801,9 @@ export default function App() {
       return next;
     });
     setSnapshotMeta(getRecoverySnapshotMeta());
+    if (didAdvance) {
+      showUiToast("Era III reached · The Gate stands open.");
+    }
   };
 
   const doctrineGrowthPanel = era >= 2 ? (
@@ -1986,6 +2066,7 @@ export default function App() {
       acolyteGatherPassivePerSecond={acolyteGatherPassivePerSecond}
       acolyteSteadyInfluencePerSecond={acolyteSteadyInfluencePerSecond}
       acolyteListenRecruitMultiplier={acolyteListenRecruitMultiplier}
+      acolyteListenWhisperBeliefMultiplier={acolyteListenWhisperBeliefMultiplier}
       omenTitle={uiReveal.omenTitle}
       visibleOmens={visibleOmens}
       activeDoubtEvent={activeDoubtEventCard}
@@ -2002,6 +2083,7 @@ export default function App() {
         echoes={gameState.prestige.echoes}
         treeViews={echoTreeViews}
         onPurchaseTree={onPurchaseEchoTreeRank}
+        showHeading={false}
       />
     ) : null;
 
@@ -2133,9 +2215,14 @@ export default function App() {
   );
   const statsDrawerProps = {
     era: gameState.era,
+    completedRuns: gameState.prestige.completedRuns,
+    lifetimeEchoes: gameState.prestige.lifetimeEchoes,
     runSeconds: elapsedSeconds,
     totalTicks: gameState.simulation.totalTicks,
     totalBeliefEarned: gameState.stats.totalBeliefEarned,
+    milestoneCount: statsMilestoneCount,
+    milestoneTarget: statsMilestoneTarget,
+    nextMilestoneLabel: statsNextMilestoneLabel,
     secondsSinceLastEvent,
     beliefBreakdown,
     influenceBreakdown: influenceRegenBreakdown,
@@ -2187,6 +2274,11 @@ export default function App() {
         </div>
       ) : null}
       {finalChoiceMaskVisible ? <div className="veil-final-choice-mask" aria-hidden="true" /> : null}
+      {uiToast ? (
+        <div className="fixed left-4 top-4 z-50 max-w-[340px] rounded-xl border border-white/20 bg-black/70 px-3 py-2 text-xs text-veil/90 shadow-veil backdrop-blur-sm">
+          {uiToast.message}
+        </div>
+      ) : null}
       <motion.div
         initial={reducedMotion ? false : { opacity: 0, y: 16 }}
         animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}

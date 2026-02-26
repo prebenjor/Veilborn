@@ -19,14 +19,22 @@ interface EchoTreeQuickPanelProps {
   echoes: number;
   treeViews: EchoTreeView[];
   onPurchaseTree: (treeId: EchoTreeId) => void;
+  showHeading?: boolean;
 }
 
-export function EchoTreeQuickPanel({ echoes, treeViews, onPurchaseTree }: EchoTreeQuickPanelProps) {
+export function EchoTreeQuickPanel({
+  echoes,
+  treeViews,
+  onPurchaseTree,
+  showHeading = true
+}: EchoTreeQuickPanelProps) {
   return (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 shadow-veil backdrop-blur-sm">
-      <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Legacy Echoes</h2>
-      <p className="mt-2 text-xs text-veil/70">
-        Echoes available: {formatResource(echoes)}. Invest now; full archive controls return in META once Era II opens.
+      {showHeading ? (
+        <h2 className="text-sm uppercase tracking-[0.25em] text-veil/80">Legacy Echoes</h2>
+      ) : null}
+      <p className={`${showHeading ? "mt-2" : ""} text-xs text-veil/70`}>
+        Echoes available: {formatResource(echoes)}. Invest now; full archive controls return in LEGACY once Era II opens.
       </p>
       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
         {treeViews.map((tree) => (

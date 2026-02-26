@@ -33,6 +33,7 @@ interface EraOneLayoutProps {
   acolyteGatherPassivePerSecond: number;
   acolyteSteadyInfluencePerSecond: number;
   acolyteListenRecruitMultiplier: number;
+  acolyteListenWhisperBeliefMultiplier: number;
   omenTitle: string;
   visibleOmens: OmenEntry[];
   activeDoubtEvent: ActiveDoubtEventView | null;
@@ -61,6 +62,7 @@ export function EraOneLayout({
   acolyteGatherPassivePerSecond,
   acolyteSteadyInfluencePerSecond,
   acolyteListenRecruitMultiplier,
+  acolyteListenWhisperBeliefMultiplier,
   omenTitle,
   visibleOmens,
   activeDoubtEvent,
@@ -157,6 +159,7 @@ export function EraOneLayout({
             >
               <p className="text-sm text-ember">Listen</p>
               <p className="mt-1 text-veil/65">Recruit x{formatResource(acolyteListenRecruitMultiplier, 2)}</p>
+              <p className="text-veil/65">Whisper belief x{formatResource(acolyteListenWhisperBeliefMultiplier, 2)}</p>
             </button>
             <button
               type="button"

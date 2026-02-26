@@ -151,21 +151,25 @@ Implementation-expanded regen stack:
 `total_influence_regen_per_second = base + shrine + cult + acolyte_order`
 
 - `base = 1 + (0.5 * prophet_count)`
-- `shrine = 0.2 * shrine_count`
+- `shrine = 0.16 * shrine_count`
 - `cult = min(avg_followers_per_cult * 0.001, 2.0) * cult_count`
-- `acolyte_order` (Era I, Steady order only) = `min(1.5, acolyte_count * 0.12) * order_potency`
+- `acolyte_order` (Era I, Steady order only) = `min(1.0, acolyte_count * 0.08) * order_potency`
 
 Costs:
 - Whisper base cost: `10` flat.
 - Era II+ whisper targets:
-  - Prophets: surcharge `+50`, follower multiplier `1.25`, fail chance `0.08`, cooldown `60s`, passive follower-rate bonus `+3%`
-  - Cults: surcharge `+80`, follower multiplier `1.4`, fail chance `0.12`, cooldown `90s`, passive follower-rate bonus `+5%`
+  - Prophets: surcharge `+50`, follower multiplier `1.25`, fail chance `0.08`, cooldown `60s`, passive follower-rate bonus `+2%`
+  - Cults: surcharge `+80`, follower multiplier `1.4`, fail chance `0.12`, cooldown `90s`, passive follower-rate bonus `+3%`
 - Domain resonance modifier (Light-Void):
   - whisper surcharge reduction: `8%` per resonance tier
   - whisper cooldown reduction: `4s` per resonance tier
 - Whisper profile cost:
 
 `whisper_cost = ceil(base_whisper_cost + target_surcharge + one_time_delta)`
+
+`target_surcharge = ceil(base_target_surcharge * (whisper_cost_scalar / 1.4) * (1 - whisper_surcharge_reduction) * (1 - resonance_reduction))`
+
+`whisper_cost_scalar = 1.48`
 
 - Whisper strain model:
 
@@ -238,30 +242,36 @@ Meta-progression anchor:
 
 Acolyte ordination:
 
-`followers_needed_for_next_acolyte = 18 * 1.45^acolytes * conversion_threshold_mult`
+`followers_needed_for_next_acolyte = 18 * 1.4^acolytes * conversion_threshold_mult`
 
 Era I acolyte orders:
-- One active order at a time; duration `45s`.
+- One active order at a time; duration `40s`.
 - Repeating the same order applies diminishing potency:
 
-`order_potency = max(0.1, 1 - min(0.45, repeat_count * 0.15))`
+`order_potency = max(0.1, 1 - min(0.6, repeat_count * 0.18))`
 
 - Gather:
   - immediate followers:
 
-`gather_immediate = floor((4 + 2 * acolytes) * order_potency)`
+`gather_immediate = floor((3 + 1.5 * acolytes) * order_potency)`
+
+  - baseline passive followers (always on in Era I):
+
+`acolyte_passive_per_second = acolytes * 0.01`
 
   - passive followers while active:
 
-`gather_passive_per_second = acolytes * 0.08 * order_potency`
+`gather_passive_per_second = acolytes * 0.035 * order_potency`
 
 - Listen:
 
-`recruit_multiplier = 1 + (0.35 * order_potency)`
+`recruit_multiplier = 1 + (0.2 * order_potency)`
+
+`whisper_belief_multiplier = 1 + (0.25 * order_potency)`
 
 - Steady:
 
-`influence_bonus_per_second = min(1.5, acolytes * 0.12) * order_potency`
+`influence_bonus_per_second = min(1.0, acolytes * 0.08) * order_potency`
 
 Prophet anointing:
 
@@ -629,6 +639,13 @@ Rules:
 - Stats content still follows progressive disclosure: only show metrics for systems the player has already unlocked or experienced.
 - After the first ascension, Echo spending must be reachable before returning to Era III (legacy quick-spend surface in Era I is acceptable).
 - UI architecture should preserve era boundaries in code: keep era composition in dedicated layout files, with `App.tsx` as orchestration only.
+- Keep a single run-core anchor in the top stat bar (Belief, Influence, Followers) with rate-first sublines (`/sec`).
+- Progression surfaces should expose one muted "next unlock" line (next threshold/cost) without adding extra CTA noise.
+- Bulk controls (`x1`, `x10`, `MAX`) are allowed only for batch-spend surfaces (for example domain investment and echo purchase), never for core active actions.
+- Ascension must always present deterministic preview lines before the CTA (`This run yields ...`, `Next Echo at ...`).
+- Primary omen feed should remain a short rolling surface; do not reintroduce long-history expansion into the main shell.
+- Stats surface should use scoped sub-tabs (`STATS`, `LORE`, `TOOLS`) to keep dense diagnostics readable without flooding the primary view.
+- Use compact toasts only for major run-state changes (era transitions, ascension), never for routine economy clicks.
 
 ## Design Rules (Do Not Break)
 
