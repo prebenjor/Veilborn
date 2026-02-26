@@ -1,4 +1,8 @@
 import {
+  ACOLYTE_ORDER_GATHER_PASSIVE_PER_ACOLYTE,
+  ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER,
+  ACOLYTE_ORDER_STEADY_INFLUENCE_CAP,
+  ACOLYTE_ORDER_STEADY_INFLUENCE_PER_ACOLYTE,
   ACT_BASE_COST,
   ACT_BASE_MULTIPLIER,
   ACT_DURATION_SECONDS,
@@ -43,7 +47,7 @@ import {
   ECHO_TREE_COST_LINEAR_SCALE,
   ERA_ONE_BELIEF_GATE_BASE,
   ERA_ONE_FOLLOWER_GATE,
-  ERA_ONE_PROPHET_GATE,
+  ERA_ONE_ACOLYTE_GATE,
   ERA_TWO_BELIEF_GATE_BASE,
   ERA_TWO_CULT_GATE,
   MIRACLE_BASE_GAIN,
@@ -137,6 +141,7 @@ import {
   type DevotionPath,
   type DomainProgress,
   type DomainId,
+  type AcolyteOrder,
   type EchoTreeId,
   type WhisperMagnitude,
   type WhisperTarget,
@@ -176,6 +181,7 @@ export interface InfluenceRegenBreakdown {
   shrinePerSecond: number;
   cultPerSecond: number;
   echoPerSecond: number;
+  acolyteOrderPerSecond: number;
   shrineCount: number;
   cultCount: number;
   cap: number;
@@ -235,8 +241,8 @@ export interface DoctrineResonanceState {
 export interface EraOneGateStatus {
   beliefTarget: number;
   beliefReady: boolean;
-  prophetsTarget: number;
-  prophetsReady: boolean;
+  acolytesTarget: number;
+  acolytesReady: boolean;
   followersTarget: number;
   followersReady: boolean;
   ready: boolean;
@@ -673,9 +679,10 @@ export function getPassiveFollowerRateBreakdown(
 ): PassiveFollowerRateBreakdown {
   void nowMs;
   if (state.era < 2) {
+    const acolyteOrderRate = getAcolyteGatherPassiveFollowersPerSecond(state);
     return {
-      totalPerSecond: 0,
-      acolytePerSecond: 0,
+      totalPerSecond: acolyteOrderRate,
+      acolytePerSecond: acolyteOrderRate,
       prophetPerSecond: 0,
       cultPerSecond: 0,
       shrinePerSecond: 0
@@ -844,6 +851,48 @@ export function getInfluenceCap(state: GameState): number {
   return Math.floor(baseCap + cultBonus + domainBonus + shrineBonus);
 }
 
+export function isAcolyteOrderActive(state: GameState): boolean {
+  return (
+    state.era === 1 &&
+    state.activity.acolyteOrder !== "none" &&
+    state.activity.acolyteOrderEndsAt > state.meta.updatedAt
+  );
+}
+
+export function getActiveAcolyteOrder(state: GameState): AcolyteOrder {
+  return isAcolyteOrderActive(state) ? state.activity.acolyteOrder : "none";
+}
+
+export function getActiveAcolyteOrderPotency(state: GameState): number {
+  if (!isAcolyteOrderActive(state)) return 0;
+  return Math.max(0, Math.min(1, state.activity.acolyteOrderPotency));
+}
+
+export function getAcolyteGatherPassiveFollowersPerSecond(state: GameState): number {
+  if (getActiveAcolyteOrder(state) !== "gather") return 0;
+  return (
+    Math.max(0, state.acolytes) *
+    ACOLYTE_ORDER_GATHER_PASSIVE_PER_ACOLYTE *
+    getActiveAcolyteOrderPotency(state)
+  );
+}
+
+export function getAcolyteListenRecruitMultiplier(state: GameState): number {
+  if (getActiveAcolyteOrder(state) !== "listen") return 1;
+  return 1 + ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER * getActiveAcolyteOrderPotency(state);
+}
+
+export function getAcolyteSteadyInfluenceBonusPerSecond(state: GameState): number {
+  if (getActiveAcolyteOrder(state) !== "steady") return 0;
+  const raw = Math.max(0, state.acolytes) * ACOLYTE_ORDER_STEADY_INFLUENCE_PER_ACOLYTE;
+  return Math.max(0, Math.min(ACOLYTE_ORDER_STEADY_INFLUENCE_CAP, raw) * getActiveAcolyteOrderPotency(state));
+}
+
+export function getAcolyteOrderRemainingSeconds(state: GameState, nowMs: number): number {
+  if (getActiveAcolyteOrder(state) === "none") return 0;
+  return Math.max(0, Math.ceil((state.activity.acolyteOrderEndsAt - nowMs) / 1000));
+}
+
 export function getMiracleReserveCap(state: GameState): number {
   if (state.era < 3) return 0;
 
@@ -898,7 +947,9 @@ export function getInfluenceRegenBreakdown(state: GameState): InfluenceRegenBrea
   const shrinePerSecond = getInfluenceShrineRegenPerSecond(state);
   const cultRegen = getInfluenceCultRegenPerSecond(state);
   const echoPerSecond = getInfluenceEchoRegenPerSecond(state);
-  const totalPerSecond = basePerSecond + shrinePerSecond + cultRegen.totalPerSecond + echoPerSecond;
+  const acolyteOrderPerSecond = getAcolyteSteadyInfluenceBonusPerSecond(state);
+  const totalPerSecond =
+    basePerSecond + shrinePerSecond + cultRegen.totalPerSecond + echoPerSecond + acolyteOrderPerSecond;
   const cap = getInfluenceCap(state);
   const fillTimeSeconds = totalPerSecond > 0 ? Math.ceil(cap / totalPerSecond) : null;
 
@@ -908,6 +959,7 @@ export function getInfluenceRegenBreakdown(state: GameState): InfluenceRegenBrea
     shrinePerSecond,
     cultPerSecond: cultRegen.totalPerSecond,
     echoPerSecond,
+    acolyteOrderPerSecond,
     shrineCount: Math.max(0, Math.floor(state.doctrine.shrinesBuilt)),
     cultCount: cultRegen.cultCount,
     cap,
@@ -1348,20 +1400,20 @@ export function getEraOneBeliefGateTarget(state: GameState): number {
 
 export function getEraOneGateStatus(state: GameState): EraOneGateStatus {
   const beliefTarget = getEraOneBeliefGateTarget(state);
-  const prophetsTarget = ERA_ONE_PROPHET_GATE;
+  const acolytesTarget = ERA_ONE_ACOLYTE_GATE;
   const followersTarget = ERA_ONE_FOLLOWER_GATE;
   const beliefReady = state.stats.totalBeliefEarned >= beliefTarget;
-  const prophetsReady = state.prophets >= prophetsTarget;
+  const acolytesReady = state.acolytes >= acolytesTarget;
   const followersReady = state.resources.followers >= followersTarget;
 
   return {
     beliefTarget,
     beliefReady,
-    prophetsTarget,
-    prophetsReady,
+    acolytesTarget,
+    acolytesReady,
     followersTarget,
     followersReady,
-    ready: beliefReady && prophetsReady && followersReady
+    ready: beliefReady && acolytesReady && followersReady
   };
 }
 

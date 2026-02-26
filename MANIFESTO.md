@@ -148,12 +148,12 @@ Era III cap scaling (runtime):
 
 Implementation-expanded regen stack:
 
-`total_influence_regen_per_second = base + shrine + cult + resonant_word`
+`total_influence_regen_per_second = base + shrine + cult + acolyte_order`
 
 - `base = 1 + (0.5 * prophet_count)`
 - `shrine = 0.2 * shrine_count`
 - `cult = min(avg_followers_per_cult * 0.001, 2.0) * cult_count`
-- `resonant_word = +2.0` flat if Echo upgrade is owned
+- `acolyte_order` (Era I, Steady order only) = `min(1.5, acolyte_count * 0.12) * order_potency`
 
 Costs:
 - Whisper base cost: `10` flat.
@@ -240,11 +240,34 @@ Acolyte ordination:
 
 `followers_needed_for_next_acolyte = 18 * 1.45^acolytes * conversion_threshold_mult`
 
+Era I acolyte orders:
+- One active order at a time; duration `45s`.
+- Repeating the same order applies diminishing potency:
+
+`order_potency = max(0.1, 1 - min(0.45, repeat_count * 0.15))`
+
+- Gather:
+  - immediate followers:
+
+`gather_immediate = floor((4 + 2 * acolytes) * order_potency)`
+
+  - passive followers while active:
+
+`gather_passive_per_second = acolytes * 0.08 * order_potency`
+
+- Listen:
+
+`recruit_multiplier = 1 + (0.35 * order_potency)`
+
+- Steady:
+
+`influence_bonus_per_second = min(1.5, acolytes * 0.12) * order_potency`
+
 Prophet anointing:
 
 `followers_needed_for_next_prophet = prophet_base * 1.6^prophets * conversion_threshold_mult`
 
-`prophet_base = 50`, or `20` with Echo upgrade.
+`prophet_base = 50`
 
 `acolytes_needed_for_next_prophet = ceil((2 + floor(prophets / 4)) * conversion_threshold_mult)`
 
@@ -254,7 +277,7 @@ Cult formation cost:
 
 `cult_cost = cult_cost_base * 2^(cults_owned) * conversion_threshold_mult`
 
-`cult_cost_base = 500`, or `350` with Echo upgrade.
+`cult_cost_base = 500`
 
 Cult leadership requirement:
 
@@ -426,8 +449,11 @@ Focused root model:
 
 Era I -> Era II:
 - `totalBeliefEarned >= 10000`
-- `prophets >= 3`
+- `acolytes >= 5`
 - `followers >= 500`
+
+Era I structure rule:
+- Era I is acolyte-led. Prophet anointing is disabled until Era II.
 
 Era II -> Era III:
 - `totalBeliefEarned >= 275000`
@@ -444,7 +470,8 @@ Era III -> Gate:
 
 Revision note (Era I gate):
 - Domain condition removed. Domains are not accessible in Era I and cannot be a gate requirement for leaving it.
-- Replaced with `followers >= 500`, which tests active Era I engagement using systems the player can see and interact with.
+- Era I is now acolyte-led: prophets no longer gate Era I progression.
+- Era I gate requires `acolytes >= 5` and `followers >= 500`, which keeps the gate tied to visible Era I systems.
 
 Revision note (Veil regen, PF-25):
 - Shrine regen now uses diminishing returns to prevent late-game shrine counts from trivializing Veil pressure.

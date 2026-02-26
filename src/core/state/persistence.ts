@@ -43,6 +43,7 @@ import {
   type GhostState,
   type GhostRunSignature,
   type GhostInfluence,
+  type AcolyteOrder,
   type WhisperMagnitude,
   type WhisperTarget
 } from "./gameState";
@@ -779,6 +780,16 @@ function sanitizeWhisperMagnitude(
   return fallback;
 }
 
+function sanitizeAcolyteOrder(
+  value: unknown,
+  fallback: AcolyteOrder
+): AcolyteOrder {
+  if (value === "none" || value === "gather" || value === "listen" || value === "steady") {
+    return value;
+  }
+  return fallback;
+}
+
 function sanitizeState(rawState: unknown, nowMs: number): GameState {
   const fallback = createInitialGameState(nowMs);
   if (!isRecord(rawState)) return fallback;
@@ -841,6 +852,20 @@ function sanitizeState(rawState: unknown, nowMs: number): GameState {
       lastWhisperMagnitude: sanitizeWhisperMagnitude(
         rawActivity.lastWhisperMagnitude,
         fallback.activity.lastWhisperMagnitude
+      ),
+      acolyteOrder: sanitizeAcolyteOrder(rawActivity.acolyteOrder, fallback.activity.acolyteOrder),
+      acolyteOrderEndsAt: Math.max(0, Math.floor(readNumber(rawActivity.acolyteOrderEndsAt, 0))),
+      acolyteOrderPotency: Math.max(
+        0.1,
+        Math.min(1, readNumber(rawActivity.acolyteOrderPotency, fallback.activity.acolyteOrderPotency))
+      ),
+      lastAcolyteOrder: sanitizeAcolyteOrder(
+        rawActivity.lastAcolyteOrder,
+        fallback.activity.lastAcolyteOrder
+      ),
+      acolyteOrderRepeatCount: Math.max(
+        0,
+        Math.floor(readNumber(rawActivity.acolyteOrderRepeatCount, fallback.activity.acolyteOrderRepeatCount))
       ),
       lastCadencePromptAt: Math.max(0, readNumber(rawActivity.lastCadencePromptAt, nowMs)),
       cadencePromptActive: readBoolean(rawActivity.cadencePromptActive, false)
@@ -913,7 +938,8 @@ const MIGRATORS: Record<number, Migrator> = {
   19: sanitizeState,
   20: sanitizeState,
   21: sanitizeState,
-  22: sanitizeState
+  22: sanitizeState,
+  23: sanitizeState
 };
 
 function applyReturnAnchor(state: GameState, nowMs: number): GameState {

@@ -76,12 +76,12 @@ Objective: First fully playable era with active engagement cadence.
 
 Deliverables:
 - Whisper and recruit actions.
-- Prophet conversion pipeline.
+- Acolyte conversion pipeline.
 - Event cadence hooks to prevent passive dead zones.
 - Era I gate checks.
 
 Definition of Done:
-- Player can reliably reach 3 prophets and 500 followers through active play.
+- Player can reliably reach 5 acolytes and 500 followers through active play.
 - Decisions occur at least every 30-60 seconds during active session.
 
 ## M4 - Doctrine Loop (Era II)
@@ -253,8 +253,9 @@ Notes:
 - `PF-22` completed Era III Influence cap scaling (cult/domain/shrine terms).
 - `PF-26` completed desktop shell split: persistent OMENS sidebar (`>=800px`) + fixed top-right STATS dock (collapsed by default); mobile behavior unchanged.
 - `PF-27` completed rite reserve + post-ascension Era I legacy echo quick-spend access.
-- `PF-28` completed whisper evolution (targeting + boosted variants + strain/cooldowns) and expanded echo sink scaling (12 ranks + overflow bonuses).
+- `PF-28` completed whisper evolution (focused Prophet/Cult targeting + strain/cooldowns) and expanded echo sink scaling (20 ranks, single-axis roots).
 - PF-26 follow-up behavior is live: active omen surface is run-scoped and capped to 6 entries to prevent prior-run bleed and long-scroll clutter.
+- `PF-29` completed era shell parity: Era I now uses `ACTIVE`/`THRESHOLD`/`LEGACY` tabs, `LEGACY` exists in every era, and Era I gained acolyte order actions.
 - Remaining M14 scope is economy constant calibration against target run durations.
 
 Deliverables:
@@ -285,9 +286,9 @@ Notes:
 
 Deliverables:
 - Era-locked shell behavior:
-  - Era I: minimal single-column layout, no tabs
-  - Era II: ACTIVE + GROWTH (+ constrained META content) tabbed structure
-  - Era III: full ACTIVE/GROWTH/META flow with low-scroll decision surfaces
+  - Era I: minimal tabbed structure with `ACTIVE`, `THRESHOLD`, `LEGACY`
+  - Era II: `ACTIVE`, `GROWTH`, `LEGACY`, and constrained `META`
+  - Era III: full `ACTIVE`, `GROWTH`, `GATE`, `LEGACY`, `META` flow with low-scroll decision surfaces
 - Era II tab contract:
   - ACTIVE order: Whispers, Doctrine (merged)
   - Influence remains in the top stat bar; no separate ACTIVE Influence container
@@ -297,7 +298,11 @@ Deliverables:
   - All GROWTH containers are collapsible with persisted state
   - Rivals collapse to one-line summary when inactive and expand only when active
   - Threshold sits at bottom of GROWTH (not ACTIVE) and defaults to collapsed
-- Era III GROWTH order: Doctrine (merged), Domains, Rivals (Threshold remains in persistent Unraveling strip)
+- Legacy tab hosts ascension/echo spending in all eras; META excludes ascension surfaces
+- Era III tab contract:
+  - ACTIVE order: Whispers, Doctrine (merged)
+  - GROWTH order: Domains, Rivals
+  - GATE tab contains gate rites and gate progression conditions
 - Era II+ META containers are collapsible with persisted state
 - ACTIVE tab prioritizes time-sensitive systems (Gate Rites, rivals, whispers, Influence pressure).
 - Unraveling gate as persistent strip in Era III.

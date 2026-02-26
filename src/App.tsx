@@ -11,6 +11,7 @@ import {
   canCastMiracle,
   canFormCult,
   canFormPantheonAlliance,
+  canIssueAcolyteOrder,
   canInvokeFinalChoice,
   canPurchaseEchoTreeRank,
   canStartAct,
@@ -33,6 +34,7 @@ import {
   performPurchaseEchoTreeRank,
   performProphetAnoint,
   performAcolyteOrdain,
+  performIssueAcolyteOrder,
   performRecruit,
   performSetArchitectureBeliefRule,
   performSetArchitectureCivilizationRule,
@@ -46,6 +48,7 @@ import {
   getActBaseMultiplier,
   getActCost,
   getActResonantBonus,
+  getAcolyteOrderRemainingSeconds,
   getActRewardBelief,
   getAscensionEchoGain,
   getActDurationSeconds,
@@ -117,6 +120,12 @@ import {
   type DoubtSessionState
 } from "./core/engine/doubtEvents";
 import {
+  ACOLYTE_ORDER_GATHER_PASSIVE_PER_ACOLYTE,
+  ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER,
+  ACOLYTE_ORDER_REPEAT_MAX_PENALTY,
+  ACOLYTE_ORDER_REPEAT_STEP,
+  ACOLYTE_ORDER_STEADY_INFLUENCE_CAP,
+  ACOLYTE_ORDER_STEADY_INFLUENCE_PER_ACOLYTE,
   DOMAIN_LABELS,
   ECHO_CONVERSION_THRESHOLD_REDUCTION_MAX,
   ECHO_CONVERSION_THRESHOLD_REDUCTION_PER_RANK,
@@ -137,6 +146,7 @@ import {
   type ArchitectureBeliefRule,
   type ArchitectureCivilizationRule,
   type ArchitectureDomainRule,
+  type AcolyteOrder,
   type DomainId,
   type EchoTreeId,
   type FinalChoice,
@@ -189,6 +199,7 @@ import { StatBar } from "./ui/layout/StatBar";
 import { TabDock } from "./ui/layout/TabDock";
 import { OmenSurface } from "./ui/layout/OmenSurface";
 import { PersistentRightPanel } from "./ui/layout/PersistentRightPanel";
+import { CollapsibleContainer } from "./ui/layout/CollapsibleContainer";
 import { formatResource } from "./core/ui/numberFormat";
 import { formatDurationCompact } from "./core/ui/timeFormat";
 import { getVeilStabilityView } from "./core/ui/veilPresentation";
@@ -200,7 +211,7 @@ const BACKGROUND_TICK_MS = 1000;
 const LOW_POWER_TICK_MS = 500;
 const LOW_BATTERY_LEVEL = 0.2;
 
-type UiTab = "active" | "growth" | "gate" | "meta";
+type UiTab = "active" | "growth" | "threshold" | "gate" | "legacy" | "meta";
 type EraValue = 1 | 2 | 3;
 type TransitionKind = "fade" | "vignette";
 
@@ -320,16 +331,23 @@ function getWhisperFollowerRateSourceLabel(
 }
 
 function getAvailableTabs(era: EraValue): UiTab[] {
-  if (era <= 1) return [];
-  if (era === 2) return ["active", "growth", "meta"];
-  return ["active", "growth", "gate", "meta"];
+  if (era === 1) return ["active", "threshold", "legacy"];
+  if (era === 2) return ["active", "growth", "legacy", "meta"];
+  return ["active", "growth", "gate", "legacy", "meta"];
 }
 
 function loadUiTabPreference(): UiTab {
   if (typeof window === "undefined") return "active";
   try {
     const raw = window.localStorage.getItem(UI_TAB_KEY);
-    if (raw === "active" || raw === "growth" || raw === "gate" || raw === "meta") {
+    if (
+      raw === "active" ||
+      raw === "growth" ||
+      raw === "threshold" ||
+      raw === "gate" ||
+      raw === "legacy" ||
+      raw === "meta"
+    ) {
       return raw;
     }
   } catch {
@@ -455,19 +473,19 @@ function withPreparedEraOneGate(state: GameState, nowMs: number): GameState {
   const nextBeliefTarget = Math.max(state.stats.totalBeliefEarned, gate.beliefTarget);
   const beliefDelta = nextBeliefTarget - state.stats.totalBeliefEarned;
   const nextFollowers = Math.max(state.resources.followers, gate.followersTarget);
-  const nextProphets = Math.max(state.prophets, gate.prophetsTarget);
+  const nextAcolytes = Math.max(state.acolytes, gate.acolytesTarget);
 
   if (
     beliefDelta <= 0 &&
     nextFollowers === state.resources.followers &&
-    nextProphets === state.prophets
+    nextAcolytes === state.acolytes
   ) {
     return state;
   }
 
   const prepared = {
     ...state,
-    prophets: nextProphets,
+    acolytes: nextAcolytes,
     resources: {
       ...state.resources,
       belief: state.resources.belief + beliefDelta,
@@ -775,9 +793,7 @@ export default function App() {
   }, [activeTab, gameState.era]);
 
   useEffect(() => {
-    if (gameState.era >= 2) {
-      saveUiTabPreference(activeTab);
-    }
+    if (getAvailableTabs(gameState.era).length > 0) saveUiTabPreference(activeTab);
   }, [activeTab, gameState.era]);
 
   useEffect(() => {
@@ -1040,6 +1056,14 @@ export default function App() {
   const eraTwoThresholdSummary = `${formatResource(eraTwoThresholdMetCount)} / ${formatResource(eraTwoThresholdTotalCount)} conditions met`;
   const eraTwoThresholdRatio =
     eraTwoThresholdTotalCount <= 0 ? 0 : eraTwoThresholdMetCount / eraTwoThresholdTotalCount;
+  const eraOneThresholdMetCount =
+    (eraOneGate.beliefReady ? 1 : 0) +
+    (eraOneGate.acolytesReady ? 1 : 0) +
+    (eraOneGate.followersReady ? 1 : 0);
+  const eraOneThresholdTotalCount = 3;
+  const eraOneThresholdSummary = `${formatResource(eraOneThresholdMetCount)} / ${formatResource(eraOneThresholdTotalCount)} conditions met`;
+  const eraOneThresholdRatio =
+    eraOneThresholdTotalCount <= 0 ? 0 : eraOneThresholdMetCount / eraOneThresholdTotalCount;
 
   const veilBonus = getVeilBonus(gameState.resources.veil);
   const veilRegenPerSecond = getVeilRegenPerSecond(gameState);
@@ -1120,6 +1144,26 @@ export default function App() {
     canUseWhisper || canUseRecruit
       ? `Whisper ${formatResource(cheapestWhisperCost)}+ \u00b7 Recruit`
       : "Influence is recovering.";
+  const canUseAcolyteOrder = canIssueAcolyteOrder(gameState);
+  const activeAcolyteOrder = gameState.activity.acolyteOrder;
+  const activeAcolyteOrderRemainingSeconds = getAcolyteOrderRemainingSeconds(gameState, nowMs);
+  const activeAcolyteOrderPotency =
+    activeAcolyteOrder === "none"
+      ? 1
+      : Math.max(0, Math.min(1, gameState.activity.acolyteOrderPotency));
+  const getNextAcolyteOrderPotency = (order: Exclude<AcolyteOrder, "none">): number => {
+    const repeatCount =
+      gameState.activity.lastAcolyteOrder === order ? gameState.activity.acolyteOrderRepeatCount + 1 : 0;
+    const penalty = Math.min(ACOLYTE_ORDER_REPEAT_MAX_PENALTY, repeatCount * ACOLYTE_ORDER_REPEAT_STEP);
+    return Math.max(0.1, 1 - penalty);
+  };
+  const acolyteGatherPassivePerSecond =
+    gameState.acolytes * ACOLYTE_ORDER_GATHER_PASSIVE_PER_ACOLYTE * getNextAcolyteOrderPotency("gather");
+  const acolyteSteadyInfluencePerSecond =
+    Math.min(ACOLYTE_ORDER_STEADY_INFLUENCE_CAP, gameState.acolytes * ACOLYTE_ORDER_STEADY_INFLUENCE_PER_ACOLYTE) *
+    getNextAcolyteOrderPotency("steady");
+  const acolyteListenRecruitMultiplier =
+    1 + ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER * getNextAcolyteOrderPotency("listen");
   const metaOverviewSummary = `Era ${formatResource(era)} \u00b7 ${formatResource(gameState.prestige.completedRuns)} completed runs`;
   const metaAscensionSummary = uiReveal.showAscensionPanel
     ? `${formatResource(gameState.prestige.echoes)} Echoes \u00b7 +${formatResource(ascensionEchoGain)} this run`
@@ -1286,6 +1330,16 @@ export default function App() {
       const next = performAcolyteOrdain(prev, actionAt);
       if (next === prev) return prev;
       recordTelemetryAction(next, "anoint_prophet", actionAt);
+      return next;
+    });
+  };
+
+  const onIssueAcolyteOrder = (order: Exclude<AcolyteOrder, "none">) => {
+    const actionAt = Date.now();
+    setGameState((prev) => {
+      const next = performIssueAcolyteOrder(prev, order, actionAt);
+      if (next === prev) return prev;
+      recordTelemetryAction(next, "issue_acolyte_order", actionAt);
       return next;
     });
   };
@@ -1744,8 +1798,8 @@ export default function App() {
       presentation="panel"
       eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
       eraOneBeliefTarget={eraOneGate.beliefTarget}
-      prophetsProgress={gameState.prophets}
-      prophetsTarget={eraOneGate.prophetsTarget}
+      acolytesProgress={gameState.acolytes}
+      acolytesTarget={eraOneGate.acolytesTarget}
       followersProgress={gameState.resources.followers}
       followersTarget={eraOneGate.followersTarget}
       eraOneReady={canAdvanceEraOne}
@@ -1777,8 +1831,8 @@ export default function App() {
       presentation="panel"
       eraOneBeliefProgress={gameState.stats.totalBeliefEarned}
       eraOneBeliefTarget={eraOneGate.beliefTarget}
-      prophetsProgress={gameState.prophets}
-      prophetsTarget={eraOneGate.prophetsTarget}
+      acolytesProgress={gameState.acolytes}
+      acolytesTarget={eraOneGate.acolytesTarget}
       followersProgress={gameState.resources.followers}
       followersTarget={eraOneGate.followersTarget}
       eraOneReady={canAdvanceEraOne}
@@ -1925,18 +1979,20 @@ export default function App() {
       acolytes={gameState.acolytes}
       nextAcolyteFollowers={nextAcolyteFollowers}
       canCreateAcolyte={canCreateAcolyte}
-      prophets={gameState.prophets}
-      nextProphetFollowers={nextProphetFollowers}
-      nextProphetAcolytes={nextProphetAcolytes}
-      canCreateProphet={canCreateProphet}
+      canUseAcolyteOrder={canUseAcolyteOrder}
+      acolyteOrder={activeAcolyteOrder}
+      acolyteOrderRemainingSeconds={activeAcolyteOrderRemainingSeconds}
+      acolyteOrderPotency={activeAcolyteOrderPotency}
+      acolyteGatherPassivePerSecond={acolyteGatherPassivePerSecond}
+      acolyteSteadyInfluencePerSecond={acolyteSteadyInfluencePerSecond}
+      acolyteListenRecruitMultiplier={acolyteListenRecruitMultiplier}
       omenTitle={uiReveal.omenTitle}
       visibleOmens={visibleOmens}
       activeDoubtEvent={activeDoubtEventCard}
-      eraGatePanel={eraGatePanel}
       onWhisper={onWhisper}
       onRecruit={onRecruit}
       onOrdainAcolyte={onOrdainAcolyte}
-      onAnointProphet={onAnointProphet}
+      onIssueAcolyteOrder={onIssueAcolyteOrder}
       onResolveDoubtChoice={onResolveDoubtChoice}
     />
   );
@@ -1958,6 +2014,21 @@ export default function App() {
         {eraThreeGatePanel}
       </div>
     ) : null;
+  const eraOneThresholdContent = (
+    <div className="space-y-2">
+      <CollapsibleContainer
+        title="Threshold"
+        summary={eraOneThresholdSummary}
+        storageKey="era1_threshold_collapsed"
+        showMiniProgress
+        miniProgressRatio={eraOneThresholdRatio}
+      >
+        <div className="[&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none [&>section]:backdrop-blur-none [&>section>h2]:hidden">
+          {eraGatePanel}
+        </div>
+      </CollapsibleContainer>
+    </div>
+  );
   const metaOverviewPanel = (
     <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
       <p>
@@ -1985,6 +2056,38 @@ export default function App() {
       Echo structures remain dormant in this cycle.
     </section>
   );
+  const legacyTabContent =
+    era === 1 ? (
+      <div className="space-y-2">
+        <CollapsibleContainer
+          title="Legacy Echoes"
+          summary={
+            gameState.prestige.completedRuns > 0
+              ? `${formatResource(gameState.prestige.echoes)} Echoes available`
+              : "Legacy echoes awaken after your first ascension."
+          }
+          storageKey="era1_legacy_collapsed"
+        >
+          {eraOneEchoQuickPanel ?? (
+            <section className="rounded-2xl border border-white/15 bg-black/25 p-4 text-sm text-veil/75 shadow-veil backdrop-blur-sm">
+              Echo roots remain dormant in this first cycle.
+            </section>
+          )}
+        </CollapsibleContainer>
+      </div>
+    ) : (
+      <div className="space-y-2">
+        <CollapsibleContainer
+          title="Legacy Echoes"
+          summary={metaAscensionSummary}
+          storageKey="legacy_ascension_collapsed"
+        >
+          <div className="[&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none [&>section]:backdrop-blur-none [&>section>h2]:hidden">
+            {metaAscensionPanel}
+          </div>
+        </CollapsibleContainer>
+      </div>
+    );
 
   const metaRemembrancePanel = (
     <RemembrancePanel
@@ -2021,11 +2124,9 @@ export default function App() {
   const metaTabContent = (
     <EraMetaLayout
       overviewPanel={metaOverviewPanel}
-      ascensionPanel={metaAscensionPanel}
       remembrancePanel={metaRemembrancePanel}
       pantheonPanel={metaPantheonPanel}
       overviewSummary={metaOverviewSummary}
-      ascensionSummary={metaAscensionSummary}
       remembranceSummary={metaRemembranceSummary}
       pantheonSummary={metaPantheonSummary}
     />
@@ -2128,20 +2229,23 @@ export default function App() {
         />
         <div className="flex flex-col gap-4 min-[800px]:flex-row min-[800px]:items-start min-[800px]:gap-6">
           <div className="min-w-0 space-y-4 min-[800px]:min-w-[500px] min-[800px]:w-[calc(100%-240px)] lg:w-[calc(100%-300px)]">
-            {era >= 2 ? (
-              <TabDock availableTabs={availableTabs} activeTab={safeActiveTab} onSelectTab={setActiveTab} />
-            ) : null}
+            <TabDock availableTabs={availableTabs} activeTab={safeActiveTab} onSelectTab={setActiveTab} />
             {era === 1 ? (
-              <>
-                {eraOneContent}
-                {eraOneEchoQuickPanel}
-              </>
+              safeActiveTab === "active" ? (
+                <>{eraOneContent}</>
+              ) : safeActiveTab === "threshold" ? (
+                <>{eraOneThresholdContent}</>
+              ) : (
+                <>{legacyTabContent}</>
+              )
             ) : safeActiveTab === "active" ? (
               <>{activeTabContent}</>
             ) : safeActiveTab === "growth" ? (
               <>{growthTabContent}</>
             ) : safeActiveTab === "gate" ? (
               <>{gateTabContent}</>
+            ) : safeActiveTab === "legacy" ? (
+              <>{legacyTabContent}</>
             ) : (
               <>{metaTabContent}</>
             )}

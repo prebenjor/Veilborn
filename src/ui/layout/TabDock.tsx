@@ -1,4 +1,4 @@
-type UiTab = "active" | "growth" | "gate" | "meta";
+type UiTab = "active" | "growth" | "threshold" | "gate" | "legacy" | "meta";
 
 interface TabDockProps {
   availableTabs: UiTab[];
@@ -29,7 +29,17 @@ export function TabDock({ availableTabs, activeTab, onSelectTab }: TabDockProps)
                   : "text-veil/70 hover:bg-white/8 hover:text-veil"
             }`}
           >
-            {tab === "active" ? "Active" : tab === "growth" ? "Growth" : tab === "gate" ? "Gate" : "Meta"}
+            {tab === "active"
+              ? "Active"
+              : tab === "growth"
+                ? "Growth"
+                : tab === "threshold"
+                  ? "Threshold"
+                  : tab === "gate"
+                    ? "Gate"
+                    : tab === "legacy"
+                      ? "Legacy"
+                      : "Meta"}
           </button>
         ))}
       </div>

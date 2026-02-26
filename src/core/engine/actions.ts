@@ -1,4 +1,9 @@
 import {
+  ACOLYTE_ORDER_DURATION_MS,
+  ACOLYTE_ORDER_GATHER_IMMEDIATE_BASE,
+  ACOLYTE_ORDER_GATHER_IMMEDIATE_PER_ACOLYTE,
+  ACOLYTE_ORDER_REPEAT_MAX_PENALTY,
+  ACOLYTE_ORDER_REPEAT_STEP,
   ECHO_TREE_MAX_RANK,
   CIV_COLLAPSE_FOLLOWER_RETENTION,
   PANTHEON_ALLY_COUNT,
@@ -26,6 +31,7 @@ import {
   type ArchitectureBeliefRule,
   type ArchitectureCivilizationRule,
   type ArchitectureDomainRule,
+  type AcolyteOrder,
   createInitialGameState,
   type ActType,
   type ActivityState,
@@ -87,6 +93,7 @@ import {
   getTotalDomainLevel,
   getInfluenceCap,
   getUnravelingGateStatus,
+  getAcolyteListenRecruitMultiplier,
   getWhisperCostForProfile,
   getWhisperFailChance,
   getWhisperFollowerPreview,
@@ -678,6 +685,17 @@ function resolveActivityAfterAction(activity: ActivityState, nowMs: number): Act
   };
 }
 
+function resolveAcolyteOrderExpiry(activity: ActivityState, nowMs: number): ActivityState {
+  if (activity.acolyteOrder === "none") return activity;
+  if (activity.acolyteOrderEndsAt > nowMs) return activity;
+  return {
+    ...activity,
+    acolyteOrder: "none",
+    acolyteOrderEndsAt: 0,
+    acolyteOrderPotency: 1
+  };
+}
+
 function withPeakFollowers(state: GameState, followers: number): GameState {
   const peakFollowers = Math.max(state.cataclysm.peakFollowers, followers);
   const peakFollowersEver = Math.max(state.prestige.remembrance.peakFollowersEver, peakFollowers);
@@ -1171,13 +1189,15 @@ export function canWhisper(state: GameState, nowMs: number, options?: WhisperAct
 }
 
 export function performWhisper(state: GameState, nowMs: number, options?: WhisperActionOptions): GameState {
-  const normalizedOptions = normalizeWhisperActionOptions(state, options);
-  if (isWhisperTargetOnCooldown(state, nowMs, normalizedOptions.target)) return state;
-  const normalizedCycle = normalizeWhisperCycle(state.activity, nowMs);
+  const resolvedActivity = resolveAcolyteOrderExpiry(state.activity, nowMs);
+  const baseState = resolvedActivity === state.activity ? state : { ...state, activity: resolvedActivity };
+  const normalizedOptions = normalizeWhisperActionOptions(baseState, options);
+  if (isWhisperTargetOnCooldown(baseState, nowMs, normalizedOptions.target)) return baseState;
+  const normalizedCycle = normalizeWhisperCycle(baseState.activity, nowMs);
   const cost =
     normalizedOptions.costOverride ??
     getWhisperCostForProfile(
-      state,
+      baseState,
       nowMs,
       {
         target: normalizedOptions.target,
@@ -1185,16 +1205,16 @@ export function performWhisper(state: GameState, nowMs: number, options?: Whispe
       },
       0
     );
-  if (state.resources.influence < cost) return state;
+  if (baseState.resources.influence < cost) return baseState;
 
-  const whisperFailChance = getWhisperFailChance(state, {
+  const whisperFailChance = getWhisperFailChance(baseState, {
     target: normalizedOptions.target,
     magnitude: normalizedOptions.magnitude
   });
-  const failRoll = rollChance(state.rngState, whisperFailChance);
+  const failRoll = rollChance(baseState.rngState, whisperFailChance);
   const strainedOutcome = failRoll.value;
-  const cadence = getCadenceBonus(state);
-  const followerPreview = getWhisperFollowerPreview(state, {
+  const cadence = getCadenceBonus(baseState);
+  const followerPreview = getWhisperFollowerPreview(baseState, {
     target: normalizedOptions.target,
     magnitude: normalizedOptions.magnitude
   });
@@ -1203,29 +1223,31 @@ export function performWhisper(state: GameState, nowMs: number, options?: Whispe
     : followerPreview.successFollowers;
   const beliefGain = WHISPER_BELIEF_GAIN + cadence.beliefBonus;
   const whisperCooldownMs = getWhisperTargetCooldownMs(
-    state,
+    baseState,
     normalizedOptions.target,
     normalizedOptions.magnitude
   );
   const whisperCooldowns = {
-    ...state.activity.whisperTargetCooldowns,
+    ...baseState.activity.whisperTargetCooldowns,
     [normalizedOptions.target]:
-      whisperCooldownMs > 0 ? nowMs + whisperCooldownMs : state.activity.whisperTargetCooldowns[normalizedOptions.target]
+      whisperCooldownMs > 0
+        ? nowMs + whisperCooldownMs
+        : baseState.activity.whisperTargetCooldowns[normalizedOptions.target]
   };
   const whisperLabel = getWhisperActionLabel(normalizedOptions.target, normalizedOptions.magnitude);
   const outcomeText = strainedOutcome ? "strained and splintered" : "held and spread";
   const withWhisper = {
-    ...state,
+    ...baseState,
     rngState: failRoll.rngState,
     resources: {
-      ...state.resources,
-      influence: state.resources.influence - cost,
-      belief: state.resources.belief + beliefGain,
-      followers: state.resources.followers + followerGain
+      ...baseState.resources,
+      influence: baseState.resources.influence - cost,
+      belief: baseState.resources.belief + beliefGain,
+      followers: baseState.resources.followers + followerGain
     },
     activity: resolveActivityAfterAction(
       {
-        ...state.activity,
+        ...baseState.activity,
         whisperWindowStartedAt: normalizedCycle.whisperWindowStartedAt,
         whispersInWindow: normalizedCycle.whispersInWindow + 1,
         whisperTargetCooldowns: whisperCooldowns,
@@ -1235,11 +1257,11 @@ export function performWhisper(state: GameState, nowMs: number, options?: Whispe
       nowMs
     ),
     stats: {
-      ...state.stats,
-      totalBeliefEarned: state.stats.totalBeliefEarned + beliefGain
+      ...baseState.stats,
+      totalBeliefEarned: baseState.stats.totalBeliefEarned + beliefGain
     },
     meta: {
-      ...state.meta,
+      ...baseState.meta,
       updatedAt: nowMs
     }
   };
@@ -1270,34 +1292,37 @@ export function canRecruit(state: GameState): boolean {
 }
 
 export function performRecruit(state: GameState, nowMs: number): GameState {
-  if (!canRecruit(state)) return state;
+  const resolvedActivity = resolveAcolyteOrderExpiry(state.activity, nowMs);
+  const baseState = resolvedActivity === state.activity ? state : { ...state, activity: resolvedActivity };
+  if (!canRecruit(baseState)) return baseState;
 
-  const recruitBase = getRecruitFollowerGainBase(state);
-  const devotionMultiplier = getDevotionRecruitMultiplier(state);
-  const recruitRandom = nextRandom(state.rngState);
+  const recruitBase = getRecruitFollowerGainBase(baseState);
+  const devotionMultiplier = getDevotionRecruitMultiplier(baseState);
+  const listenMultiplier = getAcolyteListenRecruitMultiplier(baseState);
+  const recruitRandom = nextRandom(baseState.rngState);
   const randomFollowerBonus = Math.floor(recruitRandom.value * (RECRUIT_RANDOM_FOLLOWER_MAX + 1));
-  const cadence = getCadenceBonus(state);
+  const cadence = getCadenceBonus(baseState);
   const rawFollowerGain =
-    (recruitBase + randomFollowerBonus + cadence.followerBonus) * devotionMultiplier;
+    (recruitBase + randomFollowerBonus + cadence.followerBonus) * devotionMultiplier * listenMultiplier;
   const followerGain = Math.max(1, Math.floor(rawFollowerGain));
   const beliefGain = cadence.beliefBonus;
 
   const withRecruit = {
-    ...state,
+    ...baseState,
     rngState: recruitRandom.rngState,
     resources: {
-      ...state.resources,
-      influence: state.resources.influence - RECRUIT_INFLUENCE_COST,
-      followers: state.resources.followers + followerGain,
-      belief: state.resources.belief + beliefGain
+      ...baseState.resources,
+      influence: baseState.resources.influence - RECRUIT_INFLUENCE_COST,
+      followers: baseState.resources.followers + followerGain,
+      belief: baseState.resources.belief + beliefGain
     },
-    activity: resolveActivityAfterAction(state.activity, nowMs),
+    activity: resolveActivityAfterAction(baseState.activity, nowMs),
     stats: {
-      ...state.stats,
-      totalBeliefEarned: state.stats.totalBeliefEarned + beliefGain
+      ...baseState.stats,
+      totalBeliefEarned: baseState.stats.totalBeliefEarned + beliefGain
     },
     meta: {
-      ...state.meta,
+      ...baseState.meta,
       updatedAt: nowMs
     }
   };
@@ -1478,6 +1503,7 @@ export function performDomainInvestments(
 }
 
 export function canAnointProphet(state: GameState): boolean {
+  if (state.era < 2) return false;
   return (
     state.resources.followers >= getFollowersForNextProphet(state) &&
     state.acolytes >= getAcolytesForNextProphet(state)
@@ -1485,6 +1511,7 @@ export function canAnointProphet(state: GameState): boolean {
 }
 
 export function performProphetAnoint(state: GameState, nowMs: number): GameState {
+  if (state.era < 2) return state;
   const followerThreshold = getFollowersForNextProphet(state);
   const acolyteThreshold = getAcolytesForNextProphet(state);
   if (state.resources.followers < followerThreshold || state.acolytes < acolyteThreshold) return state;
@@ -1542,6 +1569,69 @@ export function performAcolyteOrdain(state: GameState, nowMs: number): GameState
   };
 
   return appendOmen(withAcolyte, nowMs, "prophet", "An acolyte took the vow and stood among the faithful.");
+}
+
+export function canIssueAcolyteOrder(state: GameState): boolean {
+  return state.era === 1 && state.acolytes > 0;
+}
+
+export function performIssueAcolyteOrder(
+  state: GameState,
+  order: Exclude<AcolyteOrder, "none">,
+  nowMs: number
+): GameState {
+  if (!canIssueAcolyteOrder(state)) return state;
+
+  const repeatCount = state.activity.lastAcolyteOrder === order ? state.activity.acolyteOrderRepeatCount + 1 : 0;
+  const repeatPenalty = Math.min(ACOLYTE_ORDER_REPEAT_MAX_PENALTY, repeatCount * ACOLYTE_ORDER_REPEAT_STEP);
+  const potency = Math.max(0.1, 1 - repeatPenalty);
+  const immediateGatherFollowers =
+    order === "gather"
+      ? Math.max(
+          1,
+          Math.floor(
+            (ACOLYTE_ORDER_GATHER_IMMEDIATE_BASE + state.acolytes * ACOLYTE_ORDER_GATHER_IMMEDIATE_PER_ACOLYTE) *
+              potency
+          )
+        )
+      : 0;
+
+  const withOrder = {
+    ...state,
+    resources: {
+      ...state.resources,
+      followers: state.resources.followers + immediateGatherFollowers
+    },
+    activity: resolveActivityAfterAction(
+      {
+        ...state.activity,
+        acolyteOrder: order,
+        acolyteOrderEndsAt: nowMs + ACOLYTE_ORDER_DURATION_MS,
+        acolyteOrderPotency: potency,
+        lastAcolyteOrder: order,
+        acolyteOrderRepeatCount: repeatCount
+      },
+      nowMs
+    ),
+    meta: {
+      ...state.meta,
+      updatedAt: nowMs
+    }
+  };
+
+  const orderDetail =
+    order === "gather"
+      ? `Gathering rite surged; ${immediateGatherFollowers} followers answered at once.`
+      : order === "listen"
+        ? "Listening rite opened calmer channels for the next recruit calls."
+        : "Steadying rite anchored the circle and Influence began to rise faster.";
+
+  return appendOmen(
+    withPeakFollowers(withOrder, withOrder.resources.followers),
+    nowMs,
+    "prophet",
+    orderDetail
+  );
 }
 
 export function canFormCult(state: GameState): boolean {
@@ -2245,10 +2335,11 @@ export function getRecruitPreview(state: GameState): string {
   const floor = RECRUIT_BASE_FOLLOWERS + state.prophets * RECRUIT_PROPHET_FOLLOWER_BONUS;
   const domainBonus = Math.floor(getTotalDomainLevel(state) / RECRUIT_DOMAIN_FOLLOWER_DIVISOR);
   const devotionMultiplier = getDevotionRecruitMultiplier(state);
-  const low = Math.max(1, Math.floor((floor + domainBonus) * devotionMultiplier));
+  const listenMultiplier = getAcolyteListenRecruitMultiplier(state);
+  const low = Math.max(1, Math.floor((floor + domainBonus) * devotionMultiplier * listenMultiplier));
   const high = Math.max(
     low,
-    Math.floor((floor + domainBonus + RECRUIT_RANDOM_FOLLOWER_MAX) * devotionMultiplier)
+    Math.floor((floor + domainBonus + RECRUIT_RANDOM_FOLLOWER_MAX) * devotionMultiplier * listenMultiplier)
   );
   return `${formatPreviewValue(low)}-${formatPreviewValue(high)} followers`;
 }

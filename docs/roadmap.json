@@ -75,7 +75,7 @@
       ],
       "deliverables": [
         "Whisper and recruit actions",
-        "Prophet conversion",
+        "Acolyte conversion",
         "Active event cadence hooks",
         "Era I gate checks"
       ],
@@ -296,7 +296,7 @@
       ],
       "notes": "Completed. Consolidated PF-02 and PF-03 scope into the era shell structure, anti-clutter flow, and strict reveal behavior.",
       "deliverables": [
-        "Era-locked shell flow: Era I minimal, Era II ACTIVE/GROWTH(+constrained META content), Era III full ACTIVE/GROWTH/META",
+        "Era-locked shell flow: Era I ACTIVE/THRESHOLD/LEGACY, Era II ACTIVE/GROWTH/LEGACY(+constrained META content), Era III full ACTIVE/GROWTH/GATE/LEGACY/META",
         "Era II tab contract: ACTIVE order is Whispers -> Doctrine (merged); Influence is shown in the top stat bar only; GROWTH order is Domains -> Rivals -> Threshold",
         "Era II ACTIVE containers are collapsible with persisted localStorage state",
         "Doctrine and Doctrine Seeds merge into one collapsible Doctrine container in ACTIVE with Prophets/Cults above Acts",
@@ -307,7 +307,7 @@
         "Era II+ META containers are collapsible with persisted localStorage state",
         "Era III ACTIVE order is Whispers -> Doctrine, with gate rites and gate conditions moved to the GATE tab",
         "Unraveling progression uses dedicated GATE tab surfaces (no persistent strip)",
-        "Echo trees constrained to META view; between-run systems removed from active flow",
+        "Echo trees and ascension spending are constrained to LEGACY tab; META excludes ascension surfaces",
         "Persistent omen surface across tabs (drawer/strip)",
         "Theme token progression by era (data-era) for palette/texture/typography density shifts",
         "Era composition extracted to src/ui/eras/* and shared shell surfaces to src/ui/layout/*",
@@ -906,6 +906,32 @@
         "Echo tree purchases continue to rank 20 and cannot be trivially maxed in one ascension",
         "High-rank echo investment produces measurable improvements in each root's single target axis",
         "Documentation formulas match runtime behavior for whisper profiles and echo progression"
+      ]
+    },
+    {
+      "id": "PF-29",
+      "title": "Era Shell Parity and Era I Acolyte Orders",
+      "status": "completed",
+      "execute_after": "M20",
+      "notes": "Implemented as a structure + early-loop engagement follow-up. Legacy progression is now tab-consistent across eras, and Era I gets a lightweight acolyte order mechanic with short-lived tactical boosts.",
+      "scope": [
+        "Era I tab contract now uses `ACTIVE`, `THRESHOLD`, `LEGACY` with TabDock parity",
+        "Era I threshold progression moved out of active flow into dedicated `THRESHOLD` tab",
+        "Legacy progression moved into a dedicated `LEGACY` tab across all eras (Era I/II/III)",
+        "Ascension/Echo purchase surface removed from META and rendered under `LEGACY`",
+        "Era I active flow uses collapsible `Whispers` and `Acolytes` containers with persisted state",
+        "Add Era I acolyte orders: Gather (immediate + passive followers), Listen (recruit multiplier), Steady (influence regen bonus)",
+        "Acolyte orders use duration + repeat-diminishing potency and auto-expire in action/tick paths",
+        "Recruit preview and influence breakdown include active acolyte-order effects where relevant",
+        "Telemetry action stream includes `issue_acolyte_order` events"
+      ],
+      "validation": [
+        "Era I renders tabs as `ACTIVE`, `THRESHOLD`, `LEGACY` and each route displays the correct surface",
+        "Era II and Era III include `LEGACY` tabs and keep ascension controls out of META",
+        "Era I acolyte orders can be issued only when acolytes exist and expire after their timer",
+        "Gather/Listen/Steady effects apply in runtime formulas and clear cleanly on expiry",
+        "State migration preserves load safety with schema version bump and sanitization for new activity fields",
+        "Docs updated in MANIFESTO.md, docs/GAME_REFERENCE.md, and docs/UI_RESTRUCTURE.md"
       ]
     }
   ]

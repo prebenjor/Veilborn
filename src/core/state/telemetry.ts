@@ -26,6 +26,7 @@ export type TelemetryActionType =
   | "recruit"
   | "invest_domain"
   | "anoint_prophet"
+  | "issue_acolyte_order"
   | "found_cult"
   | "start_act"
   | "suppress_rival"
@@ -43,6 +44,7 @@ const TELEMETRY_ACTION_TYPES: TelemetryActionType[] = [
   "recruit",
   "invest_domain",
   "anoint_prophet",
+  "issue_acolyte_order",
   "found_cult",
   "start_act",
   "suppress_rival",
@@ -174,6 +176,7 @@ function createEmptyActionCounts(): Record<TelemetryActionType, number> {
     recruit: 0,
     invest_domain: 0,
     anoint_prophet: 0,
+    issue_acolyte_order: 0,
     found_cult: 0,
     start_act: 0,
     suppress_rival: 0,

@@ -10,8 +10,8 @@ interface EraGatePanelProps {
   presentation?: EraGatePresentation;
   eraOneBeliefProgress: number;
   eraOneBeliefTarget: number;
-  prophetsProgress: number;
-  prophetsTarget: number;
+  acolytesProgress: number;
+  acolytesTarget: number;
   followersProgress: number;
   followersTarget: number;
   eraOneReady: boolean;
@@ -145,8 +145,8 @@ export function EraGatePanel({
   presentation = "panel",
   eraOneBeliefProgress,
   eraOneBeliefTarget,
-  prophetsProgress,
-  prophetsTarget,
+  acolytesProgress,
+  acolytesTarget,
   followersProgress,
   followersTarget,
   eraOneReady,
@@ -242,7 +242,7 @@ export function EraGatePanel({
 
     const conditionViews: GateConditionView[] = [
       buildGteCondition("belief", "Total Belief Earned", eraOneBeliefProgress, eraOneBeliefTarget),
-      buildGteCondition("prophets", "Prophets", prophetsProgress, prophetsTarget),
+      buildGteCondition("acolytes", "Acolytes", acolytesProgress, acolytesTarget),
       buildGteCondition("followers", "Followers", followersProgress, followersTarget)
     ];
     return {
@@ -258,8 +258,8 @@ export function EraGatePanel({
     era,
     eraOneBeliefProgress,
     eraOneBeliefTarget,
-    prophetsProgress,
-    prophetsTarget,
+    acolytesProgress,
+    acolytesTarget,
     followersProgress,
     followersTarget,
     eraOneReady,

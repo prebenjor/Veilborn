@@ -45,14 +45,19 @@ Stats visibility rule:
 
 ## Layout Rules
 
-- Era I: minimal single-column surface, no tabs.
-- Era I: Whisper/Recruit actions and Prophet conversion live in one merged card.
+- Era I: minimal single-column surface with tabs: `ACTIVE`, `THRESHOLD`, `LEGACY`.
+- Era I `ACTIVE` order: Whispers -> Acolytes.
+- Era I `ACTIVE` containers are collapsible with persisted state.
+- Era I is acolyte-only; prophet conversion begins in Era II.
+- Era I `THRESHOLD` is a dedicated tab and uses a collapsible container.
+- Era I `LEGACY` is a dedicated tab and uses a collapsible `Legacy Echoes` container.
+- Era I: Whisper/Recruit actions and conversion controls remain in the same active-flow surface.
 - Desktop shell breakpoint is `800px`:
   - left column holds era content
   - right sidebar holds the omen feed only
   - right sidebar width: `240px` (`300px` on large screens)
   - left column min width: `500px`
-- Era II: `ACTIVE` and `GROWTH`, with constrained `META` content.
+- Era II: `ACTIVE`, `GROWTH`, `LEGACY`, and constrained `META`.
 - Era II tab contract:
   - `ACTIVE` order: Whispers -> Doctrine (merged container).
   - Influence remains in the top stat bar; there is no separate `ACTIVE` Influence container.
@@ -63,11 +68,14 @@ Stats visibility rule:
   - All `GROWTH` containers are collapsible with persisted state.
   - Rivals collapse to a single-line summary when inactive and auto-expand when active.
   - Threshold is not rendered in `ACTIVE`; it sits at the bottom of `GROWTH`, collapsed by default.
+  - `LEGACY` is a dedicated tab for Ascension/Echo spending and uses a collapsible container.
+  - `META` excludes Ascension and keeps overview/remembrance/pantheon surfaces only.
   - Meta tab label is always `Meta` (no `Meta (Lite)` suffix).
-- Era III: full `ACTIVE`, `GROWTH`, `GATE`, `META`.
+- Era III: full `ACTIVE`, `GROWTH`, `GATE`, `LEGACY`, `META`.
 - Era III `ACTIVE` order: Whispers -> Doctrine (merged doctrine progression and acts).
 - Era III `GROWTH` order: Domains -> Rivals.
 - Era III `GATE` tab contains Gate Rites (rite invocation + Veil pressure) and the gate progression panel; it replaces the old persistent strip.
+- Era III `LEGACY` is a dedicated tab for Ascension/Echo spending and uses a collapsible container.
 - Era II+ `META` containers are collapsible with persisted state.
 - Era III critical actions must be reachable without long scroll.
 - Omen feed contract:

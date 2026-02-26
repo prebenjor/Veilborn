@@ -19,7 +19,7 @@ When runtime and manifesto diverge, either:
 
 ## Current Build Snapshot
 
-- Save schema: `22`
+- Save schema: `23`
 - Core loop: deterministic tick (`250ms`)
 - Persistence: localStorage save + migration + recovery snapshot
 - Offline sim: enabled (`8h cap`, `85% belief efficiency`)
@@ -56,6 +56,7 @@ Completed PFs currently reflected in runtime:
 - `PF-26` desktop omens sidebar + fixed stats dock (run-scoped/capped omen feed)
 - `PF-27` miracle reserve + legacy echo access
 - `PF-28` whisper evolution + expanded echo sink scaling
+- `PF-29` era shell parity (Legacy tab in all eras + Era I threshold tab + Era I acolyte orders)
 
 ## Core Systems and Formulas
 
@@ -98,11 +99,12 @@ Era III bonus terms:
 
 Total regen per second:
 
-`total = base + shrine + cult`
+`total = base + shrine + cult + acolyteOrder`
 
 - `base = 1 + (0.5 * prophets)`
 - `shrine = shrinesBuilt * 0.2`
 - `cult = min(avgFollowersPerCult * 0.001, 2.0) * cultCount`
+- `acolyteOrder` (Era I only): active `Steady` order bonus, capped by order rules
 
 Notes:
 - Cult regen uses average followers per cult and applies a per-cult cap before multiplying.
@@ -170,6 +172,21 @@ Cadence prompt:
 - Trigger after `45s` inactivity
 - Next action bonus: `+5 belief`, `+1 follower`
 
+Era I acolyte orders:
+- Available when Era I has at least one acolyte.
+- One active order at a time; order duration: `45s`.
+- Repeat penalty on reissuing the same order:
+  - `penalty = min(0.45, repeatCount * 0.15)`
+  - `potency = max(0.1, 1 - penalty)`
+- `Gather`:
+  - immediate followers: `floor((4 + 2*acolytes) * potency)`, minimum `1`
+  - passive followers per second while active: `acolytes * 0.08 * potency`
+- `Listen`:
+  - next recruit and recruit preview multiplier while active: `1 + 0.35 * potency`
+- `Steady`:
+  - influence regen bonus while active: `min(1.5, acolytes * 0.12) * potency`
+- Orders auto-expire by timestamp and clear to `none` on expiry.
+
 ### Devotion (Path System Active)
 
 Devotion stacks:
@@ -226,6 +243,10 @@ Resolution model:
 - If a tab closes with an unresolved event, the next load applies narrative-only timeout resolution (no mechanical change).
 
 ### Prophet and Cult Economy
+
+Era unlock:
+- Era I: acolytes only (prophet anointing disabled)
+- Era II+: prophet anointing enabled
 
 Acolyte threshold:
 
@@ -413,7 +434,7 @@ Civilization:
 
 Era I -> II:
 - belief earned target (`10000`)
-- `3` prophets
+- `5` acolytes
 - `500` followers
 
 Era II -> III:
@@ -508,26 +529,30 @@ Implemented:
 ### UI and Era Disclosure
 
 Era I:
-- no tabbed shell
-- minimal surface
-- Whisper/Recruit and Prophets render in a single merged card (no `Doctrine Seeds` section header)
+- tabbed shell: `active`, `threshold`, `legacy`
+- minimal surface with dedicated threshold and legacy views
+- `active` order: Whispers -> Acolytes
+- active containers are collapsible and persist state (`era1_active_whispers_collapsed`, `era1_active_acolytes_collapsed`, `era1_active_prophets_collapsed`)
+- `threshold` tab uses a collapsible container (`era1_threshold_collapsed`)
+- `legacy` tab uses a collapsible `Legacy Echoes` container (`era1_legacy_collapsed`)
 - Whisper/Recruit follower yield hints are shown on action hover/focus (not as static text)
-- Devotion indicator appears in the Whispers card after first qualifying action (`●/○`, max 3)
+- Devotion indicator appears in the Whispers card after first qualifying action (max 3)
 - event log header: `Murmurs`
 - bottom status: one quiet atmospheric line
 
 Era II+:
-- tabbed shell (`active`, `growth`, `meta`)
+- tabbed shell with dedicated `legacy` tab
 - sticky tab dock
 - app shell orchestration in `src/App.tsx`; era-specific composition extracted to `src/ui/eras/*`
 - shared shell surfaces extracted to `src/ui/layout/*` (stat bar, tab dock, persistent omen surface)
-- tab containers in `active`, `growth`, and `meta` are collapsible with persisted localStorage state
+- tab containers in `active`, `growth`, `legacy`, and `meta` are collapsible with persisted localStorage state
 - desktop shell breakpoint is `>=800px` (two-column layout with left content + right omens sidebar)
 - right omens sidebar width is `240px` (`300px` on large screens); left column enforces a `500px` minimum
 - desktop stats uses a separate fixed top-right dock (collapsed by default, trigger label `STATS`)
 - the right omens sidebar has no expand control and shows a short rolling feed (max 6 entries)
 
 Era II:
+- tabs: `active`, `growth`, `legacy`, `meta`
 - `active` order: Whisper/Recruit -> Doctrine (merged)
 - influence is displayed in the top stat bar only (no separate active-tab Influence container)
 - era-II whisper surface keeps controls/cadence only (no additional subtitle text)
@@ -540,18 +565,22 @@ Era II:
 - rivals render as a single-line summary when inactive and auto-expand when active
 - threshold renders at the bottom of `growth` (not in `active`)
 - threshold defaults to collapsed in Era II
+- `legacy` tab hosts ascension/echo controls in a collapsible container (`legacy_ascension_collapsed`)
+- `meta` excludes ascension and keeps overview/remembrance/pantheon containers
 - meta tab label is `Meta` (no lite suffix)
 - event log header: `Whispers`
 - gate label: `Threshold`
 - bottom status: one directive line
 
 Era III:
+- tabs: `active`, `growth`, `gate`, `legacy`, `meta`
 - `active` order: Whispers -> Doctrine (collapsible containers)
 - `active` containers persist collapse state (`active_whispers_collapsed`, `active_doctrine_collapsed`)
 - rivals are moved out of active flow and live in `growth`
 - `growth` order: Domains -> Rivals
 - `gate` is a dedicated tab (separate from `meta`) for gate rites + gate progression
-- `meta` containers persist collapse state (`meta_overview_collapsed`, `meta_ascension_collapsed`, `meta_remembrance_collapsed`, `meta_pantheon_collapsed`)
+- `legacy` tab hosts ascension/echo controls in a collapsible container (`legacy_ascension_collapsed`)
+- `meta` containers persist collapse state (`meta_overview_collapsed`, `meta_remembrance_collapsed`, `meta_pantheon_collapsed`)
 - no persistent unraveling strip in Era III
 - event log header: `Omens`
 - gate label: `Gate`
@@ -584,7 +613,7 @@ Stats surface:
 - content scales by era without spoiling future systems
 
 Stats content by era:
-- Era I: no doctrine or gate-rite metrics (no cult output line, no shrine/cult influence lines, no rival or passive follower lines); Devotion stack line visible.
+- Era I: no doctrine or gate-rite metrics (no cult output line, no shrine/cult influence lines, no rival lines); Devotion stack line visible, and active `Steady` acolyte-order influence bonus appears in influence breakdown.
 - Era II: doctrine metrics appear (cults, shrines, rival-related flow where active) and Devotion path label appears.
 - Era III: gate-rite metrics appear (reserve, rite budget, passive follower arrival and other era-III-only lines).
 
@@ -662,3 +691,4 @@ Suggested future wiki top-level pages:
 Recommended process:
 - keep this file as internal source
 - mirror stable sections into `/wiki/*` pages in milestone `M19`
+

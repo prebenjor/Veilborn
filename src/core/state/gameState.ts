@@ -1,6 +1,6 @@
 import { openingOmen } from "../content/omens";
 
-export const GAME_STATE_SCHEMA_VERSION = 22;
+export const GAME_STATE_SCHEMA_VERSION = 23;
 export const WORLD_TICK_MS = 250;
 export const OFFLINE_MAX_SECONDS = 8 * 60 * 60;
 export const OFFLINE_BELIEF_EFFICIENCY = 0.85;
@@ -98,6 +98,18 @@ export const WHISPER_BOOSTED_FAIL_CHANCE: Record<WhisperTarget, number> = {
 };
 export const WHISPER_FAIL_FOLLOWER_MULTIPLIER = 0.6;
 export const WHISPER_ASCENSION_FAIL_MULTIPLIER = 0.96;
+
+export type AcolyteOrder = "none" | "gather" | "listen" | "steady";
+export const ACOLYTE_ORDERS: AcolyteOrder[] = ["gather", "listen", "steady"];
+export const ACOLYTE_ORDER_DURATION_MS = 45 * 1000;
+export const ACOLYTE_ORDER_REPEAT_STEP = 0.15;
+export const ACOLYTE_ORDER_REPEAT_MAX_PENALTY = 0.45;
+export const ACOLYTE_ORDER_GATHER_IMMEDIATE_BASE = 4;
+export const ACOLYTE_ORDER_GATHER_IMMEDIATE_PER_ACOLYTE = 2;
+export const ACOLYTE_ORDER_GATHER_PASSIVE_PER_ACOLYTE = 0.08;
+export const ACOLYTE_ORDER_LISTEN_RECRUIT_MULTIPLIER = 0.35;
+export const ACOLYTE_ORDER_STEADY_INFLUENCE_PER_ACOLYTE = 0.12;
+export const ACOLYTE_ORDER_STEADY_INFLUENCE_CAP = 1.5;
 export const WHISPER_PROPHETS_BASE_COOLDOWN_MS = 60 * 1000;
 export const WHISPER_CULTS_BASE_COOLDOWN_MS = 90 * 1000;
 export const WHISPER_CULTS_BOOSTED_COOLDOWN_MS = 90 * 1000;
@@ -208,7 +220,7 @@ export const DOMAIN_RESONANCE_CULT_PASSIVE_PER_TIER = 0.05;
 
 export const ERA_ONE_BELIEF_GATE_BASE = 10000;
 export const ERA_ONE_GATE_ECHO_MULTIPLIER = 0.7;
-export const ERA_ONE_PROPHET_GATE = 3;
+export const ERA_ONE_ACOLYTE_GATE = 5;
 export const ERA_ONE_FOLLOWER_GATE = 500;
 export const ERA_TWO_BELIEF_GATE_BASE = 275000;
 export const ERA_TWO_GATE_ECHO_MULTIPLIER = 0.75;
@@ -452,6 +464,11 @@ export interface ActivityState {
   whisperTargetCooldowns: Record<WhisperTarget, number>;
   lastWhisperTarget: WhisperTarget;
   lastWhisperMagnitude: WhisperMagnitude;
+  acolyteOrder: AcolyteOrder;
+  acolyteOrderEndsAt: number;
+  acolyteOrderPotency: number;
+  lastAcolyteOrder: AcolyteOrder;
+  acolyteOrderRepeatCount: number;
   lastCadencePromptAt: number;
   cadencePromptActive: boolean;
 }
@@ -703,6 +720,11 @@ export function createInitialGameState(nowMs = Date.now()): GameState {
       },
       lastWhisperTarget: "crowd",
       lastWhisperMagnitude: "base",
+      acolyteOrder: "none",
+      acolyteOrderEndsAt: 0,
+      acolyteOrderPotency: 1,
+      lastAcolyteOrder: "none",
+      acolyteOrderRepeatCount: 0,
       lastCadencePromptAt: nowMs,
       cadencePromptActive: false
     },

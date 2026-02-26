@@ -22,6 +22,7 @@ interface StatsDrawerProps {
     shrinePerSecond: number;
     cultPerSecond: number;
     echoPerSecond: number;
+    acolyteOrderPerSecond: number;
     shrineCount: number;
     cap: number;
     fillTimeSeconds: number | null;
@@ -233,6 +234,12 @@ export function StatsDrawer({
                 <>
                   <dt>Resonant Word</dt>
                   <dd>{formatResource(influenceBreakdown.echoPerSecond, 1)} /s</dd>
+                </>
+              ) : null}
+              {influenceBreakdown.acolyteOrderPerSecond > 0 ? (
+                <>
+                  <dt>Acolyte order</dt>
+                  <dd>{formatResource(influenceBreakdown.acolyteOrderPerSecond, 1)} /s</dd>
                 </>
               ) : null}
             </>

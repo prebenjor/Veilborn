@@ -90,6 +90,17 @@ function applyCadencePrompt(activity: ActivityState, nowMs: number): ActivitySta
   };
 }
 
+function resolveAcolyteOrderActivity(activity: ActivityState, nowMs: number): ActivityState {
+  if (activity.acolyteOrder === "none") return activity;
+  if (activity.acolyteOrderEndsAt > nowMs) return activity;
+  return {
+    ...activity,
+    acolyteOrder: "none",
+    acolyteOrderEndsAt: 0,
+    acolyteOrderPotency: 1
+  };
+}
+
 function cleanupRivals(rivals: RivalState[], nowMs: number): {
   active: RivalState[];
   removedCount: number;
@@ -220,7 +231,7 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
     const whisperCycle = normalizeWhisperCycle(state.activity, nowMs);
     const updatedActivity = applyCadencePrompt(
       {
-        ...state.activity,
+        ...resolveAcolyteOrderActivity(state.activity, nowMs),
         whisperWindowStartedAt: whisperCycle.whisperWindowStartedAt,
         whispersInWindow: whisperCycle.whispersInWindow
       },
@@ -247,7 +258,8 @@ export function advanceWorld(state: GameState, nowMs: number): GameState {
   const simulatedSeconds = simulatedMs / 1000;
   const preTickState: GameState = {
     ...state,
-    matchingDomainPairs
+    matchingDomainPairs,
+    activity: resolveAcolyteOrderActivity(state.activity, nowMs)
   };
 
   const beliefPerSecond = getBeliefPerSecond(preTickState, nowMs);
